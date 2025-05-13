@@ -27,10 +27,10 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/aaronlmathis/gosight/server/internal/config"
-	"github.com/aaronlmathis/gosight/server/internal/store/eventstore"
-	"github.com/aaronlmathis/gosight/server/internal/store/eventstore/pgeventstore"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-server/internal/config"
+	"github.com/aaronlmathis/gosight-server/internal/store/eventstore"
+	"github.com/aaronlmathis/gosight-server/internal/store/eventstore/pgeventstore"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 // In this file, we initialize the event store for the GoSight server.

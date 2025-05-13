@@ -31,7 +31,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-shared/model"
 )
 
 // writeCompressedWrappedLogs writes StoredLogs to disk

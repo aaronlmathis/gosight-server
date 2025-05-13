@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/aaronlmathis/gosight/server/debugtools"
+	"github.com/aaronlmathis/gosight-server/debugtools"
 )
 
 func (s *HttpServer) HandleCacheAudit(w http.ResponseWriter, r *http.Request) {

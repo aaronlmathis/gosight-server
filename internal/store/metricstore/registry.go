@@ -28,11 +28,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aaronlmathis/gosight/server/internal/cache"
-	"github.com/aaronlmathis/gosight/server/internal/config"
-	victoriametricstore "github.com/aaronlmathis/gosight/server/internal/store/metricstore/victoriametrics"
+	"github.com/aaronlmathis/gosight-server/internal/cache"
+	"github.com/aaronlmathis/gosight-server/internal/config"
+	victoriametricstore "github.com/aaronlmathis/gosight-server/internal/store/metricstore/victoriametrics"
 
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 func InitMetricStore(ctx context.Context, cfg *config.Config, metricCache cache.MetricCache) (MetricStore, error) {

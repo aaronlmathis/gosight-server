@@ -27,7 +27,7 @@ package pgstore
 import (
 	"context"
 
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-shared/model"
 )
 
 // GetTags retrieves all tags for a given endpoint ID.

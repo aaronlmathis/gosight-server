@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aaronlmathis/gosight/server/internal/cache"
-	"github.com/aaronlmathis/gosight/server/internal/config"
-	"github.com/aaronlmathis/gosight/server/internal/store/logstore/filestore.go"
-	victorialogstore "github.com/aaronlmathis/gosight/server/internal/store/logstore/victoriametrics"
+	"github.com/aaronlmathis/gosight-server/internal/cache"
+	"github.com/aaronlmathis/gosight-server/internal/config"
+	"github.com/aaronlmathis/gosight-server/internal/store/logstore/filestore.go"
+	victorialogstore "github.com/aaronlmathis/gosight-server/internal/store/logstore/victoriametrics"
 
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 func InitLogStore(ctx context.Context, cfg *config.Config, logCache cache.LogCache) (LogStore, error) {

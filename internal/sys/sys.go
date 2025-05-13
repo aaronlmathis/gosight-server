@@ -26,12 +26,12 @@ package sys
 import (
 	"context"
 
-	gosightauth "github.com/aaronlmathis/gosight/server/internal/auth"
-	"github.com/aaronlmathis/gosight/server/internal/cache"
-	"github.com/aaronlmathis/gosight/server/internal/config"
-	"github.com/aaronlmathis/gosight/server/internal/syncmanager"
-	"github.com/aaronlmathis/gosight/server/internal/tracker"
-	"github.com/aaronlmathis/gosight/server/internal/websocket"
+	gosightauth "github.com/aaronlmathis/gosight-server/internal/auth"
+	"github.com/aaronlmathis/gosight-server/internal/cache"
+	"github.com/aaronlmathis/gosight-server/internal/config"
+	"github.com/aaronlmathis/gosight-server/internal/syncmanager"
+	"github.com/aaronlmathis/gosight-server/internal/tracker"
+	"github.com/aaronlmathis/gosight-server/internal/websocket"
 )
 
 // SystemContext is passed to all subsystems, providing full access to config, state, and interfaces.

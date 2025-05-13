@@ -22,8 +22,8 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 package telemetry
 
 import (
-	"github.com/aaronlmathis/gosight/shared/model"
-	"github.com/aaronlmathis/gosight/shared/proto"
+	"github.com/aaronlmathis/gosight-shared/model"
+	"github.com/aaronlmathis/gosight-shared/proto"
 )
 
 // ConvertToModelPayload converts a protobuf MetricPayload to a model.MetricPayload.

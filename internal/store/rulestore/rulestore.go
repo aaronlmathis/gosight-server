@@ -28,7 +28,7 @@ package rulestore
 import (
 	"context"
 
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-shared/model"
 )
 
 // RuleStore defines the interface for managing alert rules.

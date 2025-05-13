@@ -26,9 +26,9 @@ package bootstrap
 import (
 	"fmt"
 
-	gosightauth "github.com/aaronlmathis/gosight/server/internal/auth"
-	"github.com/aaronlmathis/gosight/server/internal/config"
-	"github.com/aaronlmathis/gosight/server/internal/store/userstore"
+	gosightauth "github.com/aaronlmathis/gosight-server/internal/auth"
+	"github.com/aaronlmathis/gosight-server/internal/config"
+	"github.com/aaronlmathis/gosight-server/internal/store/userstore"
 )
 
 // InitAuth initializes the authentication providers for the GoSight server.

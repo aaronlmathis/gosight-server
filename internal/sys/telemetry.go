@@ -25,12 +25,12 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 package sys
 
 import (
-	"github.com/aaronlmathis/gosight/server/internal/alerts"
-	"github.com/aaronlmathis/gosight/server/internal/dispatcher"
-	"github.com/aaronlmathis/gosight/server/internal/events"
-	"github.com/aaronlmathis/gosight/server/internal/rules"
-	"github.com/aaronlmathis/gosight/server/internal/store/metastore"
-	"github.com/aaronlmathis/gosight/server/internal/store/metricindex"
+	"github.com/aaronlmathis/gosight-server/internal/alerts"
+	"github.com/aaronlmathis/gosight-server/internal/dispatcher"
+	"github.com/aaronlmathis/gosight-server/internal/events"
+	"github.com/aaronlmathis/gosight-server/internal/rules"
+	"github.com/aaronlmathis/gosight-server/internal/store/metastore"
+	"github.com/aaronlmathis/gosight-server/internal/store/metricindex"
 )
 
 // TelemetryModule encapsulates telemetry-related state and processing.

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/aaronlmathis/gosight/server/internal/sys"
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-server/internal/sys"
+	"github.com/aaronlmathis/gosight-shared/model"
 )
 
 // TriggerTestAlert simulates a high memory usage metric to trigger a test rule.

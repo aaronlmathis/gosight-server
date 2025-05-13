@@ -30,7 +30,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aaronlmathis/gosight/server/internal/config"
+	"github.com/aaronlmathis/gosight-server/internal/config"
 )
 
 // TODO Update environment variables and flags

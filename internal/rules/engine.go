@@ -30,10 +30,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aaronlmathis/gosight/server/internal/alerts"
-	"github.com/aaronlmathis/gosight/server/internal/store/rulestore"
-	"github.com/aaronlmathis/gosight/shared/model"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-server/internal/alerts"
+	"github.com/aaronlmathis/gosight-server/internal/store/rulestore"
+	"github.com/aaronlmathis/gosight-shared/model"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 type Evaluator struct {

@@ -25,14 +25,14 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 package sys
 
 import (
-	"github.com/aaronlmathis/gosight/server/internal/store/alertstore"
-	"github.com/aaronlmathis/gosight/server/internal/store/datastore"
-	"github.com/aaronlmathis/gosight/server/internal/store/eventstore"
-	"github.com/aaronlmathis/gosight/server/internal/store/logstore"
-	"github.com/aaronlmathis/gosight/server/internal/store/metricstore"
-	"github.com/aaronlmathis/gosight/server/internal/store/routestore"
-	"github.com/aaronlmathis/gosight/server/internal/store/rulestore"
-	"github.com/aaronlmathis/gosight/server/internal/store/userstore"
+	"github.com/aaronlmathis/gosight-server/internal/store/alertstore"
+	"github.com/aaronlmathis/gosight-server/internal/store/datastore"
+	"github.com/aaronlmathis/gosight-server/internal/store/eventstore"
+	"github.com/aaronlmathis/gosight-server/internal/store/logstore"
+	"github.com/aaronlmathis/gosight-server/internal/store/metricstore"
+	"github.com/aaronlmathis/gosight-server/internal/store/routestore"
+	"github.com/aaronlmathis/gosight-server/internal/store/rulestore"
+	"github.com/aaronlmathis/gosight-server/internal/store/userstore"
 )
 
 // StoreModule contains all persistent or semi-persistent storage components.

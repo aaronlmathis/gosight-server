@@ -25,7 +25,7 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 package logstore
 
 import (
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-shared/model"
 )
 
 type LogStore interface {

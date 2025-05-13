@@ -26,7 +26,7 @@ package telemetry
 import (
 	"context"
 
-	"github.com/aaronlmathis/gosight/shared/proto"
+	"github.com/aaronlmathis/gosight-shared/proto"
 )
 
 func (h *StreamHandler) EnqueueCommandToAgent(ctx context.Context, agentID string, commandType, command string, args []string) error {

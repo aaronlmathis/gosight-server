@@ -31,12 +31,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/aaronlmathis/gosight/server/internal/config"
-	"github.com/aaronlmathis/gosight/server/internal/sys"
+	"github.com/aaronlmathis/gosight-server/internal/config"
+	"github.com/aaronlmathis/gosight-server/internal/sys"
 
-	"github.com/aaronlmathis/gosight/server/internal/telemetry"
-	"github.com/aaronlmathis/gosight/shared/proto"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-server/internal/telemetry"
+	"github.com/aaronlmathis/gosight-shared/proto"
+	"github.com/aaronlmathis/gosight-shared/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"

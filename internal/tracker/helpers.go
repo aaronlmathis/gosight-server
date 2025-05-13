@@ -29,7 +29,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-shared/model"
 )
 
 // BuildAgentEventMeta builds a map of agent metadata for event tracking.

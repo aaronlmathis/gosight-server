@@ -31,7 +31,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 type ContainerMetrics struct {

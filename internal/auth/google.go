@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/aaronlmathis/gosight/server/internal/store/userstore"
-	"github.com/aaronlmathis/gosight/server/internal/usermodel"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-server/internal/store/userstore"
+	"github.com/aaronlmathis/gosight-server/internal/usermodel"
+	"github.com/aaronlmathis/gosight-shared/utils"
 	"golang.org/x/oauth2"
 )
 

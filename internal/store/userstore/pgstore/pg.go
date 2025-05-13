@@ -5,7 +5,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/aaronlmathis/gosight/server/internal/usermodel"
+	"github.com/aaronlmathis/gosight-server/internal/usermodel"
 )
 
 type PGStore struct {

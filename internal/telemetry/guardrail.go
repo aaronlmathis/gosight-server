@@ -27,7 +27,7 @@ package telemetry
 import (
 	"runtime/debug"
 
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 // SafeHandlePayload wraps a handler function to recover from any panics that occur during its execution.

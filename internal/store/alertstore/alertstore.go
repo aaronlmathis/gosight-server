@@ -26,7 +26,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-shared/model"
 )
 
 // AlertStore is an interface for managing alert instances in the database.

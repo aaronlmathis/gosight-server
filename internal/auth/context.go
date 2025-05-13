@@ -3,9 +3,9 @@ package gosightauth
 import (
 	"context"
 
-	"github.com/aaronlmathis/gosight/server/internal/contextutil"
-	"github.com/aaronlmathis/gosight/server/internal/usermodel"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-server/internal/contextutil"
+	"github.com/aaronlmathis/gosight-server/internal/usermodel"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 func InjectSessionContext(ctx context.Context, user *usermodel.User) context.Context {

@@ -26,10 +26,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/aaronlmathis/gosight/server/internal/bufferengine"
-	"github.com/aaronlmathis/gosight/server/internal/config"
-	"github.com/aaronlmathis/gosight/server/internal/sys"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-server/internal/bufferengine"
+	"github.com/aaronlmathis/gosight-server/internal/config"
+	"github.com/aaronlmathis/gosight-server/internal/sys"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 // InitBufferEngine initializes buffered stores and the central buffer engine.

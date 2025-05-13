@@ -5,7 +5,7 @@ import (
 	"sort"
 	"unicode/utf8"
 
-	"github.com/aaronlmathis/gosight/server/internal/cache"
+	"github.com/aaronlmathis/gosight-server/internal/cache"
 )
 
 type CacheAuditResult struct {

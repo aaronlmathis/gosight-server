@@ -28,9 +28,9 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/aaronlmathis/gosight/shared/model"
-	pb "github.com/aaronlmathis/gosight/shared/proto"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-shared/model"
+	pb "github.com/aaronlmathis/gosight-shared/proto"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 func (s *HttpServer) HandleCommandsAPI(w http.ResponseWriter, r *http.Request) {

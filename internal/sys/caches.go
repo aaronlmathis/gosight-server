@@ -24,7 +24,7 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 // This includes caches for metrics, logs, and processes.
 package sys
 
-import "github.com/aaronlmathis/gosight/server/internal/cache"
+import "github.com/aaronlmathis/gosight-server/internal/cache"
 
 type CacheModule struct {
 	Process cache.ProcessCache

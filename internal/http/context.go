@@ -3,9 +3,9 @@ package httpserver
 import (
 	"context"
 
-	gosightauth "github.com/aaronlmathis/gosight/server/internal/auth"
-	"github.com/aaronlmathis/gosight/server/internal/contextutil"
-	"github.com/aaronlmathis/gosight/server/internal/usermodel"
+	gosightauth "github.com/aaronlmathis/gosight-server/internal/auth"
+	"github.com/aaronlmathis/gosight-server/internal/contextutil"
+	"github.com/aaronlmathis/gosight-server/internal/usermodel"
 )
 
 func InjectUserContext(ctx context.Context, user *usermodel.User) context.Context {

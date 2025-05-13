@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aaronlmathis/gosight/server/internal/contextutil"
-	"github.com/aaronlmathis/gosight/server/internal/store/userstore"
-	"github.com/aaronlmathis/gosight/server/internal/usermodel"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-server/internal/contextutil"
+	"github.com/aaronlmathis/gosight-server/internal/store/userstore"
+	"github.com/aaronlmathis/gosight-server/internal/usermodel"
+	"github.com/aaronlmathis/gosight-shared/utils"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )

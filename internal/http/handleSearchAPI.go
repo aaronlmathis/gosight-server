@@ -28,7 +28,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-shared/model"
 )
 
 type SearchResult struct {

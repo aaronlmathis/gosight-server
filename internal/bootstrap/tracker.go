@@ -27,9 +27,9 @@ package bootstrap
 import (
 	"context"
 
-	"github.com/aaronlmathis/gosight/server/internal/events"
-	"github.com/aaronlmathis/gosight/server/internal/store/datastore"
-	"github.com/aaronlmathis/gosight/server/internal/tracker"
+	"github.com/aaronlmathis/gosight-server/internal/events"
+	"github.com/aaronlmathis/gosight-server/internal/store/datastore"
+	"github.com/aaronlmathis/gosight-server/internal/tracker"
 )
 
 // InitEndpointTracker initializes the unified endpoint tracker.

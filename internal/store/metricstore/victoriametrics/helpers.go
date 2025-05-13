@@ -29,7 +29,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-shared/model"
 )
 
 // buildPrometheusFormat converts a batch of MetricPayloads into a Prometheus-compatible string format.

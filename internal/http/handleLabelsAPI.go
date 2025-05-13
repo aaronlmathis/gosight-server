@@ -29,7 +29,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 // HandleLabelValues returns all values for a given label key from

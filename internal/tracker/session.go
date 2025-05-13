@@ -24,8 +24,8 @@ package tracker
 import (
 	"time"
 
-	"github.com/aaronlmathis/gosight/shared/proto"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-shared/proto"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 type LiveAgentSession struct {

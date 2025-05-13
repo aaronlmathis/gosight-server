@@ -28,12 +28,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aaronlmathis/gosight/server/internal/cache"
-	"github.com/aaronlmathis/gosight/server/internal/config"
-	"github.com/aaronlmathis/gosight/server/internal/store/metastore"
-	"github.com/aaronlmathis/gosight/server/internal/store/metricindex"
-	"github.com/aaronlmathis/gosight/server/internal/store/metricstore"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-server/internal/cache"
+	"github.com/aaronlmathis/gosight-server/internal/config"
+	"github.com/aaronlmathis/gosight-server/internal/store/metastore"
+	"github.com/aaronlmathis/gosight-server/internal/store/metricindex"
+	"github.com/aaronlmathis/gosight-server/internal/store/metricstore"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 // InitMetricIndex initializes the metric index for the GoSight agent.

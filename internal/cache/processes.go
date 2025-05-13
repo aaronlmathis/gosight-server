@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-shared/model"
 )
 
 const snapshotRetention = 30 * time.Minute

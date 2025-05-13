@@ -25,7 +25,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-shared/model"
 )
 
 // internal/store/rulestore/memorystore.go

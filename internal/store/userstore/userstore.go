@@ -4,7 +4,7 @@ package userstore
 import (
 	"context"
 
-	"github.com/aaronlmathis/gosight/server/internal/usermodel"
+	"github.com/aaronlmathis/gosight-server/internal/usermodel"
 )
 
 type UserStore interface {

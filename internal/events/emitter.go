@@ -27,10 +27,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/aaronlmathis/gosight/server/internal/store/eventstore"
-	"github.com/aaronlmathis/gosight/server/internal/websocket"
-	"github.com/aaronlmathis/gosight/shared/model"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-server/internal/store/eventstore"
+	"github.com/aaronlmathis/gosight-server/internal/websocket"
+	"github.com/aaronlmathis/gosight-shared/model"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 // Emitter is an event emitter that stores events in an event store.

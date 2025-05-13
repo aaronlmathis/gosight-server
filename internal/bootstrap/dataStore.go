@@ -29,11 +29,11 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/aaronlmathis/gosight/server/internal/config"
-	"github.com/aaronlmathis/gosight/server/internal/store/datastore"
-	pgstore "github.com/aaronlmathis/gosight/server/internal/store/datastore/pgsql"
+	"github.com/aaronlmathis/gosight-server/internal/config"
+	"github.com/aaronlmathis/gosight-server/internal/store/datastore"
+	pgstore "github.com/aaronlmathis/gosight-server/internal/store/datastore/pgsql"
 
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-shared/utils"
 	_ "github.com/lib/pq"
 )
 

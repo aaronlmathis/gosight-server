@@ -1,6 +1,6 @@
 package gosightauth
 
-import "github.com/aaronlmathis/gosight/server/internal/usermodel"
+import "github.com/aaronlmathis/gosight-server/internal/usermodel"
 
 func FlattenPermissions(roles []usermodel.Role) []string {
 	perms := map[string]struct{}{}

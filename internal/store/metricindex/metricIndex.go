@@ -31,7 +31,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 type MetricIndex struct {

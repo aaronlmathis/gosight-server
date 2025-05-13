@@ -27,15 +27,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aaronlmathis/gosight/server/internal/alerts"
-	"github.com/aaronlmathis/gosight/server/internal/dispatcher"
-	"github.com/aaronlmathis/gosight/server/internal/events"
-	"github.com/aaronlmathis/gosight/server/internal/rules"
-	"github.com/aaronlmathis/gosight/server/internal/store/metastore"
-	"github.com/aaronlmathis/gosight/server/internal/syncmanager"
-	"github.com/aaronlmathis/gosight/server/internal/sys"
-	"github.com/aaronlmathis/gosight/server/internal/tracker"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-server/internal/alerts"
+	"github.com/aaronlmathis/gosight-server/internal/dispatcher"
+	"github.com/aaronlmathis/gosight-server/internal/events"
+	"github.com/aaronlmathis/gosight-server/internal/rules"
+	"github.com/aaronlmathis/gosight-server/internal/store/metastore"
+	"github.com/aaronlmathis/gosight-server/internal/syncmanager"
+	"github.com/aaronlmathis/gosight-server/internal/sys"
+	"github.com/aaronlmathis/gosight-server/internal/tracker"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 // initGoSight initializes the GoSight server by setting up various components

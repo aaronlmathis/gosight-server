@@ -27,7 +27,7 @@ package eventstore
 import (
 	"context"
 
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-shared/model"
 )
 
 // EventStore is an interface for storing and retrieving events.

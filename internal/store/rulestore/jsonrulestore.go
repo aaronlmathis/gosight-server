@@ -27,7 +27,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-shared/model"
 )
 
 // JSONRuleStore is a rule store that uses a JSON file for persistence.

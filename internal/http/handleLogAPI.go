@@ -32,8 +32,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aaronlmathis/gosight/shared/model"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-shared/model"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 // HandleRecentLogs handles the HTTP request for recent logs.

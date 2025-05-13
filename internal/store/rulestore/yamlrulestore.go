@@ -27,7 +27,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-shared/model"
 	"gopkg.in/yaml.v3"
 )
 

@@ -22,7 +22,7 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 package events
 
 import (
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-shared/model"
 )
 
 func BuildLogEventMeta(log *model.LogEntry, payload *model.LogPayload) map[string]string {

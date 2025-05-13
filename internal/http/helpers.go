@@ -28,10 +28,10 @@ import (
 	"net/http"
 	"strings"
 
-	gosightauth "github.com/aaronlmathis/gosight/server/internal/auth"
-	"github.com/aaronlmathis/gosight/server/internal/contextutil"
-	"github.com/aaronlmathis/gosight/server/internal/usermodel"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	gosightauth "github.com/aaronlmathis/gosight-server/internal/auth"
+	"github.com/aaronlmathis/gosight-server/internal/contextutil"
+	"github.com/aaronlmathis/gosight-server/internal/usermodel"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 // BuildAuthEventMeta constructs a metadata map for authentication events.

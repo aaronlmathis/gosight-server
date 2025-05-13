@@ -28,10 +28,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/aaronlmathis/gosight/server/internal/bootstrap"
-	grpcserver "github.com/aaronlmathis/gosight/server/internal/grpc"
-	httpserver "github.com/aaronlmathis/gosight/server/internal/http"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-server/internal/bootstrap"
+	grpcserver "github.com/aaronlmathis/gosight-server/internal/grpc"
+	httpserver "github.com/aaronlmathis/gosight-server/internal/http"
+	"github.com/aaronlmathis/gosight-shared/utils"
 	"google.golang.org/grpc/encoding/gzip"
 )
 

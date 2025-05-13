@@ -27,10 +27,10 @@ package httpserver
 import (
 	"net/http"
 
-	gosightauth "github.com/aaronlmathis/gosight/server/internal/auth"
-	gosighttemplate "github.com/aaronlmathis/gosight/server/internal/http/templates"
-	"github.com/aaronlmathis/gosight/server/internal/sys"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	gosightauth "github.com/aaronlmathis/gosight-server/internal/auth"
+	gosighttemplate "github.com/aaronlmathis/gosight-server/internal/http/templates"
+	"github.com/aaronlmathis/gosight-server/internal/sys"
+	"github.com/aaronlmathis/gosight-shared/utils"
 	"github.com/gorilla/mux"
 )
 

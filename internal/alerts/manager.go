@@ -5,12 +5,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aaronlmathis/gosight/server/internal/dispatcher"
-	"github.com/aaronlmathis/gosight/server/internal/events"
-	"github.com/aaronlmathis/gosight/server/internal/store/alertstore"
-	"github.com/aaronlmathis/gosight/server/internal/websocket"
-	"github.com/aaronlmathis/gosight/shared/model"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-server/internal/dispatcher"
+	"github.com/aaronlmathis/gosight-server/internal/events"
+	"github.com/aaronlmathis/gosight-server/internal/store/alertstore"
+	"github.com/aaronlmathis/gosight-server/internal/websocket"
+	"github.com/aaronlmathis/gosight-shared/model"
+	"github.com/aaronlmathis/gosight-shared/utils"
 	"github.com/google/uuid"
 )
 

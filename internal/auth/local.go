@@ -4,9 +4,9 @@ package gosightauth
 import (
 	"net/http"
 
-	"github.com/aaronlmathis/gosight/server/internal/store/userstore"
-	"github.com/aaronlmathis/gosight/server/internal/usermodel"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-server/internal/store/userstore"
+	"github.com/aaronlmathis/gosight-server/internal/usermodel"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 type LocalAuth struct {

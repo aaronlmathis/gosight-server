@@ -34,7 +34,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-shared/model"
 )
 
 // QueryInstant fetches the latest data points for a given metric with optional label filters.

@@ -28,7 +28,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-shared/utils"
 	"github.com/gorilla/mux"
 )
 

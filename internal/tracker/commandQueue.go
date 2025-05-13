@@ -22,8 +22,8 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 package tracker
 
 import (
-	"github.com/aaronlmathis/gosight/shared/proto"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-shared/proto"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 type CommandQueue struct {

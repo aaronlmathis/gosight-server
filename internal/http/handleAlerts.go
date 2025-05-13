@@ -26,9 +26,9 @@ package httpserver
 import (
 	"net/http"
 
-	gosightauth "github.com/aaronlmathis/gosight/server/internal/auth"
-	"github.com/aaronlmathis/gosight/server/internal/contextutil"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	gosightauth "github.com/aaronlmathis/gosight-server/internal/auth"
+	"github.com/aaronlmathis/gosight-server/internal/contextutil"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 // HandleAlertsHistoryPage handles the page for viewing configured alerts at /alerts

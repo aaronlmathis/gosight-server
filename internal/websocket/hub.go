@@ -30,7 +30,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aaronlmathis/gosight/server/internal/store/metastore"
+	"github.com/aaronlmathis/gosight-server/internal/store/metastore"
 	"github.com/gorilla/websocket"
 )
 

@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-shared/model"
 )
 
 type BufferedMetricStore struct {

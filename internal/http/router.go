@@ -27,7 +27,7 @@ import (
 	"net/http"
 	"path/filepath"
 
-	gosightauth "github.com/aaronlmathis/gosight/server/internal/auth"
+	gosightauth "github.com/aaronlmathis/gosight-server/internal/auth"
 )
 
 func (s *HttpServer) setupRoutes() {

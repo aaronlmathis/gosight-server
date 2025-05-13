@@ -3,8 +3,8 @@ package gosightauth
 import (
 	"context"
 
-	"github.com/aaronlmathis/gosight/server/internal/contextutil"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-server/internal/contextutil"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 // HasPermission checks if the current context includes the given permission

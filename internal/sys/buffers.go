@@ -1,6 +1,6 @@
 package sys
 
-import "github.com/aaronlmathis/gosight/server/internal/bufferengine"
+import "github.com/aaronlmathis/gosight-server/internal/bufferengine"
 
 type BufferModule struct {
 	Metrics bufferengine.BufferedStore

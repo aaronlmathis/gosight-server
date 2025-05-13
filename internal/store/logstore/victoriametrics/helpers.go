@@ -31,7 +31,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-shared/model"
 )
 
 // buildPrometheusFormatFromWrapped converts a slice of StoredLog into a Prometheus-compatible string format.

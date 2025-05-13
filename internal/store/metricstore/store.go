@@ -30,7 +30,7 @@ package metricstore
 import (
 	"time"
 
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-shared/model"
 )
 
 type MetricStore interface {

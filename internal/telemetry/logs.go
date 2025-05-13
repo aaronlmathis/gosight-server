@@ -25,11 +25,11 @@ import (
 	"io"
 	"time"
 
-	"github.com/aaronlmathis/gosight/server/internal/events"
-	"github.com/aaronlmathis/gosight/server/internal/sys"
-	"github.com/aaronlmathis/gosight/shared/model"
-	pb "github.com/aaronlmathis/gosight/shared/proto"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-server/internal/events"
+	"github.com/aaronlmathis/gosight-server/internal/sys"
+	"github.com/aaronlmathis/gosight-shared/model"
+	pb "github.com/aaronlmathis/gosight-shared/proto"
+	"github.com/aaronlmathis/gosight-shared/utils"
 	"github.com/google/uuid"
 )
 

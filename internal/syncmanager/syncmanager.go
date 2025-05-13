@@ -30,10 +30,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aaronlmathis/gosight/server/internal/cache"
-	"github.com/aaronlmathis/gosight/server/internal/store/datastore"
-	"github.com/aaronlmathis/gosight/server/internal/tracker"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-server/internal/cache"
+	"github.com/aaronlmathis/gosight-server/internal/store/datastore"
+	"github.com/aaronlmathis/gosight-server/internal/tracker"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 // SyncManager handles periodic persistence of in-memory caches to the database.

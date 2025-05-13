@@ -28,8 +28,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aaronlmathis/gosight/shared/model"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-shared/model"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 // MetricCache is an in-memory cache for metrics as well as their meta data

@@ -27,7 +27,7 @@ package datastore
 import (
 	"context"
 
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-shared/model"
 )
 
 type DataStore interface {

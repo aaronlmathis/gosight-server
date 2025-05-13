@@ -26,9 +26,9 @@ package bootstrap
 import (
 	"context"
 
-	"github.com/aaronlmathis/gosight/server/internal/store/metastore"
-	"github.com/aaronlmathis/gosight/server/internal/websocket"
-	"github.com/aaronlmathis/gosight/shared/utils"
+	"github.com/aaronlmathis/gosight-server/internal/store/metastore"
+	"github.com/aaronlmathis/gosight-server/internal/websocket"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 // InitWebSocketHub initializes the WebSocket hub for the GoSight agent.

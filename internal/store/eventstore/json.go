@@ -7,7 +7,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/aaronlmathis/gosight/shared/model"
+	"github.com/aaronlmathis/gosight-shared/model"
 )
 
 // JSONEventStore is a file-backed implementation of the EventStore interface.

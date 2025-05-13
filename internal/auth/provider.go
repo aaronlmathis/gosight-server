@@ -3,7 +3,7 @@ package gosightauth
 import (
 	"net/http"
 
-	"github.com/aaronlmathis/gosight/server/internal/usermodel"
+	"github.com/aaronlmathis/gosight-server/internal/usermodel"
 )
 
 // provider.go: Defines AuthProvider interface that local.go and sso/*.go implement.

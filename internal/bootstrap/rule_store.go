@@ -27,8 +27,8 @@ package bootstrap
 import (
 	"errors"
 
-	"github.com/aaronlmathis/gosight/server/internal/config"
-	"github.com/aaronlmathis/gosight/server/internal/store/rulestore"
+	"github.com/aaronlmathis/gosight-server/internal/config"
+	"github.com/aaronlmathis/gosight-server/internal/store/rulestore"
 )
 
 // InitRuleStore initializes the rule store based on the configuration.
