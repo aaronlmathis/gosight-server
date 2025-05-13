@@ -23,25 +23,53 @@ GoSight Server is a high-performance observability backend built in Go. It recei
 
 ## Build
 
-\`\`\`bash
+```bash
 go build -o gosight-server ./cmd
-\`\`\`
+```
 
 ## Running
 
-\`\`\`bash
+```bash
 ./gosight-server --config ./config.yaml
-\`\`\`
+```
 
-See sample config in \`./server/config/\`.
+See sample config in `./server/config/`.
 
 ## Key Components
 
-- \`api/\` – gRPC and REST endpoints
-- \`telemetry/\` – stream ingestion, rule engine, tag index
-- \`web/\` – HTML templates, static assets, and dashboard
-- \`store/\` – metricstore, logstore, eventstore
-- \`tracker/\` – in-memory agent and container registry
+## Directory Overview
+
+- `internal/alerts/` – Alert models and rule evaluation engine
+- `internal/auth/` – JWT-based authentication and session management
+- `internal/bootstrap/` – Server startup logic and configuration loading
+- `internal/bufferengine/` – Queue/buffer system for telemetry processing
+- `internal/cache/` – In-memory caching layer for metadata and sessions
+- `internal/config/` – Configuration file parsing and defaults
+- `internal/contextutil/` – Request-scoped context helpers
+- `internal/dispatcher/` – Alert action dispatcher for routes (webhook, script)
+- `internal/events/` – Event tracking and structured broadcasting
+- `internal/grpc/` – gRPC service registration and listener setup
+- `internal/http/` – HTTP server handlers and routing (REST and UI)
+- `internal/rules/` – Rule parsing, condition logic, and evaluation context
+- `internal/runner/` – Metric and log task execution pipeline
+- `internal/store/` – Top-level store interface and wrappers:
+  - `alertstore/`
+  - `datastore/`
+  - `eventstore/`
+  - `logstore/`
+  - `metastore/`
+  - `metricindex/`
+  - `metricstore/`
+  - `routestore/`
+  - `rulestore/`
+  - `userstore/`
+- `internal/syncmanager/` – Live sync and periodic persistence
+- `internal/sys/` – System-level information access
+- `internal/telemetry/` – Metric and log ingestion + transformation
+- `internal/testutils/` – Mocks and utilities for testing
+- `internal/tracker/` – In-memory agent/container tracker
+- `internal/usermodel/` – User, role, and permission models
+- `internal/websocket/` – WebSocket hubs and live stream broadcasting
 
 ## License
 
