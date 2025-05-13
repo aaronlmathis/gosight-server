@@ -1,5 +1,4 @@
-![Go](https://img.shields.io/badge/built%20with-Go-blue) ![License](https://img.shields.io/github/license/aaronlmathis/gosight-server) ![Status](https://img.shields.io/badge/status-active-brightgreen)
-
+![Go](https://img.shields.io/badge/built%20with-Go-blue) ![License](https://img.shields.io/github/license/aaronlmathis/gosight-server) ![Status](https://img.shields.io/badge/status-active-brightgreen) [![Go Report Card](https://goreportcard.com/badge/github.com/aaronlmathis/gosight-server)](https://goreportcard.com/report/github.com/aaronlmathis/gosight-server)
 # GoSight Server
 
 GoSight Server is a high-performance observability backend built in Go. It receives telemetry from GoSight Agents, stores metrics and logs, processes alerts, and serves a dynamic web UI for visualization and investigation.
