@@ -19,6 +19,8 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
+// Package grpcserver provides the implementation of the gRPC server for GoSight.
+// It handles the communication between the GoSight server and agents.
 package grpcserver
 
 import (

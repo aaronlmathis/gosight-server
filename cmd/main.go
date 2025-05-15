@@ -19,7 +19,10 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// File: server/cmd/main.go
+// Package main is the package for the GoSight server.
+// It initializes the server, sets up the gRPC and HTTP servers,
+// and handles graceful shutdown.
+// It also manages the system context and sync manager for periodic persistence.
 package main
 
 import (
