@@ -311,22 +311,25 @@ function logLevelColorClass(level) {
         default: return "text-gray-700 dark:text-gray-300";
     }
 }
-
 async function fetchRecentLogs() {
     try {
-        const url = `/api/v1/logs?endpointID=${encodeURIComponent(window.endpointID)}&limit=${maxLogLines}`;
-        const res = await gosightFetch(`/api/v1/logs?endpointID=${encodeURIComponent(window.endpointID)}&limit=10`);
+        const url = `/api/v1/logs?endpoint_id=${encodeURIComponent(window.endpointID)}&limit=${maxLogLines}`;
+        const res = await gosightFetch(url);
         console.log("Fetching recent logs from:", url);
         if (!res.ok) throw new Error("Failed to fetch recent logs");
-        const logs = await res.json();
-        console.log("[Logs] Loaded:", logs);
-        for (const log of logs) {
+
+        const data = await res.json();
+        if (!Array.isArray(data.logs)) throw new Error("Invalid logs response format");
+
+        console.log("[Logs] Loaded:", data.logs);
+        for (const log of data.logs) {
             appendLogLine(log);
         }
     } catch (err) {
         console.error("Failed to preload logs:", err);
     }
 }
+
 // END LOG STREAMING
 ///
 /// ACTIVITY TAB SECTION

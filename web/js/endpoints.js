@@ -137,14 +137,11 @@ function formatUptime(seconds) {
   return `${d > 0 ? d + 'd ' : ''}${h}h ${m}m`;
 }
 export async function fetchGlobalContainerMetrics() {
-  const runtimes = ["podman", "docker"];
-  const metricNames = ["cpu_percent", "uptime_seconds"];
-  const metrics = runtimes.flatMap(rt => metricNames.map(name => `container.${rt}.${name}`));
-  const query = metrics.map(m => `metric=${m}`).join("&");
+  const metricNames = ["cpu_percent", "uptime_seconds", "status"];  // any others you care about
+  const query = metricNames.map(m => `metric=${encodeURIComponent(m)}`).join("&");
 
   try {
-    const res = await gosightFetch(`/api/v1/query?${query}`);
-    console.log(query)
+    const res = await gosightFetch(`/api/v1/query?namespace=container&${query}`);
     const rows = await res.json();
 
     const containers = new Map();
@@ -154,17 +151,36 @@ export async function fetchGlobalContainerMetrics() {
       const tags = row.tags || {};
       const id = tags.container_id;
       const metricName = tags["__name__"];
+      const value = row.value;
+      const runtime = tags.runtime;
 
       if (!id || !metricName) continue;
 
-      const parts = metricName.split(".");
-      if (parts.length >= 2) runtimeSet.add(parts[1]);
+      // Track runtime
+      if (runtime) runtimeSet.add(runtime);
 
+      // Init container entry
       if (!containers.has(id)) {
-        containers.set(id, { id, status: tags.status || "unknown" });
+        containers.set(id, {
+          id,
+          status: "unknown",
+          runtime,
+          metrics: {}
+        });
+      }
+
+      const container = containers.get(id);
+
+      // Pull in metric
+      container.metrics[metricName] = value;
+
+      // Special handling for `status`
+      if (metricName === "status") {
+        container.status = value === 1 ? "running" : "exited";
       }
     }
 
+    // Summarize
     const containerCount = containers.size;
     const runningCount = [...containers.values()].filter(c => c.status === "running").length;
     const runtimes = Array.from(runtimeSet).join(", ");
@@ -172,8 +188,11 @@ export async function fetchGlobalContainerMetrics() {
     document.getElementById("summary-containers").textContent = `${runningCount} / ${containerCount}`;
     document.getElementById("summary-runtimes").textContent = runtimes;
 
+    // Optional: expose full container map
+    window.containerMetrics = containers;
+
   } catch (err) {
-    console.error("❌ Failed to load global container metrics:", err);
+    console.error("Failed to load global container metrics:", err);
   }
 }
 
@@ -217,7 +236,7 @@ function toggleContainerRow(rowID) {
       "uptime_seconds"
     ];
     const metrics = runtimes.flatMap(rt =>
-      metricNames.map(name => `container.${rt}.${name}`)
+      metricNames.map(name => `${name}`)
     );
     const query = metrics.map(m => `metric=${m}`).join("&") + `&hostname=${encodeURIComponent(hostname)}`;
     console.log("Container query:", query);
@@ -225,7 +244,7 @@ function toggleContainerRow(rowID) {
       .then(res => res.json())
       .then(json => {
         const rows = Array.isArray(json) ? json : [];
-        console.log("📊 Raw container rows from API:", rows);
+        console.log(" Raw container rows from API:", rows);
         const grouped = groupContainers(rows);
         wrapper.innerHTML = `<div class="p-4">${buildContainerTable(grouped)}</div>`;
         wrapper.dataset.loaded = "true";
@@ -270,11 +289,6 @@ function groupContainers(rows) {
         runtime: runtime
       };
     }
-
-    console.log("Checking row with container_id:", id, "name:", tags["__name__"]);
-    console.log("🧪 Row received:", row);
-    console.log("📛 container_id:", row.tags?.container_id);
-    console.log("🧩 __name__:", row.tags?.__name__);
 
     if (!id) {
       console.warn("Skipping row: missing container_id", row);

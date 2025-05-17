@@ -199,7 +199,6 @@ func parseLogFilterFromQuery(r *http.Request) model.LogFilter {
 	return filter
 }
 
-
 // matchesSearch checks if a log entry matches the search keyword.
 // It checks if the keyword is present in the message, source, category,
 // or any of the meta fields, tags, or fields of the log entry.

@@ -41,12 +41,18 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// GetNamespaces retrieves all namespaces.
+// It returns a JSON object containing the namespaces.
+// The URL format is: /api/v1/
 func (s *HttpServer) GetNamespaces(w http.ResponseWriter, r *http.Request) {
 	namespaces := s.Sys.Cache.Metrics.GetNamespaces()
 	utils.Debug("Fetching namespaces: %+v", namespaces)
 	utils.JSON(w, http.StatusOK, s.Sys.Cache.Metrics.GetNamespaces())
 }
 
+// GetSubNamespaces retrieves all sub-namespaces for a given namespace.
+// It returns a JSON object containing the sub-namespaces.
+// The URL format is: /api/v1/{namespace}
 func (s *HttpServer) GetSubNamespaces(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ns := strings.ToLower(vars["namespace"])
@@ -58,6 +64,8 @@ func (s *HttpServer) GetSubNamespaces(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetMetricNames retrieves all metric names for a given namespace and subnamespace.
+// It returns a JSON object containing the metric names.
+// The URL format is: /api/v1/{namespace}/{sub}/metrics
 func (s *HttpServer) GetMetricNames(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ns := strings.ToLower(vars["namespace"])
@@ -71,11 +79,16 @@ func (s *HttpServer) GetMetricNames(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetDimensions retrieves all available dimensions.
+// It returns a JSON object containing the dimensions.
+// The URL format is: /api/v1/dimensions
 func (s *HttpServer) GetDimensions(w http.ResponseWriter, r *http.Request) {
 	utils.JSON(w, http.StatusOK, s.Sys.Cache.Metrics.GetAvailableDimensions())
 }
 
 // GetMetricDimensions retrieves the dimensions for a specific metric.
+// It accepts a namespace, subnamespace, and metric name as URL parameters.
+// The response is a JSON object containing the dimensions.
+// The URL format is: /api/v1/{namespace}/{sub}/{metric}/dimensions
 func (s *HttpServer) GetMetricDimensions(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ns := strings.ToLower(vars["namespace"])
@@ -93,6 +106,10 @@ func (s *HttpServer) GetMetricDimensions(w http.ResponseWriter, r *http.Request)
 	utils.JSON(w, http.StatusOK, dims)
 }
 
+// GetMetricData retrieves metric data for a specific metric.
+// It accepts a namespace, subnamespace, and metric name as URL parameters.
+// The response is a JSON object containing the metric data.
+// The URL format is: /api/v1/{namespace}/{sub}/{metric}/data
 func (s *HttpServer) GetMetricData(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ns := strings.ToLower(vars["namespace"])
@@ -140,6 +157,10 @@ func (s *HttpServer) GetMetricData(w http.ResponseWriter, r *http.Request) {
 	utils.JSON(w, http.StatusOK, points)
 }
 
+// GetMetricLatest retrieves the latest value for a specific metric.
+// It accepts a namespace, subnamespace, and metric name as URL parameters.
+// The response is a JSON object containing the latest value and timestamp.
+// The URL format is: /api/v1/{namespace}/{sub}/{metric}/latest
 func (s *HttpServer) GetMetricLatest(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ns := strings.ToLower(vars["namespace"])
@@ -167,6 +188,18 @@ func (s *HttpServer) GetMetricLatest(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// HandleAPIQuery handles flexible label-based queries without requiring a metric name.
+// Supports optional time range via start= and end= query params.
+// It also supports sorting and limiting the results.
+// The query parameters are:
+// - metric: the metric name(s) to query
+// - start: the start time for the query (RFC3339 format)
+// - end: the end time for the query (RFC3339 format)
+// - step: the step interval for the query (default is 15s)
+// - limit: the maximum number of results to return
+// - sort: the sort order for the results (asc or desc)
+// - tags: additional filters for the query (key=value pairs)
+// The response is a JSON object containing the query results.
 func (s *HttpServer) HandleAPIQuery(w http.ResponseWriter, r *http.Request) {
 
 	//utils.Debug("Known dimensions: %+v", s.Sys.Tele.Index.GetDimensions())
@@ -269,6 +302,11 @@ func (s *HttpServer) HandleAPIQuery(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, fmt.Sprintf("query failed: %v", err), http.StatusInternalServerError)
 		return
+	}
+
+	// don't let a null result be returned to api
+	if result == nil {
+		result = []model.MetricRow{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

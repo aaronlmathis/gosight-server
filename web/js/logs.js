@@ -82,13 +82,15 @@ export function initLogsTab() {
                 const contains = logsFilterSearch.value;
                 const start = logsFilterStart.value;
                 const end = logsFilterEnd.value;
-                params = new URLSearchParams({ endpointID: window.endpointID, level, contains, start, end, limit: 1000 });
+                params = new URLSearchParams({ endpoint_id: window.endpointID, level, contains, start, end, limit: 100 });
             }
+
+
 
             gosightFetch("/api/v1/logs?" + params.toString())
                 .then(res => res.json())
-                .then(logs => {
-                    allLogs = Array.isArray(logs) ? logs : [];
+                .then(data => {
+                    allLogs = Array.isArray(data.logs) ? data.logs : [];
                     logsCurrentPage = 1;
                     renderLogsPage(logsCurrentPage);
                 })
@@ -124,7 +126,7 @@ export function initLogsTab() {
         function renderLogsTableShell(containerId = "logs-table-container") {
             const container = document.getElementById(containerId);
             if (!container) {
-                console.error(`❌ Container #${containerId} not found`);
+                console.error(`Container #${containerId} not found`);
                 return;
             }
 
@@ -185,7 +187,7 @@ export function initLogsTab() {
                     source: document.getElementById("adv-source")?.value.trim() || "",
                     start: pad(document.getElementById("adv-start")?.value.trim() || ""),
                     end: pad(document.getElementById("adv-end")?.value.trim() || ""),
-                    limit: 1000
+                    limit: 100
                 });
                 fetchLogs(params);
             });

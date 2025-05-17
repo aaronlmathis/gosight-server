@@ -161,6 +161,9 @@ type EndpointFilter struct {
 	Order       string
 }
 
+// ParseEndpointFilters parses the query parameters from the request and returns an EndpointFilter struct.
+// It extracts the endpoint ID, hostname, status, host ID, IP address, OS, architecture,
+// tags, last seen time range, limit, sort field, and order (ascending/descending).
 func ParseEndpointFilters(r *http.Request) EndpointFilter {
 	q := r.URL.Query()
 	tags := utils.ParseTagString(q.Get("tags"))

@@ -44,3 +44,4 @@ server/logstore
 **/.golangci.yml
 **/generate_docs.sh
 **/lint_check.txt
+logstore/
