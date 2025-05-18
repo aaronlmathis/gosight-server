@@ -142,7 +142,7 @@ func (v *VictoriaLogStore) GetLogs(filter model.LogFilter) ([]model.LogEntry, er
 		return nil, err
 	}
 
-	// Optional: sort by time before offset/limit
+	// Sort by time before cursor/limit
 	sort.Slice(refs, func(i, j int) bool {
 		if filter.Order == "asc" {
 			return refs[i].Timestamp.Before(refs[j].Timestamp)
@@ -150,9 +150,27 @@ func (v *VictoriaLogStore) GetLogs(filter model.LogFilter) ([]model.LogEntry, er
 		return refs[i].Timestamp.After(refs[j].Timestamp)
 	})
 
-	if filter.Offset > 0 && filter.Offset < len(refs) {
-		refs = refs[filter.Offset:]
+	// Apply cursor-based pagination
+	if !filter.Cursor.IsZero() {
+		// For descending order (newest to oldest), keep logs older than cursor
+		// For ascending order (oldest to newest), keep logs newer than cursor
+		cursorTime := filter.Cursor
+		filteredRefs := make([]logRef, 0, len(refs))
+		for _, ref := range refs {
+			if filter.Order == "asc" {
+				if ref.Timestamp.After(cursorTime) {
+					filteredRefs = append(filteredRefs, ref)
+				}
+			} else {
+				if ref.Timestamp.Before(cursorTime) {
+					filteredRefs = append(filteredRefs, ref)
+				}
+			}
+		}
+		refs = filteredRefs
 	}
+
+	// Apply limit
 	if filter.Limit > 0 && len(refs) > filter.Limit {
 		refs = refs[:filter.Limit]
 	}
@@ -160,22 +178,17 @@ func (v *VictoriaLogStore) GetLogs(filter model.LogFilter) ([]model.LogEntry, er
 	var result []model.LogEntry
 	for _, ref := range refs {
 		entry, err := v.GetLogByID(ref.LogID)
-
-		if err == nil {
-			if filter.Contains != "" && !strings.Contains(strings.ToLower(entry.Message), strings.ToLower(filter.Contains)) {
-				continue
-			}
-			// Additional field filtering if needed
-			result = append(result, *entry)
-		}
 		if err != nil {
 			utils.Debug("GetLogs: GetLogByID failed: log_id=%s err=%v", ref.LogID, err)
 			continue
 		}
+
 		if filter.Contains != "" && !strings.Contains(strings.ToLower(entry.Message), strings.ToLower(filter.Contains)) {
 			utils.Debug("GetLogs: skipped due to filter.Contains on log_id=%s", ref.LogID)
 			continue
 		}
+
+		result = append(result, *entry)
 	}
 
 	return result, nil

@@ -34,6 +34,7 @@ import (
 type LogCache interface {
 	Add(batch []*model.StoredLog)
 	Get(logID string) (*model.LogEntry, bool)
+	GetLogs() []*model.StoredLog
 }
 
 // logCache is a struct that implements the LogCache interface.
@@ -78,4 +79,15 @@ func (c *logCache) Get(logID string) (*model.LogEntry, bool) {
 		return nil, false
 	}
 	return &entry.Log, true
+}
+
+func (c *logCache) GetLogs() []*model.StoredLog {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	logs := make([]*model.StoredLog, 0, len(c.store))
+	for _, log := range c.store {
+		logs = append(logs, log)
+	}
+	return logs
 }
