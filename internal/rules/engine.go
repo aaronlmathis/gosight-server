@@ -36,6 +36,12 @@ import (
 	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
+// Evaluator is responsible for evaluating alert rules against incoming metrics and logs.
+// It uses a RuleStore to manage the rules and an AlertManager to handle
+// the state of alerts. The Evaluator maintains a history of metrics
+// for each rule and endpoint combination, allowing it to track the state
+// of alerts over time. The firing map is used to track which rules are currently
+// firing for each endpoint, preventing duplicate alerts from being emitted.
 type Evaluator struct {
 	store    rulestore.RuleStore
 	AlertMgr *alerts.Manager
@@ -242,6 +248,8 @@ func ruleMatchLabels(match model.MatchCriteria, meta *model.Meta) bool {
 	return true
 }
 
+// toFloat converts various types to float64.
+// It handles float64, int, and string types.
 func toFloat(v interface{}) float64 {
 	switch val := v.(type) {
 	case float64:
@@ -256,6 +264,9 @@ func toFloat(v interface{}) float64 {
 	}
 }
 
+// toString converts various types to string.
+// It handles string, float64, and int types.
+// It returns the string representation of the value.
 func toString(v interface{}) string {
 	switch val := v.(type) {
 	case string:

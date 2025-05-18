@@ -26,7 +26,6 @@ package rulestore
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"sync"
 
@@ -45,7 +44,6 @@ type YAMLRuleStore struct {
 
 // NewYAMLStore creates a new YAMLRuleStore with the specified file path.
 func NewYAMLStore(path string) (*YAMLRuleStore, error) {
-	fmt.Println("🗂 Loading rules from file:", path) // or cfg.Alerts.RulePath
 	s := &YAMLRuleStore{
 		path:  path,
 		rules: make(map[string]model.AlertRule),
