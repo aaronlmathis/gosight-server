@@ -92,10 +92,12 @@ type LogResponse struct {
 func (s *HttpServer) HandleLogAPI(w http.ResponseWriter, r *http.Request) {
 	filter := parseLogFilterFromQuery(r)
 
-	// Ensure a sane default
+	// Ensure a sane default and request one extra record to determine if there are more
 	if filter.Limit <= 0 || filter.Limit > 1000 {
 		filter.Limit = 100
 	}
+	originalLimit := filter.Limit
+	filter.Limit = originalLimit + 1 // Request one extra to determine if there are more
 
 	logs, err := s.Sys.Stores.Logs.GetLogs(filter)
 	if err != nil {
@@ -105,13 +107,14 @@ func (s *HttpServer) HandleLogAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Pagination logic (cursor-based)
+	hasMore := len(logs) > originalLimit
 	var nextCursor string
-	hasMore := false
-	if len(logs) > filter.Limit {
-		hasMore = true
-		last := logs[filter.Limit-1]
-		nextCursor = last.Timestamp.Format(time.RFC3339Nano)
-		logs = logs[:filter.Limit] // trim to limit
+
+	if hasMore {
+		// Remove the extra record we requested
+		logs = logs[:originalLimit]
+		// Use the timestamp of the last visible log as the next cursor
+		nextCursor = logs[originalLimit-1].Timestamp.Format(time.RFC3339Nano)
 	}
 
 	resp := LogResponse{

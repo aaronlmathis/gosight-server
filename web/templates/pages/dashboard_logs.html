@@ -17,8 +17,7 @@
 <section class="p-4 space-y-6">
     <div class="mb-6">
         <h1 class="text-2xl font-semibold text-gray-800 dark:text-white">Log Explorer</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Create or view alerts on gosight metrics, logs, or
-            events.</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Search and filter logs from your endpoints.</p>
     </div>
     <!-- Advanced Log Search + Result Filters (Tailwind + Flowbite Compatible) -->
     <form id="log-search-form" class="space-y-6">
@@ -51,6 +50,21 @@
                   <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Source</label>
                     <input type="text" id="filter-source" placeholder="e.g. docker, systemd"
+                      class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white shadow-sm focus:ring-blue-500 focus:border-blue-500 min-h-[2.5rem]">
+                  </div>
+                </div>
+
+                <!-- Row 1.5: Container Name | App Name -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label for="container-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Container Name</label>
+                    <input type="text" id="container-name" placeholder="Filter by container name"
+                      class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white shadow-sm focus:ring-blue-500 focus:border-blue-500 min-h-[2.5rem]">
+                  </div>
+                  
+                  <div>
+                    <label for="app-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Application Name</label>
+                    <input type="text" id="app-name" placeholder="Filter by application name"
                       class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white shadow-sm focus:ring-blue-500 focus:border-blue-500 min-h-[2.5rem]">
                   </div>
                 </div>
@@ -191,23 +205,48 @@
                         class="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap font-mono"></pre>
                 </div>
             </div>
-            <div class="flex justify-center mt-6">
-                <button id="load-more-logs"
-                    class="px-4 py-2 text-sm font-medium text-white bg-gray-800 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
-                    Load More Logs
-                </button>
+            
+            <!-- Pagination Controls -->
+            <div class="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 sm:px-6">
+                <div class="flex flex-1 justify-between sm:hidden">
+                    <button id="prev-page-mobile" class="relative inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Previous
+                    </button>
+                    <button id="next-page-mobile" class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Next
+                    </button>
+                </div>
+                <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700 dark:text-gray-300">
+                            Showing logs from <span class="font-medium" id="cursor-time">-</span>
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                            <button id="prev-page" class="relative inline-flex items-center gap-1 rounded-l-md px-3 py-2 text-gray-400 dark:text-gray-500 ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clip-rule="evenodd" />
+                                </svg>
+                                Previous
+                            </button>
+                            <button id="next-page" class="relative inline-flex items-center gap-1 rounded-r-md px-3 py-2 text-gray-400 dark:text-gray-500 ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed">
+                                Next
+                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </nav>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="p-4 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center">
-            <div class="text-sm text-gray-500 dark:text-gray-400">Cursor: <span id="cursor-pos">-</span></div>
-            <div class="flex gap-2">
-                <button
-                    class="text-sm px-3 py-1 border border-gray-300 dark:border-gray-600 rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
-                    id="prev-page">Prev</button>
-                <button
-                    class="text-sm px-3 py-1 border border-gray-300 dark:border-gray-600 rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
-                    id="next-page">Next</button>
-            </div>
+        <div class="p-4 border-t border-gray-100 dark:border-gray-700 flex justify-center items-center">
+            <button id="load-more-logs"
+                class="text-sm px-4 py-2 rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled>
+                Load More
+            </button>
         </div>
     </div>
 
