@@ -516,7 +516,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Main log row
       const row = document.createElement("tr");
-      row.className = `border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 ${isExpanded ? 'bg-blue-50 dark:bg-blue-900' : ''}`;
+      row.className = `divide-y divide-gray-100 dark:divide-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 ${isExpanded ? 'bg-gray-50 dark:bg-gray-800' : ''}`;
       row.dataset.logKey = logKey;
       
       row.innerHTML = `
@@ -541,21 +541,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Details row
       const detailsRow = document.createElement("tr");
-      detailsRow.className = `details-row ${isExpanded ? '' : 'hidden'} bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700`;
+      detailsRow.className = `details-row ${isExpanded ? '' : 'hidden'} bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800`;
       detailsRow.dataset.logKey = logKey;
       
       detailsRow.innerHTML = `
-        <td colspan="7" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">
-          <div class="mb-4">
-            <div class="text-xs uppercase font-semibold text-gray-500 dark:text-gray-400 mb-1">Full Message</div>
-            <pre class="text-sm text-gray-800 dark:text-gray-100 font-mono whitespace-pre-wrap break-words bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
-              ${sanitize(log.message)}
-            </pre>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            ${renderSection("Tags", log.tags)}
-            ${renderSection("Meta", filterOutExtra(log.meta))}
-            ${renderSection("Fields", log.fields)}
+        <td colspan="7" class="px-6 py-4">
+          <div class="space-y-4">
+            <!-- Full Message Section -->
+            <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+              <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                <h3 class="text-xs uppercase font-medium text-gray-500 dark:text-gray-400">Full Message</h3>
+              </div>
+              <div class="p-4">
+                <pre class="text-xs text-gray-700 dark:text-gray-300 font-mono whitespace-pre-wrap break-words">${sanitize(log.message)}</pre>
+              </div>
+            </div>
+
+            <!-- Metadata Sections -->
+            <div class="grid grid-cols-3 gap-4">
+              ${renderSection("Tags", log.tags)}
+              ${renderSection("Meta", filterOutExtra(log.meta))}
+              ${renderSection("Fields", log.fields)}
+            </div>
           </div>
         </td>
       `;
@@ -575,12 +582,12 @@ document.addEventListener("DOMContentLoaded", () => {
         
         if (isCurrentlyExpanded) {
           state.expandedLogKeys.delete(logKey);
-          mainRow.classList.remove("bg-blue-50", "dark:bg-blue-900");
+          mainRow.classList.remove("bg-gray-50", "dark:bg-gray-800");
           e.target.textContent = "Show Details";
           detailsRow.classList.add("hidden");
         } else {
           state.expandedLogKeys.add(logKey);
-          mainRow.classList.add("bg-blue-50", "dark:bg-blue-900");
+          mainRow.classList.add("bg-gray-50", "dark:bg-gray-800");
           e.target.textContent = "Hide Details";
           detailsRow.classList.remove("hidden");
         }
@@ -664,27 +671,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!obj || typeof obj !== "object" || Object.keys(obj).length === 0) return "";
 
     const entries = Object.entries(obj);
-    const rows = entries.map(([key, val], i) => {
+    const rows = entries.map(([key, val]) => {
       const stringVal = typeof val === "object" ? JSON.stringify(val, null, 2) : String(val);
       const safeKey = sanitize(key);
-      const isTruncated = stringVal.length > 60;
-      const displayShort = isTruncated ? sanitize(stringVal.slice(0, 60) + "…") : sanitize(stringVal);
-      const fullValue = stringVal;
-      const bg = i % 2 === 0 ? "bg-white dark:bg-gray-900" : "bg-gray-50 dark:bg-gray-800";
+      const displayVal = sanitize(stringVal);
 
       return `
-        <tr class="group ${bg} border-b border-gray-100 dark:border-gray-700">
-          <td class="px-2 py-1 font-medium text-xs text-gray-500 whitespace-nowrap border-l-4 border-blue-200 dark:border-blue-800">
-            ${safeKey}
-          </td>
-          <td class="px-2 py-1 text-xs break-all text-gray-800 dark:text-gray-100 font-mono">
-            <span title="${fullValue}" class="inline-block">${displayShort}</span>
-            ${isTruncated ? `
-              <button class="ml-2 text-gray-400 hover:text-gray-700 dark:hover:text-white text-xs copy-btn" 
-                data-copy="${fullValue}" title="Copy full value">📋</button>
-            ` : ""}
-            <button class="ml-2 inline-block text-blue-600 hover:underline text-xs font-medium add-filter"
-              data-filter-key="${safeKey}" data-filter-value="${fullValue}">
+        <tr>
+          <td class="text-xs text-gray-500 dark:text-gray-400 font-medium py-1">${safeKey}</td>
+          <td class="text-xs text-gray-700 dark:text-gray-300 font-mono py-1 pl-4">${displayVal}</td>
+          <td class="text-xs py-1 pl-2">
+            <button class="text-blue-600 hover:underline text-xs font-medium add-filter"
+              data-filter-key="${safeKey}" data-filter-value="${stringVal}">
               + Add Filter
             </button>
           </td>
@@ -693,11 +691,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }).join("");
 
     return `
-      <div class="mb-4 border rounded border-gray-200 dark:border-gray-700">
-        <div class="px-3 py-2 border-b border-gray-100 dark:border-gray-700 font-semibold text-xs uppercase text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800">
-          ${title}
+      <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+        <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+          <h3 class="text-xs uppercase font-medium text-gray-500 dark:text-gray-400">${title}</h3>
         </div>
-        <table class="w-full text-left text-xs table-fixed">${rows}</table>
+        <div class="p-4">
+          <table class="w-full">
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </div>
       </div>
     `;
   }
