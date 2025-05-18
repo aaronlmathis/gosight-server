@@ -41,6 +41,9 @@ import (
 var Version = "dev" // default
 // go build -ldflags "-X main.Version=0.3.2" -o gosight-agent ./cmd/agent
 
+// main is the entry point for the GoSight server.
+// It initializes the server, sets up the gRPC and HTTP servers,
+// and handles graceful shutdown.
 func main() {
 
 	// Graceful Shutdown Context

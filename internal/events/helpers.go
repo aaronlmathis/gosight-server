@@ -25,6 +25,7 @@ import (
 	"github.com/aaronlmathis/gosight-shared/model"
 )
 
+// BuildLogEventMeta builds a map of metadata for a log event
 func BuildLogEventMeta(log *model.LogEntry, payload *model.LogPayload) map[string]string {
 	meta := make(map[string]string)
 

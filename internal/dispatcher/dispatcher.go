@@ -40,6 +40,9 @@ type Dispatcher struct {
 	Routes map[string]model.ActionRoute
 }
 
+// NewDispatcher initializes a new Dispatcher with the provided route map.
+// The route map should contain action IDs as keys and ActionRoute structs as values.
+// The ActionRoute struct contains the match filter and a list of actions to be executed.
 func NewDispatcher(routeMap map[string]model.ActionRoute) *Dispatcher {
 	return &Dispatcher{Routes: routeMap}
 }

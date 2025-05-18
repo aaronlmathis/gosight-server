@@ -20,7 +20,10 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
 // gosight/agent/internal/bootstrap/auth.go
-
+// GoSight - Authentication Initialization
+// This file contains the initialization logic for the authentication providers in the GoSight server.
+// The authentication providers are responsible for handling user authentication
+// using various methods such as local authentication and OAuth2.
 package bootstrap
 
 import (

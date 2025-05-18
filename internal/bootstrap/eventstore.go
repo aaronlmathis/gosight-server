@@ -19,8 +19,11 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// gosight/agent/internal/bootstrap/event_store.go
-
+// File: gosight/agent/internal/bootstrap/event_store.go
+// Description: This file contains the initialization logic for the event store in the GoSight server.
+// The event store is responsible for storing and retrieving events.
+// It supports different storage engines, such as PostgreSQL.
+// The initialization function takes a configuration object and returns an instance of the event store.
 package bootstrap
 
 import (

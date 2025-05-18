@@ -19,8 +19,12 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// gosight/agent/internal/bootstrap/alert_store.go
-
+// gosight/agent/internal/bootstrap/alertstore.go
+// Alert Store Initialization
+// This file contains the initialization logic for the alert store in the GoSight server.
+// The alert store is responsible for storing and retrieving alert instances.
+// It supports different storage engines, such as PostgreSQL.
+// The initialization function takes a configuration object and returns an instance of the alert store.
 package bootstrap
 
 import (

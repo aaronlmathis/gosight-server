@@ -28,11 +28,18 @@ import (
 	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
+// LogCache is an interface that defines methods for adding and retrieving log entries.
+// It is used to cache log entries for quick access and retrieval.
+// The cache is thread-safe and uses a mutex to synchronize access to the underlying data structure.
 type LogCache interface {
 	Add(batch []*model.StoredLog)
 	Get(logID string) (*model.LogEntry, bool)
 }
 
+// logCache is a struct that implements the LogCache interface.
+// It uses a map to store log entries, where the key is the log ID and the value is the log entry.
+// The cache is protected by a mutex to ensure thread safety.
+// It also maintains a set of endpoints to track the endpoints associated with the log entries.
 type logCache struct {
 	mu        sync.RWMutex
 	store     map[string]*model.StoredLog

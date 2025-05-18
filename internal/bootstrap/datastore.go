@@ -19,9 +19,12 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// gosight/agent/internal/bootstrap/data_store.go
-// // Package bootstrap initializes the user store
-// Package store provides an interface for storing and retrieving user / permission data
+// File: gosight/agent/internal/bootstrap/data_store.go
+// Description: This file contains the initialization logic for the data store in the GoSight server.
+// The data store is responsible for storing and retrieving user and permission data.
+// It supports different storage engines, such as PostgreSQL.
+// The initialization function takes a configuration object and returns an instance of the data store.
+// // Package store provides an interface for storing and retrieving user / permission data
 
 package bootstrap
 

@@ -19,8 +19,15 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
+// File: gosight-server/internal/cache/cache.go
+// Description: Package cache provides a unified cache for the GoSight server.
+// It includes caches for processes, metrics, tags, logs, and other components.
+// The cache is used to store and retrieve data efficiently.
 package cache
 
+// Cache is a struct that holds all the caches used in the GoSight server.
+// It includes caches for processes, metrics, tags, logs, and other components.
+// Each cache is represented by a specific type, such as ProcessCache, MetricCache, TagCache, and LogCache.
 type Cache struct {
 	Processes ProcessCache
 	Metrics   MetricCache
@@ -29,11 +36,7 @@ type Cache struct {
 	/*
 		Agents    AgentCache
 		Endpoints EndpointCache
-
-
-		Tags      TagCache
 		Alerts    AlertCache
 		Events    EventCache
-		Metrics   MetricCache
 	*/
 }

@@ -19,9 +19,12 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// gosight/agent/internal/bootstrap/user_store.go
-// // Package bootstrap initializes the user store
-// Package store provides an interface for storing and retrieving user / permission data
+// File: gosight-server/internal/bootstrap/userstore.go
+// Description: Package bootstrap initializes the user store for the GoSight server.
+// The user store is responsible for storing and retrieving user and permission data.
+// Supports different storage engines, such as PostgreSQL.
+// The initialization function takes a configuration object and returns an instance of the user store.
+// The user store is used to manage user accounts, permissions, and roles.
 
 package bootstrap
 
@@ -36,6 +39,9 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// InitUserStore initializes the user store for the GoSight server.
+// The user store is responsible for storing and retrieving user and permission data.
+// It supports different storage engines, such as PostgreSQL.
 func InitUserStore(cfg *config.Config) (userstore.UserStore, error) {
 	userStoreEngine := cfg.UserStore.Engine
 

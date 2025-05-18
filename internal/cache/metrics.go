@@ -19,8 +19,8 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// internal/cache/metrics.go
-
+// Package cache provides a unified cache for the GoSight server.
+// It includes caches for processes, metrics, tags, logs, and other components.
 package cache
 
 import (
@@ -33,6 +33,9 @@ import (
 )
 
 // MetricCache is an in-memory cache for metrics as well as their meta data
+// and tags. It is used to store and retrieve metric information efficiently.
+// The cache is designed to be thread-safe and allows concurrent access.
+// It uses a mutex to synchronize access to the underlying data structure.
 type MetricCache interface {
 	Add(payload *model.MetricPayload)
 	GetNamespaces() []string                                // Get all known namespaces
@@ -46,17 +49,20 @@ type MetricCache interface {
 	GetAllTagKeys() []string                   // Get all known tag keys
 	GetAllTagValuesForKey(key string) []string // Get all known values for tag key
 
-	// Label = Metric dimension + Tags (prometheus labels)
 	GetAllKnownLabelValues(label, contains string) []string  // Get all known values for a given label key (dimensions + tags) (optionally filtered)
 	GetLabelValues(label, contains string) []string          // Get all label values for a known label (optionally filtered)
 	GetMetricsWithLabels(filters map[string]string) []string // Get all metric names that match a given label filter
 
 	Prune()
 
-	// For debugtools
 	GetAllEntries() []*MetricEntry
 }
 
+// MetricEntry represents a metric entry in the cache.
+// It contains information about the metric, including its namespace, subnamespace,
+// name, unit, type, dimensions, labels, tags, and emitters.
+// The dimensions and labels are stored as maps of string sets, allowing for efficient
+// membership testing and uniqueness.
 type MetricEntry struct {
 	Namespace string
 	SubNS     string
@@ -69,6 +75,11 @@ type MetricEntry struct {
 	Tags       map[string]StringSet // Tags are user-defined key value pairs, added by the user in the Meta
 	Emitters   map[string]struct{}  // endpoint IDs
 }
+
+// metricCache is a struct that implements the MetricCache interface.
+// It uses a map to store metric entries, where the key is the full metric name
+// (namespace + subnamespace + name) and the value is the MetricEntry.
+// The cache is protected by a mutex to ensure thread safety.
 type metricCache struct {
 	mu sync.RWMutex
 
@@ -80,6 +91,10 @@ type metricCache struct {
 	LastSeen      map[string]int64
 }
 
+// NewMetricCache creates a new instance of MetricCache.
+// It initializes the cache with empty maps for namespaces, subnamespaces,
+// metric entries, label values, endpoint metadata, and last seen timestamps.
+// The cache is designed to be thread-safe and allows concurrent access.
 func NewMetricCache() MetricCache {
 	return &metricCache{
 
@@ -92,6 +107,9 @@ func NewMetricCache() MetricCache {
 	}
 }
 
+// Add adds a new metric payload to the cache.
+// It updates the metric entries, namespaces, subnamespaces, label values,
+// and endpoint metadata based on the provided payload.
 func (c *metricCache) Add(payload *model.MetricPayload) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -150,6 +168,9 @@ func (c *metricCache) Add(payload *model.MetricPayload) {
 	}
 }
 
+// GetNamespaces returns a slice of all known namespaces in the cache.
+// It iterates over the namespaces map and collects the keys into a slice.
+// The function is thread-safe and uses a read lock to ensure concurrent access.
 func (c *metricCache) GetNamespaces() []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -161,6 +182,10 @@ func (c *metricCache) GetNamespaces() []string {
 	return out
 }
 
+// GetMetricNames returns a slice of all metric names for a given namespace and subnamespace.
+// It checks if the namespace and subnamespace exist in the metric entries map
+// and collects the metric names into a slice. The function is thread-safe and uses
+// a read lock to ensure concurrent access.
 func (c *metricCache) GetMetricNames(namespace, subNamespace string) []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -174,6 +199,10 @@ func (c *metricCache) GetMetricNames(namespace, subNamespace string) []string {
 	return names
 }
 
+// GetSubNamespaces returns a slice of all known subnamespaces for a given namespace.
+// It checks if the namespace exists in the subnamespaces map and collects
+// the keys into a slice. The function is thread-safe and uses a read lock
+// to ensure concurrent access.
 func (c *metricCache) GetSubNamespaces(namespace string) []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -190,6 +219,8 @@ func (c *metricCache) GetSubNamespaces(namespace string) []string {
 	return out
 }
 
+// GetAllMetricNames returns a slice of all known metric names in the cache.
+// It iterates over the metric entries map and collects the full names into a slice.
 func (c *metricCache) GetAllMetricNames() []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -201,6 +232,10 @@ func (c *metricCache) GetAllMetricNames() []string {
 	return names
 }
 
+// GetAvailableDimensions returns a map of all available dimensions in the cache.
+// It iterates over the label values map and collects the keys and their corresponding
+// values into a new map. The function only includes keys that are used as dimensions
+// (not tags only). The function is thread-safe and uses a read lock to ensure concurrent access.
 func (c *metricCache) GetAvailableDimensions() map[string][]string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -226,6 +261,10 @@ func (c *metricCache) GetAvailableDimensions() map[string][]string {
 	return out
 }
 
+// GetMetricDimensions returns a slice of all dimension keys for a given metric name.
+// It checks if the metric name exists in the metric entries map and collects
+// the dimension keys into a slice. The function is thread-safe and uses
+// a read lock to ensure concurrent access.
 func (c *metricCache) GetMetricDimensions(metricName string) []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -242,6 +281,10 @@ func (c *metricCache) GetMetricDimensions(metricName string) []string {
 	return keys
 }
 
+// GetAllTagKeys returns a slice of all known tag keys in the cache.
+// It iterates over the EndpointMeta map and collects the keys into a slice.
+// The function is thread-safe and uses a read lock to ensure concurrent access.
+// It also ensures that the keys are unique by using a set.
 func (c *metricCache) GetAllTagKeys() []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -261,6 +304,10 @@ func (c *metricCache) GetAllTagKeys() []string {
 	}
 	return keys
 }
+
+// GetAllTagValuesForKey returns a slice of all known tag values for a given key.
+// It iterates over the EndpointMeta map and collects the values into a slice.
+// The function is thread-safe and uses a read lock to ensure concurrent access.
 func (c *metricCache) GetAllTagValuesForKey(key string) []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -280,10 +327,16 @@ func (c *metricCache) GetAllTagValuesForKey(key string) []string {
 	return values
 }
 
+// GetAllKnownLabelValues returns a slice of all known label values for a given label key.
+// It iterates over the label values map and collects the values into a slice.
 func (c *metricCache) GetAllKnownLabelValues(label, contains string) []string {
 	return c.GetLabelValues(label, contains)
 }
 
+// GetLabelValues returns a slice of all label values for a given label key.
+// It checks if the label key exists in the label values map and collects
+// the values into a slice. The function also allows for filtering based on
+// a substring match. If the contains parameter is empty, all values are returned.
 func (c *metricCache) GetLabelValues(label, contains string) []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -302,6 +355,9 @@ func (c *metricCache) GetLabelValues(label, contains string) []string {
 	return out
 }
 
+// GetMetricsWithLabels returns a slice of all metric names that match a given label filter.
+// It iterates over the metric entries map and checks if the labels match the filters.
+// The function allows for filtering based on multiple label key-value pairs.
 func (c *metricCache) GetMetricsWithLabels(filters map[string]string) []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -330,6 +386,10 @@ func (c *metricCache) GetMetricsWithLabels(filters map[string]string) []string {
 
 	return matched
 }
+
+// Prune removes stale entries from the cache.
+// It identifies endpoints that have not been seen for a certain period
+// (e.g., 10 minutes) and removes them from the cache.
 func (c *metricCache) Prune() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -358,6 +418,8 @@ func (c *metricCache) Prune() {
 	}
 }
 
+// GetAllEntries returns a slice of all metric entries in the cache.
+// It iterates over the metric entries map and collects the entries into a slice.
 func (c *metricCache) GetAllEntries() []*MetricEntry {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -369,8 +431,10 @@ func (c *metricCache) GetAllEntries() []*MetricEntry {
 	return entries
 }
 
-// Helpers
-
+// AddMetaFieldsToLabels adds metadata fields to the labels map.
+// It takes a pointer to a model.Meta object and a map of labels.
+// The function adds various metadata fields (e.g., agent ID, host ID, etc.)
+// to the labels map, ensuring that the keys and values are unique.
 func AddMetaFieldsToLabels(meta *model.Meta, labels map[string]StringSet) {
 	if meta == nil || labels == nil {
 		return

@@ -20,6 +20,10 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
 // File: server/internal/bootstrap/config.go
+// Description: This file contains the configuration loading logic for the GoSight server.
+// It uses command-line flags, environment variables, and a configuration file to set up the server's configuration.
+// The configuration includes server addresses, logging settings, and other parameters.
+// The configuration is loaded into a Config struct, which is then used throughout the application.
 // Loads ENV, FLAG, Configs
 
 package bootstrap

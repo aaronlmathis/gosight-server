@@ -45,6 +45,8 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+// GrpcServer represents a gRPC server instance.
+// It contains the system context, log handler, stream handler, listener, and server instance.
 type GrpcServer struct {
 	Sys           *sys.SystemContext
 	LogHandler    *telemetry.LogsHandler

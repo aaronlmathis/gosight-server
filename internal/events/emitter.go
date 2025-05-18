@@ -19,7 +19,6 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// gosight/agent/shared/model/event.go
 // Package events provides an event emitter for the GoSight application.
 package events
 

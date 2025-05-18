@@ -36,6 +36,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Config represents the configuration structure for the GoSight server.
+// It includes settings for server address, storage engine, database path,
+// logging, TLS settings, and debug options.
 type Config struct {
 	Server struct {
 		GRPCAddr     string        `yaml:"grpc_addr"`
@@ -137,12 +140,16 @@ type Config struct {
 	} `yaml:"auth"`
 }
 
+// GoogleConfig represents the configuration for Google OAuth2 authentication.
+// It includes the client ID, client secret, and redirect URI.
 type GoogleConfig struct {
 	ClientID     string `yaml:"client_id"`
 	ClientSecret string `yaml:"client_secret"`
 	RedirectURI  string `yaml:"redirect_uri"`
 }
 
+// LoadConfig loads the configuration from a YAML file.
+// It returns a Config struct and an error if any occurs during loading.
 func LoadConfig(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -155,6 +162,10 @@ func LoadConfig(path string) (*Config, error) {
 	return &cfg, nil
 }
 
+// ApplyEnvOverrides applies environment variable overrides to the configuration.
+// It checks for specific environment variables and updates the corresponding
+// fields in the Config struct. This allows for dynamic configuration without
+// modifying the YAML file.
 func ApplyEnvOverrides(cfg *Config) {
 	if val := os.Getenv("GOSIGHT_GRPC_LISTEN"); val != "" {
 		cfg.Server.GRPCAddr = val
@@ -197,6 +208,8 @@ func ApplyEnvOverrides(cfg *Config) {
 	}
 }
 
+// ToOAuthConfig converts the GoogleConfig to an OAuth2 configuration.
+// It sets the client ID, client secret, redirect URI, scopes, and endpoint.
 func (g *GoogleConfig) ToOAuthConfig() *oauth2.Config {
 	return &oauth2.Config{
 		ClientID:     g.ClientID,

@@ -19,7 +19,11 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// gosight/agent/internal/bootstrap/log_store.go
+// File: gosight/agent/internal/bootstrap/logstore.go
+// Description: Package bootstrap initializes the log store for the GoSight agent.
+// The log store is responsible for storing and retrieving logs.
+// Supports different storage engines, such as JSON File and VictoriaMetrics
+// Initialization function takes a configuration object and returns an instance of the log store.
 package bootstrap
 
 import (

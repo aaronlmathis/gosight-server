@@ -20,7 +20,12 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
 // server/internal/bootstrap/caches.go
-
+// gosight-server - Caches Initialization
+// This file contains the initialization logic for the caches in the GoSight server.
+// The caches are used to store frequently accessed data in memory for faster access.
+// The caches include metric cache, tag cache, process cache, and log cache.
+// The initialization function takes a context and a data store as parameters
+// and returns a pointer to the Cache struct containing all the caches.
 package bootstrap
 
 import (

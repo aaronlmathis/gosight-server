@@ -45,3 +45,4 @@ server/logstore
 **/generate_docs.sh
 **/lint_check.txt
 logstore/
+generatedocs.sh

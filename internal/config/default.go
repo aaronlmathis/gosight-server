@@ -31,6 +31,7 @@ storage: "sqlite"
 database_path: "./data/gobright.db"
 `
 
+// EnsureDefaultConfig checks if the default configuration file exists at the specified path.
 func EnsureDefaultConfig(path string) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {

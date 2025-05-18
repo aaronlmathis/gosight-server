@@ -19,27 +19,24 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// gosight/agent/internal/bootstrap/rule_store.go
-// // Package bootstrap initializes the rule store
+// File: gosight/agent/internal/bootstrap/routestore.go
+// Description: Package bootstrap initializes the route store for the GoSight agent.
+// The route store is responsible for storing and retrieving routes.
+// Supports different storage engines, such as JSON File
 
 package bootstrap
 
 import (
-	"errors"
-
 	"github.com/aaronlmathis/gosight-server/internal/config"
-	"github.com/aaronlmathis/gosight-server/internal/store/rulestore"
+	"github.com/aaronlmathis/gosight-server/internal/store/routestore"
 )
 
-// InitRuleStore initializes the rule store based on the configuration.
-func InitRuleStore(cfg *config.Config) (rulestore.RuleStore, error) {
-	switch cfg.RuleStore.Engine {
-	case "yaml":
-		return rulestore.NewYAMLStore(cfg.RuleStore.Path)
-	//case "memory":
-	//return rulestore.NewMemoryStore(), nil
-	default:
-		return nil, errors.New("unsupported rule store engine: " + cfg.RuleStore.Engine)
+// InitMetricIndex initializes the metric index for the GoSight agent.
+func InitRouteStore(cfg *config.Config) (*routestore.RouteStore, error) {
+	// Initialize the route store
+	routeStore, err := routestore.NewRouteStore(cfg.RouteStore.Path)
+	if err != nil {
+		return nil, err
 	}
-
+	return routeStore, nil
 }

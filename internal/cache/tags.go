@@ -1,3 +1,24 @@
+/*
+SPDX-License-Identifier: GPL-3.0-or-later
+
+Copyright (C) 2025 Aaron Mathis aaron.mathis@gmail.com
+
+This file is part of GoSight.
+
+GoSight is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+GoSight is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with GoSight. If not, see https://www.gnu.org/licenses/.
+*/
+
 package cache
 
 import (
@@ -8,6 +29,7 @@ import (
 	"github.com/aaronlmathis/gosight-shared/model"
 )
 
+// Add adds a value to the StringSet
 func (s StringSet) Add(val string) {
 	if val != "" {
 		s[val] = struct{}{}
@@ -31,6 +53,11 @@ type TagCache interface {
 	GetAllEndpoints() map[string]map[string]StringSet
 }
 
+// tagCache is a thread-safe in-memory cache for tags
+// It uses a map of maps to store tags for each endpoint
+// and a reverse index to quickly find endpoints by tag
+// It also tracks the last seen time for each endpoint
+// and allows for flushing to a datastore
 type tagCache struct {
 	mu sync.RWMutex
 
@@ -42,6 +69,9 @@ type tagCache struct {
 	dirty          map[string]struct{}             // endpointIDs that changed
 }
 
+// NewTagCache creates a new TagCache
+// It initializes the maps to avoid nil checks later
+// It is not thread-safe and should only be called once at startup
 func NewTagCache() TagCache {
 	return &tagCache{
 		Endpoints:      make(map[string]map[string]StringSet),
@@ -54,6 +84,9 @@ func NewTagCache() TagCache {
 }
 
 // Add adds tags from a MetricPayload to the cache at ingestion (telemetry/stream.go)
+// It uses the endpointID as the key and the tags as the value
+// It also tracks the last seen time for each endpoint
+// It does not check for duplicates or empty values
 func (c *tagCache) Add(payload *model.MetricPayload) {
 	if payload == nil || payload.Meta == nil || payload.Meta.EndpointID == "" {
 		return
@@ -173,6 +206,8 @@ func (c *tagCache) GetFlattenedTagsForEndpoint(endpointID string) map[string]str
 	return flat
 }
 
+// GetTagKeys retrieves a copy of the tag keys
+// It returns a slice of strings containing all the keys
 func (c *tagCache) GetTagKeys() []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -184,6 +219,9 @@ func (c *tagCache) GetTagKeys() []string {
 	return keys
 }
 
+// getTagValues retrieves a copy of the tag values for a specific key
+// It returns a StringSet containing all the values for the given key
+// It is a copy of the original set
 func (c *tagCache) GetTagValues(key string) StringSet {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
