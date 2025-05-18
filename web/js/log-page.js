@@ -1275,10 +1275,18 @@ document.addEventListener("DOMContentLoaded", () => {
           ? `${key}: ${formatTimestampForDisplay(val)}`
           : `${key}:${val}`;
 
-        span.innerHTML = `
-          <span class="mr-1">${display}</span>
-          <button type="button" class="ml-1 text-xs remove-tag" title="Remove filter">&times;</button>
-        `;
+        const textSpan = document.createElement("span");
+        textSpan.className = "mr-1";
+        textSpan.textContent = display;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "ml-1 text-xs remove-tag";
+        button.title = "Remove filter";
+        button.textContent = "×";
+
+        span.appendChild(textSpan);
+        span.appendChild(button);
 
         tagContainer.appendChild(span);
       }
@@ -1294,10 +1302,18 @@ document.addEventListener("DOMContentLoaded", () => {
       span.dataset.customTag = "false"; // Mark as not a custom tag
       span.dataset.key = "level";
       span.dataset.value = v;
-      span.innerHTML = `
-        <span class="mr-1">level:${v}</span>
-        <button type="button" class="ml-1 text-xs remove-tag" title="Remove filter">&times;</button>
-      `;
+      const textSpan = document.createElement("span");
+      textSpan.className = "mr-1";
+      textSpan.textContent = `level:${v}`;
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "ml-1 text-xs remove-tag";
+      button.title = "Remove filter";
+      button.textContent = "×";
+
+      span.appendChild(textSpan);
+      span.appendChild(button);
       tagContainer.appendChild(span);
     });
 
@@ -1307,10 +1323,18 @@ document.addEventListener("DOMContentLoaded", () => {
       span.dataset.customTag = "false"; // Mark as not a custom tag
       span.dataset.key = "category";
       span.dataset.value = v;
-      span.innerHTML = `
-        <span class="mr-1">category:${v}</span>
-        <button type="button" class="ml-1 text-xs remove-tag" title="Remove filter">&times;</button>
-      `;
+      const textSpan = document.createElement("span");
+      textSpan.className = "mr-1";
+      textSpan.textContent = `category:${v}`;
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "ml-1 text-xs remove-tag";
+      button.title = "Remove filter";
+      button.textContent = "×";
+
+      span.appendChild(textSpan);
+      span.appendChild(button);
       tagContainer.appendChild(span);
     });
 
