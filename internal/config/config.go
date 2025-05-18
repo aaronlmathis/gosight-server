@@ -28,6 +28,7 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 package config
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -137,12 +138,39 @@ type Config struct {
 		MFASecret  string       `yaml:"mfa_secret_key"`
 		JWTSecret  string       `yaml:"jwt_secret"`
 		Google     GoogleConfig `yaml:"google"`
+		AWS        AWSConfig    `yaml:"aws"`
+		Azure      AzureConfig  `yaml:"azure"`
+		GitHub     GitHubConfig `yaml:"github"`
 	} `yaml:"auth"`
 }
 
 // GoogleConfig represents the configuration for Google OAuth2 authentication.
 // It includes the client ID, client secret, and redirect URI.
 type GoogleConfig struct {
+	ClientID     string `yaml:"client_id"`
+	ClientSecret string `yaml:"client_secret"`
+	RedirectURI  string `yaml:"redirect_uri"`
+}
+
+// AWSConfig represents the configuration for AWS Cognito authentication
+type AWSConfig struct {
+	Region       string `yaml:"region"`
+	UserPoolID   string `yaml:"user_pool_id"`
+	ClientID     string `yaml:"client_id"`
+	ClientSecret string `yaml:"client_secret"`
+	RedirectURI  string `yaml:"redirect_uri"`
+}
+
+// AzureConfig represents the configuration for Azure AD authentication
+type AzureConfig struct {
+	TenantID     string `yaml:"tenant_id"`
+	ClientID     string `yaml:"client_id"`
+	ClientSecret string `yaml:"client_secret"`
+	RedirectURI  string `yaml:"redirect_uri"`
+}
+
+// GitHubConfig represents the configuration for GitHub OAuth authentication
+type GitHubConfig struct {
 	ClientID     string `yaml:"client_id"`
 	ClientSecret string `yaml:"client_secret"`
 	RedirectURI  string `yaml:"redirect_uri"`
@@ -217,5 +245,56 @@ func (g *GoogleConfig) ToOAuthConfig() *oauth2.Config {
 		RedirectURL:  g.RedirectURI,
 		Scopes:       []string{"openid", "email", "profile"},
 		Endpoint:     google.Endpoint,
+	}
+}
+
+// ToOAuthConfig converts the AWSConfig to an OAuth2 configuration
+func (a *AWSConfig) ToOAuthConfig() *oauth2.Config {
+	return &oauth2.Config{
+		ClientID:     a.ClientID,
+		ClientSecret: a.ClientSecret,
+		RedirectURL:  a.RedirectURI,
+		Scopes:       []string{"openid", "email", "profile"},
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  fmt.Sprintf("https://%s.auth.%s.amazoncognito.com/oauth2/authorize", a.UserPoolID, a.Region),
+			TokenURL: fmt.Sprintf("https://%s.auth.%s.amazoncognito.com/oauth2/token", a.UserPoolID, a.Region),
+		},
+	}
+}
+
+// ToOAuthConfig converts the AzureConfig to an OAuth2 configuration
+func (a *AzureConfig) ToOAuthConfig() *oauth2.Config {
+	return &oauth2.Config{
+		ClientID:     a.ClientID,
+		ClientSecret: a.ClientSecret,
+		RedirectURL:  a.RedirectURI,
+		Scopes: []string{
+			"openid",
+			"email",
+			"profile",
+			"offline_access",
+			"https://graph.microsoft.com/User.Read",
+		},
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/v2.0/authorize", a.TenantID),
+			TokenURL: fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/v2.0/token", a.TenantID),
+		},
+	}
+}
+
+// ToOAuthConfig converts the GitHubConfig to an OAuth2 configuration
+func (g *GitHubConfig) ToOAuthConfig() *oauth2.Config {
+	return &oauth2.Config{
+		ClientID:     g.ClientID,
+		ClientSecret: g.ClientSecret,
+		RedirectURL:  g.RedirectURI,
+		Scopes: []string{
+			"read:user",
+			"user:email",
+		},
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  "https://github.com/login/oauth/authorize",
+			TokenURL: "https://github.com/login/oauth/access_token",
+		},
 	}
 }

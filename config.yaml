@@ -74,6 +74,24 @@ google:
   client_secret: ""
   redirect_uri: "http://localhost:8080/callback?provider=google"
 
+aws:
+  region: ""
+  user_pool_id: ""
+  client_id: ""
+  client_secret: ""
+  redirect_uri: "http://localhost:8080/callback?provider=aws"
+
+azure:
+  tenant_id: ""
+  client_id: ""
+  client_secret: ""
+  redirect_uri: "http://localhost:8080/callback?provider=azure"
+
+github:
+  client_id: ""
+  client_secret: ""
+  redirect_uri: "http://localhost:8080/callback?provider=github"
+
 # Auth Config
 auth:
   sso_enabled: true                                                # Is SSO allowed for login?
