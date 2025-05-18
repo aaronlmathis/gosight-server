@@ -6,6 +6,8 @@
 import "github.com/aaronlmathis/gosight-server/internal/bootstrap"
 ```
 
+Package bootstrap initializes the GoSight server. It sets up the logging, metric index, log store, metric store, data store, agent tracker, meta tracker, websocket hub, user store, event store, rule store, emitter/alert manager, evaluator, and authentication providers. It loads these components into a SystemContext and returns an error if any of the components fail to initialize.
+
 SPDX\-License\-Identifier: GPL\-3.0\-or\-later
 
 Copyright \(C\) 2025 Aaron Mathis aaron.mathis@gmail.com
@@ -17,8 +19,6 @@ GoSight is free software: you can redistribute it and/or modify it under the ter
 GoSight is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with GoSight. If not, see https://www.gnu.org/licenses/.
-
-Package bootstrap initializes the GoSight server. It sets up the logging, metric index, log store, metric store, data store, agent tracker, meta tracker, websocket hub, user store, event store, rule store, emitter/alert manager, evaluator, and authentication providers. It loads these components into a SystemContext and returns an error if any of the components fail to initialize.
 
 ## Index
 
@@ -42,7 +42,7 @@ Package bootstrap initializes the GoSight server. It sets up the logging, metric
 
 
 <a name="InitAlertStore"></a>
-## func [InitAlertStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/alertstore.go#L38>)
+## func [InitAlertStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/alertstore.go#L44>)
 
 ```go
 func InitAlertStore(cfg *config.Config) (alertstore.AlertStore, error)
@@ -96,7 +96,7 @@ func InitEventStore(cfg *config.Config) (eventstore.EventStore, error)
 InitEventStore initializes the event store for the GoSight server.
 
 <a name="InitGoSight"></a>
-## func [InitGoSight](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/init.go#L51>)
+## func [InitGoSight](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/init.go#L45>)
 
 ```go
 func InitGoSight(ctx context.Context) (*sys.SystemContext, error)
