@@ -81,14 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Add form submit handler
     elements.searchForm.addEventListener("submit", (e) => {
       e.preventDefault();
-      state.currentCursor = null;
-      state.previousCursors = [];
-      state.nextCursor = null;
-      state.hasMore = false;
-      state.cursorStack = [];
-      renderActiveFiltersFromForm();
-      updateURLFromForm();
-      fetchLogs();
+      handleFilterChange();
     });
 
     // Add reset button handler
@@ -124,6 +117,119 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Setup pagination
     setupPaginationListeners();
+
+    // Setup dropdown handlers
+    setupDropdownHandlers();
+  }
+
+  function setupDropdownHandlers() {
+    // Handle level dropdown
+    const levelButton = document.getElementById("filter-level");
+    const levelDropdown = document.getElementById("filter-level-dropdown");
+    
+    if (levelButton && levelDropdown) {
+        levelButton.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            levelDropdown.classList.toggle("hidden");
+        });
+    }
+
+    // Handle category dropdown
+    const categoryButton = document.getElementById("filter-category");
+    const categoryDropdown = document.getElementById("filter-category-dropdown");
+    
+    if (categoryButton && categoryDropdown) {
+        categoryButton.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            categoryDropdown.classList.toggle("hidden");
+        });
+    }
+
+    // Close dropdowns when clicking outside
+    document.addEventListener("click", (e) => {
+        if (levelDropdown && !levelButton?.contains(e.target) && !levelDropdown.contains(e.target)) {
+            levelDropdown.classList.add("hidden");
+        }
+        if (categoryDropdown && !categoryButton?.contains(e.target) && !categoryDropdown.contains(e.target)) {
+            categoryDropdown.classList.add("hidden");
+        }
+    });
+  }
+
+  // Centralized filter change handler
+  function handleFilterChange() {
+    // Reset pagination state
+    state.currentCursor = null;
+    state.previousCursors = [];
+    state.nextCursor = null;
+    state.hasMore = false;
+    state.cursorStack = [];
+
+    // Save existing custom tag filters
+    const existingCustomTags = Array.from(document.querySelectorAll("#tag-filters span[data-custom-tag='true']"))
+        .map(span => ({
+            key: span.dataset.key,
+            value: span.dataset.value
+        }));
+
+    // Render active filters from form
+    renderActiveFiltersFromForm();
+
+    // Re-add custom tags
+    existingCustomTags.forEach(tag => {
+        addTagFilter(tag.key, tag.value, false);
+    });
+
+    updateURLFromForm();
+    fetchLogs();
+  }
+
+  function bindFormAutoTags() {
+    const inputs = [
+        "filter-keyword", "filter-source", "container-name", "endpoint-name",
+        "app-name", "start-time", "end-time"
+    ];
+
+    // Add change handlers to all inputs
+    inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            console.log(`Setting up handlers for input: ${id}`);
+            
+            // Add change event listener
+            el.addEventListener("change", () => {
+                console.log(`Change event triggered for ${id}`);
+                handleFilterChange();
+            });
+
+            // Add input event for real-time filtering with debounce
+            const debouncedHandler = debounce(() => {
+                console.log(`Debounced input event triggered for ${id}`);
+                handleFilterChange();
+            }, 300);
+
+            el.addEventListener("input", debouncedHandler);
+
+            // Add Enter key handler
+            el.addEventListener("keypress", (e) => {
+                if (e.key === "Enter") {
+                    console.log(`Enter pressed in ${id}`);
+                    e.preventDefault();
+                    handleFilterChange();
+                }
+            });
+        }
+    });
+
+    // Add change handlers to checkboxes
+    document.querySelectorAll(".filter-level-option, .filter-category-option").forEach(cb => {
+        cb.addEventListener("change", () => {
+            console.log('Checkbox changed:', cb.value);
+            handleFilterChange();
+        });
+    });
   }
 
   // Start initialization
@@ -415,7 +521,9 @@ document.addEventListener("DOMContentLoaded", () => {
       
       row.innerHTML = `
         <td class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">${timestamp}</td>
-        <td class="px-4 py-2 text-xs font-medium text-${getColor(log.level)}-600">${log.level || 'info'}</td>
+        <td class="px-4 py-2">
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getColor(log.level)}">${(log.level || 'info').toLowerCase()}</span>
+        </td>
         <td class="px-4 py-2 text-sm">${sanitize(log.source || '')}</td>
         <td class="px-4 py-2 text-sm">
           ${sanitize(log.tags?.container_name || log.tags?.hostname || '')}
@@ -505,15 +613,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Get all filter values from form fields
     const filters = {
-      keyword: document.getElementById("filter-keyword").value.trim(),
+      keyword: document.getElementById("filter-keyword")?.value?.trim(),
       levels: Array.from(document.querySelectorAll(".filter-level-option:checked")).map(el => el.value),
       categories: Array.from(document.querySelectorAll(".filter-category-option:checked")).map(el => el.value),
-      source: document.getElementById("filter-source").value.trim(),
+      source: document.getElementById("filter-source")?.value?.trim(),
       container: document.getElementById("container-name")?.value?.trim() || "",
       endpoint: document.getElementById("endpoint-name")?.value?.trim() || "",
       app: document.getElementById("app-name")?.value?.trim() || "",
-      start: document.getElementById("start-time").value,
-      end: document.getElementById("end-time").value,
+      start: document.getElementById("start-time")?.value,
+      end: document.getElementById("end-time")?.value,
     };
 
     // Add non-empty filters to URL
@@ -527,22 +635,28 @@ document.addEventListener("DOMContentLoaded", () => {
     if (filters.start) params.set("start", new Date(filters.start).toISOString());
     if (filters.end) params.set("end", new Date(filters.end).toISOString());
 
-    // Only add tag_ parameters for actual custom tags
-    document.querySelectorAll("#tag-filters span[data-custom-tag='true']").forEach(span => {
+    // Add all tag filters
+    document.querySelectorAll("#tag-filters span").forEach(span => {
       const key = span.dataset.key;
       const value = span.dataset.value;
+      const isCustomTag = span.dataset.customTag === "true";
+      
       if (key && value) {
-        params.append(`tag_${key.trim()}`, value.trim());
+        if (isCustomTag) {
+          // For custom tags, add with tag_ prefix
+          params.append(`tag_${key.trim()}`, value.trim());
+        }
       }
     });
 
-    // Add cursor if exists and is not null - use currentCursor instead of nextCursor
+    // Add cursor if exists and is not null
     if (state.currentCursor) {
       params.set("cursor", state.currentCursor);
     }
 
     // Update URL without reloading page
     const newURL = `${window.location.pathname}?${params.toString()}`;
+    console.log('Updating URL with params:', params.toString());
     history.replaceState(null, "", newURL);
   }
 
@@ -601,7 +715,15 @@ document.addEventListener("DOMContentLoaded", () => {
     // Helper function to safely set checkbox state
     const setCheckboxState = (selector, values) => {
       document.querySelectorAll(selector).forEach(checkbox => {
-        checkbox.checked = values.includes(checkbox.value);
+        // Handle both 'warn' and 'warning' cases for loading
+        const checkboxValue = checkbox.value;
+        const matches = values.some(v => {
+          const value = v.toLowerCase();
+          return value === checkboxValue.toLowerCase() || 
+                 (value === 'warn' && checkboxValue.toLowerCase() === 'warning') ||
+                 (value === 'warning' && checkboxValue.toLowerCase() === 'warn');
+        });
+        checkbox.checked = matches;
       });
     };
 
@@ -648,15 +770,27 @@ document.addEventListener("DOMContentLoaded", () => {
     setCheckboxState(".filter-category-option", params.getAll("category"));
 
     // Handle custom tag filters
+    const tagFiltersToAdd = [];
     for (const [key, value] of params.entries()) {
       if (key.startsWith("tag_")) {
         const tagKey = key.slice(4); // Remove 'tag_' prefix
         // Skip if this is a regular form field
         if (!["contains", "source", "endpoint", "container", "app", "level", "category", "start", "end"].includes(tagKey)) {
-          addTagFilter(tagKey, value);
+          tagFiltersToAdd.push({ key: tagKey, value });
         }
       }
     }
+
+    // Add all tag filters after clearing
+    tagFiltersToAdd.forEach(({ key, value }) => {
+      const span = document.createElement("span");
+      span.className = "inline-flex items-center px-3 py-1 rounded-sm text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100";
+      span.dataset.customTag = "true";
+      span.dataset.key = key;
+      span.dataset.value = value;
+      span.innerHTML = `${sanitize(key)}:${sanitize(value)} <button class="ml-1 text-xs remove-tag" type="button">&times;</button>`;
+      tagFilters.appendChild(span);
+    });
 
     // Handle cursor
     const cursor = params.get("cursor");
@@ -673,9 +807,191 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     console.log('Form loaded from URL');
+    
+    // After loading all filters, update the URL to ensure consistency
+    updateURLFromForm();
   }
 
-  function addTagFilter(key, value) {
+  function sanitize(str) {
+    const div = document.createElement("div");
+    div.innerText = str;
+    return div.innerHTML;
+  }
+
+  function getColor(level) {
+    switch ((level || "").toLowerCase()) {
+      case "critical": return "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200";
+      case "error": return "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200";
+      case "warn":
+      case "warning": return "bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100";
+      case "info": return "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100";
+      case "debug": return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+      case "notice": return "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200";
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
+    }
+  }
+
+  document.getElementById("tag-filters").addEventListener("click", (e) => {
+    if (!e.target.classList.contains("remove-tag")) return;
+
+    const pill = e.target.closest("span");
+    if (!pill) return;
+
+    // Get the key and value from the data attributes
+    const key = pill.dataset.key;
+    const value = pill.dataset.value;
+    if (!key || !value) return;
+
+    console.log('Removing pill:', { key, value, isCustomTag: pill.dataset.customTag });
+
+    // Remove matching form values
+    if (key === "level") {
+      document.querySelectorAll(".filter-level-option:checked").forEach(cb => {
+        if (cb.value === value) {
+          cb.checked = false;
+          cb.dispatchEvent(new Event('change'));
+        }
+      });
+    } else if (key === "category") {
+      document.querySelectorAll(".filter-category-option:checked").forEach(cb => {
+        if (cb.value === value) {
+          cb.checked = false;
+          cb.dispatchEvent(new Event('change'));
+        }
+      });
+    } else {
+      const mappings = {
+        contains: "filter-keyword",
+        source: "filter-source",
+        container: "container-name",
+        endpoint: "endpoint-name",
+        app: "app-name",
+        start: "start-time",
+        end: "end-time"
+      };
+      
+      const id = mappings[key];
+      if (id) {
+        const input = document.getElementById(id);
+        if (input) {
+          input.value = "";
+          // Trigger both input and change events to ensure state updates
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+    }
+
+    // Remove the pill visually
+    pill.remove();
+
+    // Reset pagination state
+    state.currentCursor = null;
+    state.previousCursors = [];
+    state.nextCursor = null;
+    state.hasMore = false;
+    state.cursorStack = [];
+
+    // Update URL and trigger new search
+    updateURLFromForm();
+    fetchLogs();
+  });
+
+  // Add event listeners for table interactions
+  elements.resultsTable.addEventListener("click", (e) => {
+    if (e.target.classList.contains("copy-btn")) {
+      const value = e.target.dataset.copy;
+      if (value) {
+        navigator.clipboard.writeText(value).then(() => {
+          e.target.textContent = "✅";
+          setTimeout(() => e.target.textContent = "📋", 1000);
+        });
+      }
+    }
+  });
+
+  elements.resultsTable.addEventListener("click", (e) => {
+    const tag = e.target?.dataset?.tag;
+    if (!tag) return;
+
+    const [key, value] = tag.split(":");
+    if (!key || !value) return;
+
+    const tagContainer = document.getElementById("tag-filters");
+    if ([...tagContainer.querySelectorAll("span")].some(span => span.textContent.includes(`${key}:${value}`))) return;
+
+    const span = document.createElement("span");
+    span.className = "inline-flex items-center px-3 py-1 rounded-sm text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100";
+    span.innerHTML = `${key}:${value} <button class="ml-1 text-xs remove-tag" type="button">&times;</button>`;
+    tagContainer.appendChild(span);
+    updateURLFromForm();
+  });
+
+  elements.resultsTable.addEventListener("click", (e) => {
+    if (e.target.matches("[data-filter-key]")) {
+      e.preventDefault();
+
+      const key = e.target.dataset.filterKey;
+      const value = e.target.dataset.filterValue;
+      if (!key || !value) return;
+
+      // Check if this is a regular form field
+      const formFields = ["contains", "source", "endpoint", "container", "app", "level", "category", "start", "end"];
+      if (formFields.includes(key)) {
+        // Handle as form field
+        const mappings = {
+          contains: "filter-keyword",
+          source: "filter-source",
+          endpoint: "endpoint-name",
+          container: "container-name",
+          app: "app-name",
+          start: "start-time",
+          end: "end-time"
+        };
+
+        const id = mappings[key];
+        if (id) {
+          const input = document.getElementById(id);
+          if (input) {
+            input.value = value;
+            // Trigger change event to update filters
+            input.dispatchEvent(new Event("change"));
+          }
+        } else if (key === "level" || key === "category") {
+          // Handle checkbox fields
+          document.querySelectorAll(`.filter-${key}-option`).forEach(cb => {
+            if (cb.value === value) {
+              cb.checked = true;
+              // Trigger change event to update filters
+              cb.dispatchEvent(new Event("change"));
+            }
+          });
+        }
+      } else {
+        // Handle as custom tag
+        addTagFilter(key, value);
+        // Update URL and trigger search
+        updateURLFromForm();
+        fetchLogs();
+      }
+    }
+  });
+
+  // Add debounce function at the top level
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+
+  // Modify addTagFilter to accept optional parameter to control fetchLogs
+  function addTagFilter(key, value, shouldFetchLogs = true) {
     // Don't add regular search parameters as tags
     const searchParams = [
       "contains", "source", "container", "endpoint", 
@@ -684,6 +1000,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (searchParams.includes(key)) return;
 
     const tagContainer = document.getElementById("tag-filters");
+    if (!tagContainer) return;
     
     // Check if filter already exists
     const existingFilter = Array.from(tagContainer.children).find(span => {
@@ -699,147 +1016,12 @@ document.addEventListener("DOMContentLoaded", () => {
     span.dataset.value = value;
     span.innerHTML = `${sanitize(key)}:${sanitize(value)} <button class="ml-1 text-xs remove-tag" type="button">&times;</button>`;
     tagContainer.appendChild(span);
-  }
 
-  function bindFormAutoTags() {
-    const inputs = [
-      "filter-keyword", "filter-source", "container-name", "endpoint-name",
-      "app-name", "start-time", "end-time"
-    ];
-
-    // Add change handlers to all inputs
-    inputs.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        console.log(`Setting up handlers for input: ${id}`);
-        
-        const handleInputChange = () => {
-          console.log(`Input changed for ${id}:`, el.value);
-          // Reset pagination state
-          state.currentCursor = null;
-          state.previousCursors = [];
-          state.nextCursor = null;
-          state.hasMore = false;
-          state.cursorStack = [];
-
-          renderActiveFiltersFromForm();
-          updateURLFromForm();
-          fetchLogs();
-        };
-
-        // Add change event listener
-        el.addEventListener("change", () => {
-          console.log(`Change event triggered for ${id}`);
-          handleInputChange();
-        });
-
-        // Add input event for real-time filtering with debounce
-        const debouncedHandler = debounce(() => {
-          console.log(`Debounced input event triggered for ${id}`);
-          handleInputChange();
-        }, 300);
-
-        el.addEventListener("input", debouncedHandler);
-
-        // Add Enter key handler
-        el.addEventListener("keypress", (e) => {
-          if (e.key === "Enter") {
-            console.log(`Enter pressed in ${id}`);
-            e.preventDefault();
-            handleInputChange();
-          }
-        });
-      }
-    });
-
-    // Add change handlers to checkboxes
-    document.querySelectorAll(".filter-level-option, .filter-category-option").forEach(cb => {
-      cb.addEventListener("change", () => {
-        console.log('Checkbox changed:', cb.value);
-        // Reset pagination state
-        state.currentCursor = null;
-        state.previousCursors = [];
-        state.nextCursor = null;
-        state.hasMore = false;
-        state.cursorStack = [];
-
-        renderActiveFiltersFromForm();
-        updateURLFromForm();
-        fetchLogs();
-      });
-    });
-  }
-
-  function renderActiveFiltersFromForm() {
-    const tagContainer = document.getElementById("tag-filters");
-    tagContainer.innerHTML = ""; // clear all first
-
-    // Add pills for regular search inputs
-    const mappings = {
-      contains: "filter-keyword",
-      source: "filter-source",
-      container: "container-name",
-      endpoint: "endpoint-name",
-      app: "app-name",
-      start: "start-time",
-      end: "end-time"
-    };
-
-    for (const [key, id] of Object.entries(mappings)) {
-      const val = document.getElementById(id)?.value?.trim();
-      if (val) {
-        const span = document.createElement("span");
-        span.className = "inline-flex items-center px-3 py-1 rounded-sm text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100";
-        span.dataset.customTag = "false"; // Mark as not a custom tag
-        span.dataset.key = key;
-        span.dataset.value = val;
-
-        const display = (key === "start" || key === "end")
-          ? `${key}: ${formatTimestampForDisplay(val)}`
-          : `${key}:${val}`;
-
-        span.innerHTML = `
-          <span class="mr-1">${display}</span>
-          <button type="button" class="ml-1 text-xs remove-tag" title="Remove filter">&times;</button>
-        `;
-
-        tagContainer.appendChild(span);
-      }
+    // Update URL and optionally trigger search
+    updateURLFromForm();
+    if (shouldFetchLogs) {
+      fetchLogs();
     }
-
-    // Add level and category filters as pills
-    const getChecked = cls =>
-      Array.from(document.querySelectorAll(`.${cls}:checked`)).map(el => el.value);
-
-    getChecked("filter-level-option").forEach(v => {
-      const span = document.createElement("span");
-      span.className = "inline-flex items-center px-3 py-1 rounded-sm text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100";
-      span.dataset.customTag = "false"; // Mark as not a custom tag
-      span.dataset.key = "level";
-      span.dataset.value = v;
-      span.innerHTML = `
-        <span class="mr-1">level:${v}</span>
-        <button type="button" class="ml-1 text-xs remove-tag" title="Remove filter">&times;</button>
-      `;
-      tagContainer.appendChild(span);
-    });
-
-    getChecked("filter-category-option").forEach(v => {
-      const span = document.createElement("span");
-      span.className = "inline-flex items-center px-3 py-1 rounded-sm text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100";
-      span.dataset.customTag = "false"; // Mark as not a custom tag
-      span.dataset.key = "category";
-      span.dataset.value = v;
-      span.innerHTML = `
-        <span class="mr-1">category:${v}</span>
-        <button type="button" class="ml-1 text-xs remove-tag" title="Remove filter">&times;</button>
-      `;
-      tagContainer.appendChild(span);
-    });
-
-    // Add custom tags already in tag-filters (preserve existing custom tags)
-    const existingCustomTags = document.querySelectorAll("#tag-filters span[data-custom-tag='true']");
-    existingCustomTags.forEach(span => tagContainer.appendChild(span.cloneNode(true)));
   }
 
   async function populateEndpointDropdown() {
@@ -1025,183 +1207,75 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function sanitize(str) {
-    const div = document.createElement("div");
-    div.innerText = str;
-    return div.innerHTML;
-  }
-
-  function getColor(level) {
-    switch ((level || "").toLowerCase()) {
-      case "critical": return "red";
-      case "error": return "red";
-      case "warning": return "yellow";
-      case "info": return "blue";
-      case "debug": return "gray";
-      default: return "gray";
-    }
-  }
-
-  document.getElementById("tag-filters").addEventListener("click", (e) => {
-    if (!e.target.classList.contains("remove-tag")) return;
-
-    const pill = e.target.closest("span");
-    if (!pill) return;
-
-    // Get the key and value from the data attributes
-    const key = pill.dataset.key;
-    const value = pill.dataset.value;
-    if (!key || !value) return;
-
-    console.log('Removing pill:', { key, value, isCustomTag: pill.dataset.customTag });
-
-    // Remove matching form values
-    if (key === "level") {
-      document.querySelectorAll(".filter-level-option:checked").forEach(cb => {
-        if (cb.value === value) {
-          cb.checked = false;
-          cb.dispatchEvent(new Event('change'));
-        }
-      });
-    } else if (key === "category") {
-      document.querySelectorAll(".filter-category-option:checked").forEach(cb => {
-        if (cb.value === value) {
-          cb.checked = false;
-          cb.dispatchEvent(new Event('change'));
-        }
-      });
-    } else {
-      const mappings = {
-        contains: "filter-keyword",
-        source: "filter-source",
-        container: "container-name",
-        endpoint: "endpoint-name",
-        app: "app-name",
-        start: "start-time",
-        end: "end-time"
-      };
-      
-      const id = mappings[key];
-      if (id) {
-        const input = document.getElementById(id);
-        if (input) {
-          input.value = "";
-          // Trigger both input and change events to ensure state updates
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-          input.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-      }
-    }
-
-    // Remove the pill visually
-    pill.remove();
-
-    // Reset pagination state
-    state.currentCursor = null;
-    state.previousCursors = [];
-    state.nextCursor = null;
-    state.hasMore = false;
-    state.cursorStack = [];
-
-    // Update URL and trigger new search
-    updateURLFromForm();
-    fetchLogs();
-  });
-
-  // Add event listeners for table interactions
-  elements.resultsTable.addEventListener("click", (e) => {
-    if (e.target.classList.contains("copy-btn")) {
-      const value = e.target.dataset.copy;
-      if (value) {
-        navigator.clipboard.writeText(value).then(() => {
-          e.target.textContent = "✅";
-          setTimeout(() => e.target.textContent = "📋", 1000);
-        });
-      }
-    }
-  });
-
-  elements.resultsTable.addEventListener("click", (e) => {
-    const tag = e.target?.dataset?.tag;
-    if (!tag) return;
-
-    const [key, value] = tag.split(":");
-    if (!key || !value) return;
-
+  function renderActiveFiltersFromForm() {
     const tagContainer = document.getElementById("tag-filters");
-    if ([...tagContainer.querySelectorAll("span")].some(span => span.textContent.includes(`${key}:${value}`))) return;
+    tagContainer.innerHTML = ""; // clear all first
 
-    const span = document.createElement("span");
-    span.className = "inline-flex items-center px-3 py-1 rounded-sm text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100";
-    span.innerHTML = `${key}:${value} <button class="ml-1 text-xs remove-tag" type="button">&times;</button>`;
-    tagContainer.appendChild(span);
-    updateURLFromForm();
-  });
+    // Add pills for regular search inputs
+    const mappings = {
+      contains: "filter-keyword",
+      source: "filter-source",
+      container: "container-name",
+      endpoint: "endpoint-name",
+      app: "app-name",
+      start: "start-time",
+      end: "end-time"
+    };
 
-  elements.resultsTable.addEventListener("click", (e) => {
-    if (e.target.matches("[data-filter-key]")) {
-      e.preventDefault();
+    for (const [key, id] of Object.entries(mappings)) {
+      const val = document.getElementById(id)?.value?.trim();
+      if (val) {
+        const span = document.createElement("span");
+        span.className = "inline-flex items-center px-3 py-1 rounded-sm text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100";
+        span.dataset.customTag = "false"; // Mark as not a custom tag
+        span.dataset.key = key;
+        span.dataset.value = val;
 
-      const key = e.target.dataset.filterKey;
-      const value = e.target.dataset.filterValue;
-      if (!key || !value) return;
+        const display = (key === "start" || key === "end")
+          ? `${key}: ${formatTimestampForDisplay(val)}`
+          : `${key}:${val}`;
 
-      // Check if this is a regular form field
-      const formFields = ["contains", "source", "endpoint", "container", "app", "level", "category", "start", "end"];
-      if (formFields.includes(key)) {
-        // Handle as form field
-        const mappings = {
-          contains: "filter-keyword",
-          source: "filter-source",
-          endpoint: "endpoint-name",
-          container: "container-name",
-          app: "app-name",
-          start: "start-time",
-          end: "end-time"
-        };
+        span.innerHTML = `
+          <span class="mr-1">${display}</span>
+          <button type="button" class="ml-1 text-xs remove-tag" title="Remove filter">&times;</button>
+        `;
 
-        const id = mappings[key];
-        if (id) {
-          const input = document.getElementById(id);
-          if (input) {
-            input.value = value;
-            // Trigger change event to update filters
-            input.dispatchEvent(new Event("change"));
-          }
-        } else if (key === "level" || key === "category") {
-          // Handle checkbox fields
-          document.querySelectorAll(`.filter-${key}-option`).forEach(cb => {
-            if (cb.value === value) {
-              cb.checked = true;
-              cb.dispatchEvent(new Event("change"));
-            }
-          });
-        }
-      } else {
-        // Handle as custom tag
-        addTagFilter(key, value);
-        // Reset pagination and refresh
-        state.currentCursor = null;
-        state.previousCursors = [];
-        state.nextCursor = null;
-        state.hasMore = false;
-        state.cursorStack = [];
-        updateURLFromForm();
-        fetchLogs();
+        tagContainer.appendChild(span);
       }
     }
-  });
 
-  // Add debounce function at the top level
-  function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-      const later = () => {
-        clearTimeout(timeout);
-        func(...args);
-      };
-      clearTimeout(timeout);
-      timeout = setTimeout(later, wait);
-    };
+    // Add level and category filters as pills
+    const getChecked = cls =>
+      Array.from(document.querySelectorAll(`.${cls}:checked`)).map(el => el.value);
+
+    getChecked("filter-level-option").forEach(v => {
+      const span = document.createElement("span");
+      span.className = "inline-flex items-center px-3 py-1 rounded-sm text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100";
+      span.dataset.customTag = "false"; // Mark as not a custom tag
+      span.dataset.key = "level";
+      span.dataset.value = v;
+      span.innerHTML = `
+        <span class="mr-1">level:${v}</span>
+        <button type="button" class="ml-1 text-xs remove-tag" title="Remove filter">&times;</button>
+      `;
+      tagContainer.appendChild(span);
+    });
+
+    getChecked("filter-category-option").forEach(v => {
+      const span = document.createElement("span");
+      span.className = "inline-flex items-center px-3 py-1 rounded-sm text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100";
+      span.dataset.customTag = "false"; // Mark as not a custom tag
+      span.dataset.key = "category";
+      span.dataset.value = v;
+      span.innerHTML = `
+        <span class="mr-1">category:${v}</span>
+        <button type="button" class="ml-1 text-xs remove-tag" title="Remove filter">&times;</button>
+      `;
+      tagContainer.appendChild(span);
+    });
+
+    // Add custom tags already in tag-filters (preserve existing custom tags)
+    const existingCustomTags = document.querySelectorAll("#tag-filters span[data-custom-tag='true']");
+    existingCustomTags.forEach(span => tagContainer.appendChild(span.cloneNode(true)));
   }
 });
