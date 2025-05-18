@@ -204,7 +204,7 @@ type RuleStore interface {
 ```
 
 <a name="YAMLRuleStore"></a>
-## type [YAMLRuleStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/rulestore/yamlrulestore.go#L40-L44>)
+## type [YAMLRuleStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/rulestore/yamlrulestore.go#L39-L43>)
 
 YAMLRuleStore is a rule store that uses a YAML file for persistence. It implements the RuleStore interface and provides methods for adding, updating, deleting, and retrieving rules.
 
@@ -215,7 +215,7 @@ type YAMLRuleStore struct {
 ```
 
 <a name="NewYAMLStore"></a>
-### func [NewYAMLStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/rulestore/yamlrulestore.go#L47>)
+### func [NewYAMLStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/rulestore/yamlrulestore.go#L46>)
 
 ```go
 func NewYAMLStore(path string) (*YAMLRuleStore, error)
@@ -224,7 +224,7 @@ func NewYAMLStore(path string) (*YAMLRuleStore, error)
 NewYAMLStore creates a new YAMLRuleStore with the specified file path.
 
 <a name="YAMLRuleStore.AddRule"></a>
-### func \(\*YAMLRuleStore\) [AddRule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/rulestore/yamlrulestore.go#L100>)
+### func \(\*YAMLRuleStore\) [AddRule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/rulestore/yamlrulestore.go#L98>)
 
 ```go
 func (s *YAMLRuleStore) AddRule(ctx context.Context, r model.AlertRule) error
@@ -233,7 +233,7 @@ func (s *YAMLRuleStore) AddRule(ctx context.Context, r model.AlertRule) error
 AddRule adds a new rule to the store.
 
 <a name="YAMLRuleStore.DeleteRule"></a>
-### func \(\*YAMLRuleStore\) [DeleteRule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/rulestore/yamlrulestore.go#L113>)
+### func \(\*YAMLRuleStore\) [DeleteRule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/rulestore/yamlrulestore.go#L111>)
 
 ```go
 func (s *YAMLRuleStore) DeleteRule(ctx context.Context, id string) error
@@ -242,7 +242,7 @@ func (s *YAMLRuleStore) DeleteRule(ctx context.Context, id string) error
 DeleteRule removes a rule from the store.
 
 <a name="YAMLRuleStore.GetActiveRules"></a>
-### func \(\*YAMLRuleStore\) [GetActiveRules](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/rulestore/yamlrulestore.go#L135>)
+### func \(\*YAMLRuleStore\) [GetActiveRules](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/rulestore/yamlrulestore.go#L133>)
 
 ```go
 func (s *YAMLRuleStore) GetActiveRules(ctx context.Context) ([]model.AlertRule, error)
@@ -251,7 +251,7 @@ func (s *YAMLRuleStore) GetActiveRules(ctx context.Context) ([]model.AlertRule, 
 
 
 <a name="YAMLRuleStore.GetRuleByID"></a>
-### func \(\*YAMLRuleStore\) [GetRuleByID](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/rulestore/yamlrulestore.go#L147>)
+### func \(\*YAMLRuleStore\) [GetRuleByID](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/rulestore/yamlrulestore.go#L145>)
 
 ```go
 func (s *YAMLRuleStore) GetRuleByID(ctx context.Context, id string) (model.AlertRule, error)
@@ -260,7 +260,7 @@ func (s *YAMLRuleStore) GetRuleByID(ctx context.Context, id string) (model.Alert
 GetRuleByID retrieves a rule by its ID.
 
 <a name="YAMLRuleStore.GetRuleByName"></a>
-### func \(\*YAMLRuleStore\) [GetRuleByName](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/rulestore/yamlrulestore.go#L158>)
+### func \(\*YAMLRuleStore\) [GetRuleByName](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/rulestore/yamlrulestore.go#L156>)
 
 ```go
 func (s *YAMLRuleStore) GetRuleByName(ctx context.Context, name string) (model.AlertRule, error)
@@ -269,7 +269,7 @@ func (s *YAMLRuleStore) GetRuleByName(ctx context.Context, name string) (model.A
 GetRuleByName retrieves a rule by its Name \(case\-sensitive\).
 
 <a name="YAMLRuleStore.ListRules"></a>
-### func \(\*YAMLRuleStore\) [ListRules](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/rulestore/yamlrulestore.go#L121>)
+### func \(\*YAMLRuleStore\) [ListRules](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/rulestore/yamlrulestore.go#L119>)
 
 ```go
 func (s *YAMLRuleStore) ListRules(ctx context.Context) ([]model.AlertRule, error)
@@ -278,7 +278,7 @@ func (s *YAMLRuleStore) ListRules(ctx context.Context) ([]model.AlertRule, error
 ListRules returns a list of all rules in the store.
 
 <a name="YAMLRuleStore.UpdateRule"></a>
-### func \(\*YAMLRuleStore\) [UpdateRule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/rulestore/yamlrulestore.go#L108>)
+### func \(\*YAMLRuleStore\) [UpdateRule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/rulestore/yamlrulestore.go#L106>)
 
 ```go
 func (s *YAMLRuleStore) UpdateRule(ctx context.Context, r model.AlertRule) error
