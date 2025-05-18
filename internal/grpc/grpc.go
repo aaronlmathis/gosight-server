@@ -58,7 +58,6 @@ type GrpcServer struct {
 // NewGRPCServer creates a new gRPC server instance with the provided system context.
 // It initializes the server with TLS configuration and registers the metrics and log services.
 // The server listens on the address specified in the system context configuration.
-
 func NewGRPCServer(sys *sys.SystemContext) (*GrpcServer, error) {
 
 	// Load TLS for mTLS
@@ -127,11 +126,10 @@ func NewGRPCServer(sys *sys.SystemContext) (*GrpcServer, error) {
 
 }
 
-// logTLSConfig loads the TLS configuration for the gRPC server.
+// loadTLSConfig loads the TLS configuration for the gRPC server.
 // It loads the server certificate and key, and sets up client authentication
 // if a client CA file is provided. It also verifies the client certificate
 // and logs the common name and SHA256 fingerprint of the client certificate.
-
 func loadTLSConfig(cfg *config.Config) (*tls.Config, error) {
 	cert, err := tls.LoadX509KeyPair(cfg.TLS.CertFile, cfg.TLS.KeyFile)
 	if err != nil {
@@ -177,8 +175,7 @@ func loadTLSConfig(cfg *config.Config) (*tls.Config, error) {
 	return tlsCfg, nil
 }
 
-// gracefulDisconnectAllAgents disconnects all agents by sending a `disconnect` command to each agent.
-
+// GracefulDisconnectAllAgents disconnects all agents by sending a `disconnect` command to each agent.
 func (g *GrpcServer) GracefulDisconnectAllAgents() {
 	liveSessions := g.Sys.Tracker.GetLiveAgentIDs()
 	utils.Info("Sending disconnect command to %d live agents", len(liveSessions))
