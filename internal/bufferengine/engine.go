@@ -21,10 +21,7 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 
 // File: gosight-server/internal/bufferengine/engine.go
 // Description: Package bufferengine provides a buffered store engine for GoSight.
-// It allows for writing data to multiple stores with a specified flush interval.
-// The engine manages the lifecycle of the stores, including starting and stopping them.
-// It also provides a mechanism for writing data to the stores and flushing the data at regular intervals.
-// The engine is designed to be used in a concurrent environment, with support for multiple goroutines.
+
 package bufferengine
 
 import (

@@ -21,11 +21,7 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 
 // File: gosight-server/internal/bufferengine/logbuffer.go
 // Description: Package bufferengine provides a buffered log store implementation.
-// The BufferedLogStore buffers log entries before writing them to the underlying log store.
-// It supports a maximum buffer size and a flush interval.
-// The buffer is protected by a mutex to ensure thread safety.
-// The BufferedLogStore is designed to improve performance by reducing the number of write operations
-// to the underlying log store.
+
 package bufferengine
 
 import (

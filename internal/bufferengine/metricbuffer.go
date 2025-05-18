@@ -21,11 +21,7 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 
 // File: gosight-server/internal/bufferengine/metricbuffer.go
 // Description: Package bufferengine provides a buffered metric store implementation.
-// It buffers metric payloads before writing them to the underlying metric store.
-// The BufferedMetricStore is designed to improve performance by reducing the number of write operations
-// to the underlying metric store.
-// The buffer is protected by a mutex to ensure thread safety.
-// The BufferedMetricStore supports a maximum buffer size and a flush interval.
+
 package bufferengine
 
 import (

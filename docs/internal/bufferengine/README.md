@@ -8,12 +8,6 @@ import "github.com/aaronlmathis/gosight-server/internal/bufferengine"
 
 File: gosight\-server/internal/bufferengine/databuffer.go Description: Package bufferengine provides a buffered data store implementation for writing process payloads to an underlying data store. It buffers the payloads in memory and flushes them to the underlying store when the buffer reaches a certain size or after a specified interval. The buffered data store is designed to improve performance by reducing the number of write operations to the underlying data store.
 
-File: gosight\-server/internal/bufferengine/engine.go Description: Package bufferengine provides a buffered store engine for GoSight. It allows for writing data to multiple stores with a specified flush interval. The engine manages the lifecycle of the stores, including starting and stopping them. It also provides a mechanism for writing data to the stores and flushing the data at regular intervals. The engine is designed to be used in a concurrent environment, with support for multiple goroutines.
-
-File: gosight\-server/internal/bufferengine/logbuffer.go Description: Package bufferengine provides a buffered log store implementation. The BufferedLogStore buffers log entries before writing them to the underlying log store. It supports a maximum buffer size and a flush interval. The buffer is protected by a mutex to ensure thread safety. The BufferedLogStore is designed to improve performance by reducing the number of write operations to the underlying log store.
-
-File: gosight\-server/internal/bufferengine/metricbuffer.go Description: Package bufferengine provides a buffered metric store implementation. It buffers metric payloads before writing them to the underlying metric store. The BufferedMetricStore is designed to improve performance by reducing the number of write operations to the underlying metric store. The buffer is protected by a mutex to ensure thread safety. The BufferedMetricStore supports a maximum buffer size and a flush interval.
-
 ## Index
 
 - [type BufferEngine](<#BufferEngine>)
@@ -52,7 +46,7 @@ File: gosight\-server/internal/bufferengine/metricbuffer.go Description: Package
 
 
 <a name="BufferEngine"></a>
-## type [BufferEngine](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L53-L59>)
+## type [BufferEngine](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L50-L56>)
 
 BufferEngine is a struct that manages multiple buffered stores. It is responsible for starting and stopping the stores, as well as flushing the data at regular intervals.
 
@@ -63,7 +57,7 @@ type BufferEngine struct {
 ```
 
 <a name="NewBufferEngine"></a>
-### func [NewBufferEngine](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L66>)
+### func [NewBufferEngine](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L63>)
 
 ```go
 func NewBufferEngine(ctx context.Context, flushInterval time.Duration, maxWorkers int) *BufferEngine
@@ -72,7 +66,7 @@ func NewBufferEngine(ctx context.Context, flushInterval time.Duration, maxWorker
 NewBufferEngine creates a new BufferEngine instance. It takes a context, flush interval, and maximum number of workers as parameters. The flush interval is used to determine how often the data should be flushed to the stores. The maximum number of workers is used to limit the number of concurrent goroutines that can be used for flushing the data.
 
 <a name="BufferEngine.RegisterStore"></a>
-### func \(\*BufferEngine\) [RegisterStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L79>)
+### func \(\*BufferEngine\) [RegisterStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L76>)
 
 ```go
 func (e *BufferEngine) RegisterStore(store BufferedStore)
@@ -81,7 +75,7 @@ func (e *BufferEngine) RegisterStore(store BufferedStore)
 RegisterStore registers a new buffered store with the BufferEngine. It adds the store to the list of stores managed by the engine. The store must implement the BufferedStore interface. The engine will manage the lifecycle of the store, including starting and stopping it. The store will be flushed at regular intervals as specified by the flush interval.
 
 <a name="BufferEngine.Start"></a>
-### func \(\*BufferEngine\) [Start](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L89>)
+### func \(\*BufferEngine\) [Start](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L86>)
 
 ```go
 func (e *BufferEngine) Start()
@@ -90,7 +84,7 @@ func (e *BufferEngine) Start()
 Start starts the BufferEngine and its registered stores. It launches a goroutine for each store that will flush the data at regular intervals. The flush interval is determined by the store's Interval method. The engine will also listen for a cancellation signal from the context. When the context is cancelled, the engine will stop all stores and wait for them to finish flushing.
 
 <a name="BufferEngine.Stop"></a>
-### func \(\*BufferEngine\) [Stop](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L123>)
+### func \(\*BufferEngine\) [Stop](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L120>)
 
 ```go
 func (e *BufferEngine) Stop()
@@ -173,7 +167,7 @@ func (b *BufferedDataStore) WriteAny(payload interface{}) error
 WriteAny writes a process payload to the buffered data store. It takes an interface\{\} as a parameter and attempts to cast it to a \*model.ProcessPayload. If the cast is successful, it calls the Write method to add the payload to the buffer. If the cast fails, it returns an error indicating that the payload type is invalid. This method is used to provide a generic interface for writing different types of payloads,
 
 <a name="BufferedLogStore"></a>
-## type [BufferedLogStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/logbuffer.go#L50-L57>)
+## type [BufferedLogStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/logbuffer.go#L46-L53>)
 
 BufferedLogStore is a buffered implementation of the LogStore interface. It buffers log entries in memory and flushes them to the underlying log store when the buffer reaches a certain size or after a specified interval.
 
@@ -184,7 +178,7 @@ type BufferedLogStore struct {
 ```
 
 <a name="NewBufferedLogStore"></a>
-### func [NewBufferedLogStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/logbuffer.go#L65>)
+### func [NewBufferedLogStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/logbuffer.go#L61>)
 
 ```go
 func NewBufferedLogStore(name string, store LogStore, maxSize int, flushInterval time.Duration) *BufferedLogStore
@@ -193,7 +187,7 @@ func NewBufferedLogStore(name string, store LogStore, maxSize int, flushInterval
 NewBufferedLogStore creates a new BufferedLogStore instance. It initializes the buffer with a specified maximum size and flush interval. The flush interval determines how often the buffer is flushed to the underlying log store. The maximum size determines when the buffer is flushed. The BufferedLogStore is designed to improve performance by reducing the number of write operations to the underlying log store.
 
 <a name="BufferedLogStore.Close"></a>
-### func \(\*BufferedLogStore\) [Close](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/logbuffer.go#L143>)
+### func \(\*BufferedLogStore\) [Close](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/logbuffer.go#L139>)
 
 ```go
 func (b *BufferedLogStore) Close() error
@@ -202,7 +196,7 @@ func (b *BufferedLogStore) Close() error
 Close closes the BufferedLogStore and flushes any remaining log entries in the buffer. It is called to ensure that all buffered log entries are written to the underlying log store before the BufferedLogStore is closed. The Close method is thread\-safe and uses a mutex to protect the buffer. It returns an error if the flush operation fails.
 
 <a name="BufferedLogStore.Flush"></a>
-### func \(\*BufferedLogStore\) [Flush](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/logbuffer.go#L118>)
+### func \(\*BufferedLogStore\) [Flush](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/logbuffer.go#L114>)
 
 ```go
 func (b *BufferedLogStore) Flush() error
@@ -211,7 +205,7 @@ func (b *BufferedLogStore) Flush() error
 Flush flushes the buffer to the underlying log store. It is called to ensure that all buffered log entries are written to the store. The Flush method is thread\-safe and uses a mutex to protect the buffer. It returns an error if the flush operation fails.
 
 <a name="BufferedLogStore.Interval"></a>
-### func \(\*BufferedLogStore\) [Interval](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/logbuffer.go#L84>)
+### func \(\*BufferedLogStore\) [Interval](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/logbuffer.go#L80>)
 
 ```go
 func (b *BufferedLogStore) Interval() time.Duration
@@ -220,7 +214,7 @@ func (b *BufferedLogStore) Interval() time.Duration
 Interval returns the flush interval of the BufferedLogStore. This is the time duration after which the buffer will be flushed to the underlying log store, even if the buffer size has not reached the maximum.
 
 <a name="BufferedLogStore.Name"></a>
-### func \(\*BufferedLogStore\) [Name](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/logbuffer.go#L77>)
+### func \(\*BufferedLogStore\) [Name](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/logbuffer.go#L73>)
 
 ```go
 func (b *BufferedLogStore) Name() string
@@ -229,7 +223,7 @@ func (b *BufferedLogStore) Name() string
 Name returns the name of the BufferedLogStore. It is used to identify the store in logs and metrics.
 
 <a name="BufferedLogStore.Write"></a>
-### func \(\*BufferedLogStore\) [Write](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/logbuffer.go#L103>)
+### func \(\*BufferedLogStore\) [Write](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/logbuffer.go#L99>)
 
 ```go
 func (b *BufferedLogStore) Write(payload model.LogPayload) error
@@ -238,7 +232,7 @@ func (b *BufferedLogStore) Write(payload model.LogPayload) error
 Write writes a log entry to the BufferedLogStore. It appends the entry to the buffer and checks if the buffer size has reached the maximum. If the buffer size exceeds the maximum, it flushes the buffer to the underlying log store. The Write method is thread\-safe and uses a mutex to protect the buffer.
 
 <a name="BufferedLogStore.WriteAny"></a>
-### func \(\*BufferedLogStore\) [WriteAny](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/logbuffer.go#L91>)
+### func \(\*BufferedLogStore\) [WriteAny](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/logbuffer.go#L87>)
 
 ```go
 func (b *BufferedLogStore) WriteAny(payload interface{}) error
@@ -247,7 +241,7 @@ func (b *BufferedLogStore) WriteAny(payload interface{}) error
 WriteAny writes a log entry to the BufferedLogStore. It takes an interface\{\} as a parameter and attempts to convert it to a LogPayload. If the conversion fails, it returns an error.
 
 <a name="BufferedMetricStore"></a>
-## type [BufferedMetricStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/metricbuffer.go#L44-L51>)
+## type [BufferedMetricStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/metricbuffer.go#L40-L47>)
 
 BufferedMetricStore is a buffered implementation of the MetricStore interface. It buffers metric payloads in memory and flushes them to the underlying metric store when the buffer reaches a certain size or after a specified interval. The buffer is protected by a mutex to ensure thread safety. The BufferedMetricStore is designed to improve performance by reducing the number of write operations
 
@@ -258,7 +252,7 @@ type BufferedMetricStore struct {
 ```
 
 <a name="NewBufferedMetricStore"></a>
-### func [NewBufferedMetricStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/metricbuffer.go#L68>)
+### func [NewBufferedMetricStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/metricbuffer.go#L64>)
 
 ```go
 func NewBufferedMetricStore(name string, store MetricStore, maxSize int, flushInterval time.Duration) *BufferedMetricStore
@@ -267,7 +261,7 @@ func NewBufferedMetricStore(name string, store MetricStore, maxSize int, flushIn
 NewBufferedMetricStore creates a new BufferedMetricStore instance. It initializes the buffer with a specified maximum size and flush interval. The flush interval determines how often the buffer is flushed to the underlying metric store. The maximum size determines when the buffer is flushed. The BufferedMetricStore is designed to improve performance by reducing the number of write operations to the underlying metric store.
 
 <a name="BufferedMetricStore.Close"></a>
-### func \(\*BufferedMetricStore\) [Close](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/metricbuffer.go#L148>)
+### func \(\*BufferedMetricStore\) [Close](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/metricbuffer.go#L144>)
 
 ```go
 func (b *BufferedMetricStore) Close() error
@@ -276,7 +270,7 @@ func (b *BufferedMetricStore) Close() error
 Close closes the BufferedMetricStore and flushes any remaining buffered metric payloads. It is called to ensure that all buffered metric payloads are written to the underlying metric store. The Close method is thread\-safe and uses a mutex to protect the buffer. It returns an error if the flush operation fails. The Close method is typically called when the application is shutting down
 
 <a name="BufferedMetricStore.Flush"></a>
-### func \(\*BufferedMetricStore\) [Flush](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/metricbuffer.go#L123>)
+### func \(\*BufferedMetricStore\) [Flush](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/metricbuffer.go#L119>)
 
 ```go
 func (b *BufferedMetricStore) Flush() error
@@ -285,7 +279,7 @@ func (b *BufferedMetricStore) Flush() error
 Flush flushes the buffer to the underlying metric store. It is called to ensure that all buffered metric payloads are written to the store. The Flush method is thread\-safe and uses a mutex to protect the buffer. It returns an error if the flush operation fails.
 
 <a name="BufferedMetricStore.Interval"></a>
-### func \(\*BufferedMetricStore\) [Interval](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/metricbuffer.go#L87>)
+### func \(\*BufferedMetricStore\) [Interval](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/metricbuffer.go#L83>)
 
 ```go
 func (b *BufferedMetricStore) Interval() time.Duration
@@ -294,7 +288,7 @@ func (b *BufferedMetricStore) Interval() time.Duration
 Interval returns the flush interval of the BufferedMetricStore. This is the time duration after which the buffer will be flushed to the underlying metric store, even if the buffer size has not reached the maximum.
 
 <a name="BufferedMetricStore.Name"></a>
-### func \(\*BufferedMetricStore\) [Name](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/metricbuffer.go#L80>)
+### func \(\*BufferedMetricStore\) [Name](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/metricbuffer.go#L76>)
 
 ```go
 func (b *BufferedMetricStore) Name() string
@@ -303,7 +297,7 @@ func (b *BufferedMetricStore) Name() string
 Name returns the name of the BufferedMetricStore. It is used to identify the store in logs and metrics.
 
 <a name="BufferedMetricStore.Write"></a>
-### func \(\*BufferedMetricStore\) [Write](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/metricbuffer.go#L108>)
+### func \(\*BufferedMetricStore\) [Write](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/metricbuffer.go#L104>)
 
 ```go
 func (b *BufferedMetricStore) Write(payload model.MetricPayload) error
@@ -312,7 +306,7 @@ func (b *BufferedMetricStore) Write(payload model.MetricPayload) error
 Write writes a metric payload to the buffered metric store. It appends the payload to the buffer and checks if the buffer size has reached the maximum. If the buffer size exceeds the maximum, it flushes the buffer to the underlying metric store. The Write method is thread\-safe and uses a mutex to protect the buffer. It returns an error if the flush operation fails.
 
 <a name="BufferedMetricStore.WriteAny"></a>
-### func \(\*BufferedMetricStore\) [WriteAny](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/metricbuffer.go#L95>)
+### func \(\*BufferedMetricStore\) [WriteAny](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/metricbuffer.go#L91>)
 
 ```go
 func (b *BufferedMetricStore) WriteAny(payload interface{}) error
@@ -321,7 +315,7 @@ func (b *BufferedMetricStore) WriteAny(payload interface{}) error
 WriteAny writes a payload to the buffered metric store. It takes an interface\{\} as a parameter and attempts to convert it to a MetricPayload. If the conversion is successful, it writes the payload to the buffer. If the conversion fails, it returns an error.
 
 <a name="BufferedStore"></a>
-## type [BufferedStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L43-L49>)
+## type [BufferedStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L40-L46>)
 
 BufferedStore is an interface that defines the methods for a buffered store. It is used to abstract the underlying store implementation, allowing for different storage engines to be used \(e.g., file, database\). The BufferedStore interface defines methods for writing data, flushing the buffer, closing the store, and retrieving the store name and flush interval.
 
@@ -347,7 +341,7 @@ type DataStore interface {
 ```
 
 <a name="LogStore"></a>
-## type [LogStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/logbuffer.go#L43-L45>)
+## type [LogStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/logbuffer.go#L39-L41>)
 
 LogStore is an interface that defines the methods for writing log entries. It is used to abstract the underlying log store implementation, allowing for different storage engines to be used \(e.g., file, database\).
 
@@ -358,7 +352,7 @@ type LogStore interface {
 ```
 
 <a name="MetricStore"></a>
-## type [MetricStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/metricbuffer.go#L58-L60>)
+## type [MetricStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/metricbuffer.go#L54-L56>)
 
 MetricStore is an interface that defines the methods for writing metric payloads. It is used to abstract the underlying metric store implementation, allowing for different storage engines to be used \(e.g., file, database\). The MetricStore interface defines methods for writing metric payloads, flushing the buffer, closing the store, and retrieving the store name and flush interval.
 
