@@ -19,6 +19,9 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
+// Package rulestore provides a rule store implementation that uses a YAML file for persistence.
+// It implements the RuleStore interface and provides methods for adding,
+// updating, deleting, and retrieving rules.
 package rulestore
 
 import (

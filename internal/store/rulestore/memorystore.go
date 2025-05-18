@@ -28,20 +28,22 @@ import (
 	"github.com/aaronlmathis/gosight-shared/model"
 )
 
-// internal/store/rulestore/memorystore.go
-
-// Package memorystore provides an in-memory implementation of the RuleStore interface.
-// It is primarily used for testing and development purposes.
-
+// MemoryRuleStore is an in-memory implementation of the RuleStore interface.
+// It provides methods for adding, updating, deleting, and retrieving rules.
 type MemoryRuleStore struct {
 	rules map[string]model.AlertRule
 	lock  sync.RWMutex
 }
 
+// NewMemoryStore creates a new MemoryRuleStore.
+// It initializes an empty rules map.
+// This store is not persistent and will lose data on application restart.
 func NewMemoryStore() *MemoryRuleStore {
 	return &MemoryRuleStore{rules: make(map[string]model.AlertRule)}
 }
 
+// AddRule adds a new rule to the store.
+// If a rule with the same ID already exists, it will be overwritten.
 func (s *MemoryRuleStore) AddRule(ctx context.Context, r model.AlertRule) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -49,10 +51,14 @@ func (s *MemoryRuleStore) AddRule(ctx context.Context, r model.AlertRule) error 
 	return nil
 }
 
+// UpdateRule updates an existing rule in the store.
+// If the rule does not exist, it will be added as a new rule.
 func (s *MemoryRuleStore) UpdateRule(ctx context.Context, r model.AlertRule) error {
 	return s.AddRule(ctx, r)
 }
 
+// DeleteRule deletes a rule from the store by its ID.
+// If the rule does not exist, it will be ignored.
 func (s *MemoryRuleStore) DeleteRule(ctx context.Context, id string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -60,6 +66,8 @@ func (s *MemoryRuleStore) DeleteRule(ctx context.Context, id string) error {
 	return nil
 }
 
+// ListRules returns a list of all rules in the store.
+// It returns an empty list if no rules are present.
 func (s *MemoryRuleStore) ListRules(ctx context.Context) ([]model.AlertRule, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
@@ -71,6 +79,9 @@ func (s *MemoryRuleStore) ListRules(ctx context.Context) ([]model.AlertRule, err
 	return out, nil
 }
 
+// GetActiveRules returns a list of all active rules in the store.
+// An active rule is one that has its Enabled field set to true.
+// It returns an empty list if no active rules are present.
 func (s *MemoryRuleStore) GetActiveRules(ctx context.Context) ([]model.AlertRule, error) {
 	all, _ := s.ListRules(ctx)
 	var filtered []model.AlertRule
