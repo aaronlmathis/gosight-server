@@ -19,11 +19,6 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// File: gosight/agent/internal/bootstrap/routestore.go
-// Description: Package bootstrap initializes the route store for the GoSight agent.
-// The route store is responsible for storing and retrieving routes.
-// Supports different storage engines, such as JSON File
-
 package bootstrap
 
 import (

@@ -6,19 +6,19 @@
 import "github.com/aaronlmathis/gosight-server/internal/bootstrap"
 ```
 
-gosight/agent/internal/bootstrap/alertstore.go Alert Store Initialization This file contains the initialization logic for the alert store in the GoSight server. The alert store is responsible for storing and retrieving alert instances. It supports different storage engines, such as PostgreSQL. The initialization function takes a configuration object and returns an instance of the alert store.
+SPDX\-License\-Identifier: GPL\-3.0\-or\-later
 
-gosight/agent/internal/bootstrap/auth.go GoSight \- Authentication Initialization This file contains the initialization logic for the authentication providers in the GoSight server. The authentication providers are responsible for handling user authentication using various methods such as local authentication and OAuth2.
+Copyright \(C\) 2025 Aaron Mathis aaron.mathis@gmail.com
 
-server/internal/bootstrap/bufferengine.go GoSight \- Buffered Engine Initialization This file contains the initialization logic for the buffered engine in the GoSight server. The buffered engine is responsible for buffering metrics, logs, and data before sending them to the respective stores. It allows for better performance and reliability by batching writes and handling failures gracefully.
+This file is part of GoSight.
 
-server/internal/bootstrap/caches.go gosight\-server \- Caches Initialization This file contains the initialization logic for the caches in the GoSight server. The caches are used to store frequently accessed data in memory for faster access. The caches include metric cache, tag cache, process cache, and log cache. The initialization function takes a context and a data store as parameters and returns a pointer to the Cache struct containing all the caches.
+GoSight is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or \(at your option\) any later version.
 
-File: gosight/agent/internal/bootstrap/event\_store.go Description: This file contains the initialization logic for the event store in the GoSight server. The event store is responsible for storing and retrieving events. It supports different storage engines, such as PostgreSQL. The initialization function takes a configuration object and returns an instance of the event store.
+GoSight is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
-File: gosight/agent/internal/bootstrap/init.go Description: Package bootstrap initializes the GoSight server. It sets up the logging, metric index, log store, metric store, data store, agent tracker, meta tracker, websocket hub, user store, event store, rule store, emitter/alert manager, evaluator, and authentication providers. It loads these components into a SystemContext and returns an error if any of the components fail to initialize.
+You should have received a copy of the GNU General Public License along with GoSight. If not, see https://www.gnu.org/licenses/.
 
-File: gosight/agent/internal/bootstrap/logstore.go Description: Package bootstrap initializes the log store for the GoSight agent. The log store is responsible for storing and retrieving logs. Supports different storage engines, such as JSON File and VictoriaMetrics Initialization function takes a configuration object and returns an instance of the log store.
+Package bootstrap initializes the GoSight server. It sets up the logging, metric index, log store, metric store, data store, agent tracker, meta tracker, websocket hub, user store, event store, rule store, emitter/alert manager, evaluator, and authentication providers. It loads these components into a SystemContext and returns an error if any of the components fail to initialize.
 
 ## Index
 
@@ -42,16 +42,16 @@ File: gosight/agent/internal/bootstrap/logstore.go Description: Package bootstra
 
 
 <a name="InitAlertStore"></a>
-## func [InitAlertStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/alertstore.go#L45>)
+## func [InitAlertStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/alertstore.go#L38>)
 
 ```go
 func InitAlertStore(cfg *config.Config) (alertstore.AlertStore, error)
 ```
 
-
+InitAlertStore initializes the alert store for the GoSight server. The alert store is responsible for storing and retrieving alert instances.
 
 <a name="InitAuth"></a>
-## func [InitAuth](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/auth.go#L38>)
+## func [InitAuth](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/auth.go#L33>)
 
 ```go
 func InitAuth(cfg *config.Config, userStore userstore.UserStore) (map[string]gosightauth.AuthProvider, error)
@@ -60,7 +60,7 @@ func InitAuth(cfg *config.Config, userStore userstore.UserStore) (map[string]gos
 InitAuth initializes the authentication providers for the GoSight server.
 
 <a name="InitBufferEngine"></a>
-## func [InitBufferEngine](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/bufferedengine.go#L42>)
+## func [InitBufferEngine](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/bufferedengine.go#L36>)
 
 ```go
 func InitBufferEngine(ctx context.Context, cfg *config.BufferEngineConfig, stores *sys.StoreModule) *sys.BufferModule
@@ -69,7 +69,7 @@ func InitBufferEngine(ctx context.Context, cfg *config.BufferEngineConfig, store
 InitBufferEngine initializes buffered stores and the central buffer engine. It wraps existing backend stores with buffering and returns the sys.BuffersModule wrapped buffers.
 
 <a name="InitCaches"></a>
-## func [InitCaches](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/caches.go#L40>)
+## func [InitCaches](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/caches.go#L33>)
 
 ```go
 func InitCaches(ctx context.Context, dataStore datastore.DataStore) (*cache.Cache, error)
@@ -78,16 +78,16 @@ func InitCaches(ctx context.Context, dataStore datastore.DataStore) (*cache.Cach
 InitCaches initializes caches for the system context.
 
 <a name="InitDataStore"></a>
-## func [InitDataStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/datastore.go#L43>)
+## func [InitDataStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/datastore.go#L38>)
 
 ```go
 func InitDataStore(cfg *config.Config) (datastore.DataStore, error)
 ```
 
-
+InitDataStore initializes the data store for the GoSight server. The data store is responsible for storing and retrieving data instances. It supports different types of data stores, such as PostgreSQL.
 
 <a name="InitEventStore"></a>
-## func [InitEventStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/eventstore.go#L46>)
+## func [InitEventStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/eventstore.go#L35>)
 
 ```go
 func InitEventStore(cfg *config.Config) (eventstore.EventStore, error)
@@ -96,16 +96,16 @@ func InitEventStore(cfg *config.Config) (eventstore.EventStore, error)
 InitEventStore initializes the event store for the GoSight server.
 
 <a name="InitGoSight"></a>
-## func [InitGoSight](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/init.go#L54>)
+## func [InitGoSight](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/init.go#L51>)
 
 ```go
 func InitGoSight(ctx context.Context) (*sys.SystemContext, error)
 ```
 
-
+initGoSight initializes the GoSight server by setting up various components such as logging, metric index, log store, metric store, data store, agent tracker, meta tracker, websocket hub, user store, event store, rule store, emitter/alert manager, evaluator, and authentication providers. It loads these components into a SystemContext and returns an error if any of the components fail to initialize.
 
 <a name="InitLogStore"></a>
-## func [InitLogStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/logstore.go#L41>)
+## func [InitLogStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/logstore.go#L36>)
 
 ```go
 func InitLogStore(ctx context.Context, cfg *config.Config, logCache cache.LogCache) (logstore.LogStore, error)
@@ -114,7 +114,7 @@ func InitLogStore(ctx context.Context, cfg *config.Config, logCache cache.LogCac
 InitLogStore initializes the log store for the GoSight agent. The log store is responsible for storing and retrieving logs.
 
 <a name="InitMetaStore"></a>
-## func [InitMetaStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/metricstore.go#L67>)
+## func [InitMetaStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/metricstore.go#L61>)
 
 ```go
 func InitMetaStore() *metastore.MetaTracker
@@ -123,7 +123,7 @@ func InitMetaStore() *metastore.MetaTracker
 InitMetaStore initializes the meta store for the GoSight agent. The meta store is responsible for storing and retrieving metadata.
 
 <a name="InitMetricIndex"></a>
-## func [InitMetricIndex](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/metricstore.go#L43>)
+## func [InitMetricIndex](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/metricstore.go#L37>)
 
 ```go
 func InitMetricIndex() (*metricindex.MetricIndex, error)
@@ -132,7 +132,7 @@ func InitMetricIndex() (*metricindex.MetricIndex, error)
 InitMetricIndex initializes the metric index for the GoSight agent.
 
 <a name="InitMetricStore"></a>
-## func [InitMetricStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/metricstore.go#L52>)
+## func [InitMetricStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/metricstore.go#L46>)
 
 ```go
 func InitMetricStore(ctx context.Context, cfg *config.Config, metricCache cache.MetricCache) (metricstore.MetricStore, error)
@@ -141,7 +141,7 @@ func InitMetricStore(ctx context.Context, cfg *config.Config, metricCache cache.
 InitMetricStore initializes the metric store for the GoSight agent. The metric store is responsible for storing and retrieving metrics.
 
 <a name="InitRouteStore"></a>
-## func [InitRouteStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/routestore.go#L35>)
+## func [InitRouteStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/routestore.go#L30>)
 
 ```go
 func InitRouteStore(cfg *config.Config) (*routestore.RouteStore, error)
@@ -150,7 +150,7 @@ func InitRouteStore(cfg *config.Config) (*routestore.RouteStore, error)
 InitMetricIndex initializes the metric index for the GoSight agent.
 
 <a name="InitRuleStore"></a>
-## func [InitRuleStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/rulestore.go#L38>)
+## func [InitRuleStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/rulestore.go#L32>)
 
 ```go
 func InitRuleStore(cfg *config.Config) (rulestore.RuleStore, error)
@@ -159,7 +159,7 @@ func InitRuleStore(cfg *config.Config) (rulestore.RuleStore, error)
 InitRuleStore initializes the rule store based on the configuration.
 
 <a name="InitTracker"></a>
-## func [InitTracker](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/tracker.go#L41>)
+## func [InitTracker](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/tracker.go#L34>)
 
 ```go
 func InitTracker(ctx context.Context, dataStore datastore.DataStore, emitter *events.Emitter) *tracker.EndpointTracker
@@ -168,7 +168,7 @@ func InitTracker(ctx context.Context, dataStore datastore.DataStore, emitter *ev
 InitEndpointTracker initializes the unified endpoint tracker. Tracks both agents and containers, and emits lifecycle events.
 
 <a name="InitUserStore"></a>
-## func [InitUserStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/userstore.go#L45>)
+## func [InitUserStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/userstore.go#L38>)
 
 ```go
 func InitUserStore(cfg *config.Config) (userstore.UserStore, error)
@@ -177,7 +177,7 @@ func InitUserStore(cfg *config.Config) (userstore.UserStore, error)
 InitUserStore initializes the user store for the GoSight server. The user store is responsible for storing and retrieving user and permission data. It supports different storage engines, such as PostgreSQL.
 
 <a name="InitWebSocketHub"></a>
-## func [InitWebSocketHub](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/websocket.go#L40>)
+## func [InitWebSocketHub](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/websocket.go#L35>)
 
 ```go
 func InitWebSocketHub(ctx context.Context, metaStore *metastore.MetaTracker) *websocket.HubManager
@@ -186,12 +186,12 @@ func InitWebSocketHub(ctx context.Context, metaStore *metastore.MetaTracker) *we
 InitWebSocketHub initializes the WebSocket hub for the GoSight agent. The WebSocket hub is responsible for managing WebSocket connections and broadcasting messages to connected clients.
 
 <a name="LoadServerConfig"></a>
-## func [LoadServerConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/config.go#L41>)
+## func [LoadServerConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/config.go#L40>)
 
 ```go
 func LoadServerConfig() *config.Config
 ```
 
-TODO Update environment variables and flags
+LoadServerConfig loads the server configuration from a file, environment variables, and command line flags. It applies the following order of precedence: 1. Command line flags 2. Environment variables 3. Default configuration file 4. Hardcoded defaults The function returns a pointer to the loaded configuration.
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)

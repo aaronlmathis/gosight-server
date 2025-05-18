@@ -18,14 +18,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
-
-// File: gosight/agent/internal/bootstrap/data_store.go
-// Description: This file contains the initialization logic for the data store in the GoSight server.
-// The data store is responsible for storing and retrieving user and permission data.
-// It supports different storage engines, such as PostgreSQL.
-// The initialization function takes a configuration object and returns an instance of the data store.
-// // Package store provides an interface for storing and retrieving user / permission data
-
 package bootstrap
 
 import (
@@ -40,6 +32,9 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// InitDataStore initializes the data store for the GoSight server.
+// The data store is responsible for storing and retrieving data instances.
+// It supports different types of data stores, such as PostgreSQL.
 func InitDataStore(cfg *config.Config) (datastore.DataStore, error) {
 	dataStoreType := cfg.DataStore.Engine
 

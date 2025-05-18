@@ -363,7 +363,7 @@ func NewProcessHub(metaTracker *metastore.MetaTracker) *ProcessHub
 
 
 <a name="ProcessHub.Broadcast"></a>
-### func \(\*ProcessHub\) [Broadcast](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/websocket/processhub.go#L158>)
+### func \(\*ProcessHub\) [Broadcast](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/websocket/processhub.go#L157>)
 
 ```go
 func (h *ProcessHub) Broadcast(payload model.ProcessPayload)

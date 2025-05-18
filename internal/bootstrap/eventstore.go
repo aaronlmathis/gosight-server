@@ -19,11 +19,6 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// File: gosight/agent/internal/bootstrap/event_store.go
-// Description: This file contains the initialization logic for the event store in the GoSight server.
-// The event store is responsible for storing and retrieving events.
-// It supports different storage engines, such as PostgreSQL.
-// The initialization function takes a configuration object and returns an instance of the event store.
 package bootstrap
 
 import (
@@ -35,12 +30,6 @@ import (
 	"github.com/aaronlmathis/gosight-server/internal/store/eventstore/pgeventstore"
 	"github.com/aaronlmathis/gosight-shared/utils"
 )
-
-// In this file, we initialize the event store for the GoSight server.
-// The event store is responsible for storing and retrieving events.
-// The implementation of this interface should handle the actual storage
-// and retrieval of events, whether it's in memory, a database, or any other
-// storage mechanism.
 
 // InitEventStore initializes the event store for the GoSight server.
 func InitEventStore(cfg *config.Config) (eventstore.EventStore, error) {

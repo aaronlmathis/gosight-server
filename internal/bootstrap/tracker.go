@@ -19,13 +19,6 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// File: server/internal/bootstrap/tracker.go
-// Description: Package bootstrap initializes the unified endpoint tracker for the GoSight server.
-// The tracker is responsible for tracking the lifecycle of endpoints, including agents and containers.
-// It emits lifecycle events to the event emitter.
-// The tracker is initialized with a context, an event emitter, and a data store.
-// It returns a pointer to the initialized EndpointTracker instance.
-
 package bootstrap
 
 import (

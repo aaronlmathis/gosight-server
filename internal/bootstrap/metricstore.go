@@ -19,12 +19,6 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// File: gosight/agent/internal/bootstrap/metricstore.go
-// Description: Package bootstrap initializes the metric store for the GoSight agent.
-// The metric store is responsible for storing and retrieving metrics.
-// Supports different storage engines, such as VictoriaMetrics
-// Initialization function takes a configuration object and returns an instance of the metric store.
-
 package bootstrap
 
 import (

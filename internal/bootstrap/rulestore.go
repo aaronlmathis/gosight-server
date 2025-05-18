@@ -19,12 +19,6 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// File: gosight/agent/internal/bootstrap/rulestore.go
-// Description: Package bootstrap initializes the rule store for the GoSight agent.
-// The rule store is responsible for storing and retrieving rules.
-// Supports different storage engines, such as YAML / JSON File
-// Initialization function takes a configuration object and returns an instance of the rule store.
-
 package bootstrap
 
 import (

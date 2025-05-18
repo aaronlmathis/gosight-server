@@ -19,12 +19,6 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// server/internal/bootstrap/bufferengine.go
-// GoSight - Buffered Engine Initialization
-// This file contains the initialization logic for the buffered engine in the GoSight server.
-// The buffered engine is responsible for buffering metrics, logs, and data before
-// sending them to the respective stores. It allows for better performance and
-// reliability by batching writes and handling failures gracefully.
 package bootstrap
 
 import (

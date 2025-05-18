@@ -90,7 +90,7 @@ func NewLogsHandler(sys *sys.SystemContext) *LogsHandler
 
 
 <a name="LogsHandler.EvaluateSeverityLevel"></a>
-### func \(\*LogsHandler\) [EvaluateSeverityLevel](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/logs.go#L107>)
+### func \(\*LogsHandler\) [EvaluateSeverityLevel](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/logs.go#L106>)
 
 ```go
 func (h *LogsHandler) EvaluateSeverityLevel(logPayload *model.LogPayload)

@@ -19,8 +19,7 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// File: gosight/agent/internal/bootstrap/init.go
-// Description: Package bootstrap initializes the GoSight server.
+// Package bootstrap initializes the GoSight server.
 // It sets up the logging, metric index, log store, metric store, data store,
 // agent tracker, meta tracker, websocket hub, user store, event store,
 // rule store, emitter/alert manager, evaluator, and authentication providers.
@@ -47,10 +46,8 @@ import (
 // such as logging, metric index, log store, metric store, data store,
 // agent tracker, meta tracker, websocket hub, user store, event store,
 // rule store, emitter/alert manager, evaluator, and authentication providers.
-
 // It loads these components into a SystemContext and returns an error if any
 // of the components fail to initialize.
-
 func InitGoSight(ctx context.Context) (*sys.SystemContext, error) {
 
 	// Initialize the GoSight server

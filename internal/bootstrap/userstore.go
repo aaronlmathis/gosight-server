@@ -19,13 +19,6 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// File: gosight-server/internal/bootstrap/userstore.go
-// Description: Package bootstrap initializes the user store for the GoSight server.
-// The user store is responsible for storing and retrieving user and permission data.
-// Supports different storage engines, such as PostgreSQL.
-// The initialization function takes a configuration object and returns an instance of the user store.
-// The user store is used to manage user accounts, permissions, and roles.
-
 package bootstrap
 
 import (

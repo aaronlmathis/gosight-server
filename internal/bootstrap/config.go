@@ -19,13 +19,6 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// File: server/internal/bootstrap/config.go
-// Description: This file contains the configuration loading logic for the GoSight server.
-// It uses command-line flags, environment variables, and a configuration file to set up the server's configuration.
-// The configuration includes server addresses, logging settings, and other parameters.
-// The configuration is loaded into a Config struct, which is then used throughout the application.
-// Loads ENV, FLAG, Configs
-
 package bootstrap
 
 import (
@@ -37,7 +30,13 @@ import (
 	"github.com/aaronlmathis/gosight-server/internal/config"
 )
 
-// TODO Update environment variables and flags
+// LoadServerConfig loads the server configuration from a file, environment variables, and command line flags.
+// It applies the following order of precedence:
+// 1. Command line flags
+// 2. Environment variables
+// 3. Default configuration file
+// 4. Hardcoded defaults
+// The function returns a pointer to the loaded configuration.
 func LoadServerConfig() *config.Config {
 	// CLI flags
 	configFlag := flag.String("config", "", "Path to server config file")

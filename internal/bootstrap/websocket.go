@@ -19,11 +19,6 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// File: gosight-server/internal/bootstrap/websocket.go
-// Description: Package bootstrap initializes the WebSocket hub for the GoSight agent.
-// The WebSocket hub is responsible for managing WebSocket connections and
-// broadcasting messages to connected clients.
-
 package bootstrap
 
 import (

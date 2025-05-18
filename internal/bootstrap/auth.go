@@ -19,11 +19,6 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// gosight/agent/internal/bootstrap/auth.go
-// GoSight - Authentication Initialization
-// This file contains the initialization logic for the authentication providers in the GoSight server.
-// The authentication providers are responsible for handling user authentication
-// using various methods such as local authentication and OAuth2.
 package bootstrap
 
 import (
@@ -59,7 +54,6 @@ func InitAuth(cfg *config.Config, userStore userstore.UserStore) (map[string]gos
 
 // buildAuthProviders builds the authentication providers based on the configuration.
 // It returns a map of provider names to their respective AuthProvider implementations.
-
 func buildAuthProviders(cfg *config.Config, store userstore.UserStore) (map[string]gosightauth.AuthProvider, error) {
 	providers := make(map[string]gosightauth.AuthProvider)
 
