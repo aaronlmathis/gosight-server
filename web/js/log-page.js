@@ -640,6 +640,24 @@ document.addEventListener("DOMContentLoaded", () => {
   function getLogKey(log) {
     return `${log.timestamp}_${log.message}`;
   }
+  function truncateMessage(message, maxLines = 3) {
+    if (!message) return message;
+    
+    // First split by newlines
+    const lines = message.split('\n');
+    
+    if (lines.length <= maxLines) {
+      // If it's a single line but very long, truncate it
+      if (lines.length === 1 && message.length > 150) {
+        return message.substring(0, 150) + '...';
+      }
+      return message;
+    }
+    
+    // Take first few lines and add indication of how many more lines exist
+    const truncated = lines.slice(0, maxLines).join('\n');
+    return `${truncated}\n[... ${lines.length - maxLines} more lines ...]`;
+  }
   function renderLogs(logs, append = false) {
     if (!append) {
       elements.resultsTable.innerHTML = "";
@@ -663,6 +681,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const timestamp = new Date(log.timestamp).toLocaleString();
       const logKey = getLogKey(log);
       const isExpanded = state.expandedLogKeys.has(logKey);
+      const truncatedMessage = truncateMessage(log.message);
 
       // Main log row
       const row = document.createElement("tr");
@@ -678,8 +697,10 @@ document.addEventListener("DOMContentLoaded", () => {
         <td class="px-4 py-2 text-sm">
           ${sanitize(log.tags?.container_name || log.tags?.hostname || '')}
         </td>
-        <td class="px-4 py-2 text-xs text-gray-700 dark:text-gray-200 font-mono truncate max-w-[400px]">
-          ${sanitize(log.message)}
+        <td class="px-4 py-2 text-xs text-gray-700 dark:text-gray-200 font-mono max-w-[400px] w-full">
+          ${sanitize(truncatedMessage).split('\n').map(line => 
+            `<div class="truncate">${line}</div>`
+          ).join('')}
         </td>
         <td class="px-4 py-2 text-sm">${sanitize(log.meta?.user || '')}</td>
         <td class="px-4 py-2 text-sm">
