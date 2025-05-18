@@ -61,7 +61,6 @@ func (h *LogsHandler) SubmitStream(stream pb.LogService_SubmitStreamServer) erro
 		SafeHandlePayload(func() {
 			converted := ConvertToModelLogPayload(pbPayload)
 
-
 			// Tag enrichment from in-memory cache
 			if converted.Meta != nil && converted.Meta.EndpointID != "" {
 				tags := h.Sys.Cache.Tags.GetFlattenedTagsForEndpoint(converted.Meta.EndpointID)
@@ -95,7 +94,7 @@ func (h *LogsHandler) SubmitStream(stream pb.LogService_SubmitStreamServer) erro
 			} else {
 				if err := h.Sys.Buffers.Logs.WriteAny(converted); err != nil {
 					utils.Warn("Failed to buffer LogPayload: %v", err)
-				}	
+				}
 			}
 
 		})
@@ -128,7 +127,7 @@ func (h *LogsHandler) EvaluateSeverityLevel(logPayload *model.LogPayload) {
 				Scope:      "endpoint",
 				Target:     logPayload.EndpointID,
 				EndpointID: logPayload.EndpointID,
-				Meta: events.BuildLogEventMeta(&logEntry, logPayload),
+				Meta:       events.BuildLogEventMeta(&logEntry, logPayload),
 			}
 			h.Sys.Tele.Emitter.Emit(h.Sys.Ctx, evt)
 		case "warning":

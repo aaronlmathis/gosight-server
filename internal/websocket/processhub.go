@@ -48,7 +48,7 @@ type ProcessHub struct {
 func NewProcessHub(metaTracker *metastore.MetaTracker) *ProcessHub {
 	return &ProcessHub{
 		clients:     make(map[*Client]bool),
-		broadcast:   make(chan model.ProcessPayload, 2000), 
+		broadcast:   make(chan model.ProcessPayload, 2000),
 		metaTracker: metaTracker,
 	}
 }
@@ -96,7 +96,7 @@ func (h *ProcessHub) Run(ctx context.Context) {
 
 // ServeWS upgrades HTTP to WebSocket and registers client to ProcessHub.
 func (h *ProcessHub) ServeWS(w http.ResponseWriter, r *http.Request) {
-	
+
 	_, err := gosightauth.GetSessionClaims(r)
 	if err != nil {
 		utils.Warn("Unauthorized WebSocket attempt: %v", err)
@@ -145,7 +145,6 @@ func (h *ProcessHub) ServeWS(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}()
-
 
 	h.lock.Lock()
 	h.clients[client] = true

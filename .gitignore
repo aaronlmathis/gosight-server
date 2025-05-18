@@ -46,3 +46,4 @@ server/logstore
 **/lint_check.txt
 logstore/
 generatedocs.sh
+format.sh

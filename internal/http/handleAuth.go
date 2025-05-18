@@ -349,9 +349,9 @@ func (s *HttpServer) createFinalSessionAndRedirect(w http.ResponseWriter, r *htt
 		"/":          true,
 		"/dashboard": true,
 		"/profile":   true,
-		"/alerts":   true,
-		"/logs":   true,
-		"/events":   true,
+		"/alerts":    true,
+		"/logs":      true,
+		"/events":    true,
 		"/metrics":   true,
 	}
 	if _, ok := allowedPaths[next]; !ok {
