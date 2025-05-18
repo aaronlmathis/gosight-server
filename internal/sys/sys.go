@@ -19,8 +19,10 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// gosight/agent/internal/sys/sys.go
 // Package sys provides the system context for the GoSight application.
+// It contains the SystemContext struct which holds references to various subsystems
+// and modules, allowing for easy access and management of the application's state.
+// The SystemContext is passed to all subsystems, providing full access to config, state, and interfaces.
 package sys
 
 import (
@@ -48,6 +50,10 @@ type SystemContext struct {
 	SyncMgr *syncmanager.SyncManager
 }
 
+// NewSystemContext creates a new SystemContext with the provided parameters.
+// It initializes the context, configuration, tracker, websocket hub, authentication providers,
+// stores, telemetry, caches, buffers, and synchronization manager.
+// This function is typically called during the initialization phase of the application.
 func NewSystemContext(
 	ctx context.Context,
 	cfg *config.Config,

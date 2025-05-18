@@ -21,7 +21,10 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 
 // gosight/server/internal/dispatcher/dispatcher.go
 
-// Package dispatcher provides functionality to manage and dispatch
+// Package dispatcher provides functionality to manage and dispatch events
+// to various actions based on defined routes. It allows for flexible event handling
+// through the use of webhooks and scripts, enabling integration with external systems
+// and custom processing of events.
 package dispatcher
 
 import (
@@ -36,6 +39,7 @@ import (
 	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
+// Dispatcher is responsible for managing and dispatching events to various actions based on defined routes.
 type Dispatcher struct {
 	Routes map[string]model.ActionRoute
 }
@@ -91,7 +95,7 @@ func matchRoute(f model.MatchFilter, e model.EventEntry) bool {
 	return true
 }
 
-// executeAction executes the action specified in the route.
+// ExecuteAction executes the action specified in the route.
 // It determines the action type (webhook or script) and calls the appropriate function.
 func (d *Dispatcher) ExecuteAction(ctx context.Context, a model.ActionSpec, e model.EventEntry) {
 	switch strings.ToLower(a.Type) {
@@ -107,7 +111,6 @@ func (d *Dispatcher) ExecuteAction(ctx context.Context, a model.ActionSpec, e mo
 // executeWebhook sends a POST request to the specified URL with the event data as JSON.
 // It sets the content type to application/json and includes any additional headers specified in the action.
 func executeWebhook(a model.ActionSpec, e model.EventEntry) {
-	utils.Debug("🔥 Webhook triggered for: %s", a.URL)
 	payload, _ := json.Marshal(e)
 	req, _ := http.NewRequest("POST", a.URL, bytes.NewBuffer(payload))
 	req.Header.Set("Content-Type", "application/json")

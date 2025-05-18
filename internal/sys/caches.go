@@ -19,13 +19,12 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// gosight/agent/internal/sys/caches.go
-// Package sys provides system-level caches and context for the agent.
-// This includes caches for metrics, logs, and processes.
 package sys
 
 import "github.com/aaronlmathis/gosight-server/internal/cache"
 
+// CacheModule is a struct that holds different types of caches.
+// It is used to manage the in-memory caches for the application.
 type CacheModule struct {
 	Process cache.ProcessCache
 	Metric  cache.MetricCache

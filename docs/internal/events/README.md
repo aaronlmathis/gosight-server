@@ -6,7 +6,7 @@
 import "github.com/aaronlmathis/gosight-server/internal/events"
 ```
 
-Package events provides an event emitter for the GoSight application.
+Package events provides an event emitter for the GoSight application. It allows for the emission of events with various attributes such as level, category, message, source, and metadata. The Emitter struct is responsible for storing events in an event store and broadcasting them to connected clients via a WebSocket hub.
 
 ## Index
 
@@ -26,7 +26,7 @@ func BuildLogEventMeta(log *model.LogEntry, payload *model.LogPayload) map[strin
 BuildLogEventMeta builds a map of metadata for a log event
 
 <a name="Emitter"></a>
-## type [Emitter](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/events/emitter.go#L37-L40>)
+## type [Emitter](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/events/emitter.go#L39-L42>)
 
 Emitter is an event emitter that stores events in an event store. It provides a method to emit events with various attributes such as level, category, message, source, and metadata.
 
@@ -38,7 +38,7 @@ type Emitter struct {
 ```
 
 <a name="NewEmitter"></a>
-### func [NewEmitter](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/events/emitter.go#L43>)
+### func [NewEmitter](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/events/emitter.go#L45>)
 
 ```go
 func NewEmitter(store eventstore.EventStore, hub *websocket.EventsHub) *Emitter
@@ -47,7 +47,7 @@ func NewEmitter(store eventstore.EventStore, hub *websocket.EventsHub) *Emitter
 NewEmitter creates a new Emitter instance with the provided event store.
 
 <a name="Emitter.Emit"></a>
-### func \(\*Emitter\) [Emit](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/events/emitter.go#L51>)
+### func \(\*Emitter\) [Emit](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/events/emitter.go#L53>)
 
 ```go
 func (e *Emitter) Emit(ctx context.Context, event model.EventEntry)

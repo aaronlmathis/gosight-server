@@ -19,9 +19,6 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// gosight/agent/internal/sys/stores.go
-// Package sys provides the system context for the GoSight application.
-
 package sys
 
 import (
@@ -48,7 +45,6 @@ type StoreModule struct {
 }
 
 // NewStoreModule creates a new StoreModule with the provided components.
-
 func NewStoreModule(
 	metrics metricstore.MetricStore,
 	logs logstore.LogStore,

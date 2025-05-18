@@ -6,9 +6,7 @@
 import "github.com/aaronlmathis/gosight-server/internal/sys"
 ```
 
-gosight/agent/internal/sys/caches.go Package sys provides system\-level caches and context for the agent. This includes caches for metrics, logs, and processes.
-
-gosight/agent/internal/sys/sys.go Package sys provides the system context for the GoSight application.
+Package sys provides the system context for the GoSight application. It contains the SystemContext struct which holds references to various subsystems and modules, allowing for easy access and management of the application's state. The SystemContext is passed to all subsystems, providing full access to config, state, and interfaces.
 
 ## Index
 
@@ -23,9 +21,9 @@ gosight/agent/internal/sys/sys.go Package sys provides the system context for th
 
 
 <a name="BufferModule"></a>
-## type [BufferModule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/buffers.go#L5-L11>)
+## type [BufferModule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/buffers.go#L27-L33>)
 
-
+BufferModule is a struct that holds buffered stores for different types of data.
 
 ```go
 type BufferModule struct {
@@ -38,9 +36,9 @@ type BufferModule struct {
 ```
 
 <a name="CacheModule"></a>
-## type [CacheModule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/caches.go#L29-L33>)
+## type [CacheModule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/caches.go#L28-L32>)
 
-
+CacheModule is a struct that holds different types of caches. It is used to manage the in\-memory caches for the application.
 
 ```go
 type CacheModule struct {
@@ -50,7 +48,7 @@ type CacheModule struct {
 ```
 
 <a name="StoreModule"></a>
-## type [StoreModule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/stores.go#L39-L48>)
+## type [StoreModule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/stores.go#L36-L45>)
 
 StoreModule contains all persistent or semi\-persistent storage components.
 
@@ -68,16 +66,16 @@ type StoreModule struct {
 ```
 
 <a name="NewStoreModule"></a>
-### func [NewStoreModule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/stores.go#L52-L61>)
+### func [NewStoreModule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/stores.go#L48-L57>)
 
 ```go
 func NewStoreModule(metrics metricstore.MetricStore, logs logstore.LogStore, users userstore.UserStore, data datastore.DataStore, events eventstore.EventStore, rules rulestore.RuleStore, actions *routestore.RouteStore, alerts alertstore.AlertStore) *StoreModule
 ```
 
-
+NewStoreModule creates a new StoreModule with the provided components.
 
 <a name="SystemContext"></a>
-## type [SystemContext](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/sys.go#L38-L49>)
+## type [SystemContext](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/sys.go#L40-L51>)
 
 SystemContext is passed to all subsystems, providing full access to config, state, and interfaces.
 
@@ -97,13 +95,13 @@ type SystemContext struct {
 ```
 
 <a name="NewSystemContext"></a>
-### func [NewSystemContext](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/sys.go#L51-L63>)
+### func [NewSystemContext](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/sys.go#L57-L69>)
 
 ```go
 func NewSystemContext(ctx context.Context, cfg *config.Config, tracker *tracker.EndpointTracker, wsHub *websocket.HubManager, authProviders map[string]gosightauth.AuthProvider, stores *StoreModule, telemetry *TelemetryModule, caches *cache.Cache, buffers *BufferModule, syncMgr *syncmanager.SyncManager) *SystemContext
 ```
 
-
+NewSystemContext creates a new SystemContext with the provided parameters. It initializes the context, configuration, tracker, websocket hub, authentication providers, stores, telemetry, caches, buffers, and synchronization manager. This function is typically called during the initialization phase of the application.
 
 <a name="TelemetryModule"></a>
 ## type [TelemetryModule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/telemetry.go#L37-L44>)

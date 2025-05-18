@@ -1,3 +1,30 @@
+/*
+SPDX-License-Identifier: GPL-3.0-or-later
+
+Copyright (C) 2025 Aaron Mathis aaron.mathis@gmail.com
+
+This file is part of GoSight.
+
+GoSight is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+GoSight is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with GoSight. If not, see https://www.gnu.org/licenses/.
+*/
+
+// Package alerts provides a manager for handling alert instances.
+// It manages the state of alerts, including firing and resolving them,
+// and dispatches events related to alert state changes.
+// It also provides a way to list active alerts and handle log-based alerts.
+// The manager uses a store to persist alert instances and a dispatcher
+// to trigger actions based on alert state changes.
 package alerts
 
 import (
@@ -14,6 +41,9 @@ import (
 	"github.com/google/uuid"
 )
 
+// Manager is responsible for managing alert instances.
+// It handles the state of alerts, including firing and resolving them,
+// and dispatches events related to alert state changes.
 type Manager struct {
 	lock       sync.RWMutex
 	active     map[string]*model.AlertInstance // key: ruleID|endpointID
@@ -23,6 +53,11 @@ type Manager struct {
 	hub        *websocket.AlertsHub
 }
 
+// NewManager creates a new Manager instance.
+// It takes an emitter for emitting events, a dispatcher for triggering actions,
+// a store for persisting alert instances, and a hub for broadcasting alerts.
+// The manager maintains a map of active alert instances, keyed by rule ID and endpoint ID.
+// It also provides methods for handling alert state changes and listing active alerts.
 func NewManager(emitter *events.Emitter, dispatcher *dispatcher.Dispatcher, store alertstore.AlertStore, hub *websocket.AlertsHub) *Manager {
 	return &Manager{
 		active:     make(map[string]*model.AlertInstance),
@@ -33,12 +68,14 @@ func NewManager(emitter *events.Emitter, dispatcher *dispatcher.Dispatcher, stor
 	}
 }
 
+// key generates a unique key for the alert instance based on the rule ID and endpoint ID.
+// This key is used to store and retrieve alert instances from the active map.
 func key(ruleID, endpointID string) string {
 	return ruleID + "|" + endpointID
 }
 
+// HandleState processes the state of an alert based on the given rule, metadata, value, and triggered status.
 func (m *Manager) HandleState(ctx context.Context, rule model.AlertRule, meta *model.Meta, value float64, triggered bool) {
-	utils.Debug("✅  Handle State... Rule ID: %s, Endpoint ID: %s, Value: %f, Triggered: %v", rule.ID, meta.EndpointID, value, triggered)
 	k := key(rule.ID, meta.EndpointID)
 	now := time.Now().UTC()
 
@@ -124,6 +161,10 @@ func (m *Manager) HandleState(ctx context.Context, rule model.AlertRule, meta *m
 	}
 }
 
+// HandleLogState processes the state of a log-based alert based on the given rule, metadata, log entry, and triggered status.
+// It creates a new alert instance if the alert is triggered and updates the existing instance if it is already firing.
+// It also emits an event for the log alert and triggers any actions associated with the rule.
+// The log entry is expected to be in the format of model.LogEntry, and the metadata is expected to be in the format of model.Meta.
 func (m *Manager) HandleLogState(ctx context.Context, rule model.AlertRule, meta *model.Meta, log model.LogEntry, triggered bool) {
 	k := key(rule.ID, meta.EndpointID+"|"+log.Timestamp.Format(time.RFC3339Nano))
 	now := time.Now().UTC()
@@ -178,6 +219,10 @@ func (m *Manager) HandleLogState(ctx context.Context, rule model.AlertRule, meta
 	}
 }
 
+// emitAlertFiringEvent emits an event for a firing alert.
+// It creates an EventEntry with the alert's details and dispatches it to the event emitter and dispatcher.
+// The event includes the alert's timestamp, level, category, message, source, scope, target, and metadata.
+// The event is also broadcasted to the websocket hub for real-time updates.
 func (m *Manager) emitAlertFiringEvent(ctx context.Context, rule model.AlertRule, meta *model.Meta, now time.Time) {
 	scope, target := inferScopeAndTarget(meta)
 	event := model.EventEntry{
@@ -195,6 +240,10 @@ func (m *Manager) emitAlertFiringEvent(ctx context.Context, rule model.AlertRule
 	m.dispatcher.Dispatch(ctx, event)
 }
 
+// emitAlertResolvedEvent emits an event for a resolved alert.
+// It creates an EventEntry with the alert's details and dispatches it to the event emitter and dispatcher.
+// The event includes the alert's timestamp, level, category, message, source, scope, target, and metadata.
+// The event is also broadcasted to the websocket hub for real-time updates.
 func (m *Manager) emitAlertResolvedEvent(ctx context.Context, rule model.AlertRule, meta *model.Meta, now time.Time) {
 	scope, target := inferScopeAndTarget(meta)
 	event := model.EventEntry{
@@ -212,6 +261,10 @@ func (m *Manager) emitAlertResolvedEvent(ctx context.Context, rule model.AlertRu
 	m.dispatcher.Dispatch(ctx, event)
 }
 
+// emitLogAlertFiringEvent emits an event for a log-based alert firing.
+// It creates an EventEntry with the log's details and dispatches it to the event emitter and dispatcher.
+// The event includes the log's timestamp, level, category, message, source, scope, target, and metadata.
+// The event is also broadcasted to the websocket hub for real-time updates.
 func (m *Manager) emitLogAlertFiringEvent(ctx context.Context, rule model.AlertRule, meta *model.Meta, log model.LogEntry, now time.Time) {
 	event := model.EventEntry{
 		Timestamp: now,
@@ -228,6 +281,9 @@ func (m *Manager) emitLogAlertFiringEvent(ctx context.Context, rule model.AlertR
 	m.dispatcher.Dispatch(ctx, event)
 }
 
+// ListActive returns a list of all active alert instances.
+// It iterates over the active map and appends each alert instance to a slice.
+// The slice is then returned to the caller.
 func (m *Manager) ListActive() []model.AlertInstance {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
@@ -239,6 +295,10 @@ func (m *Manager) ListActive() []model.AlertInstance {
 	return list
 }
 
+// inferScopeAndTarget determines the scope and target for the alert instance.
+// It checks if the endpoint ID is present in the metadata.
+// If it is, the scope is set to "endpoint" and the target is set to the endpoint ID.
+// If the endpoint ID is not present, the scope is set to "global" and the target is set to "gosight-core".
 func inferScopeAndTarget(meta *model.Meta) (string, string) {
 	if meta.EndpointID != "" {
 		return "endpoint", meta.EndpointID
@@ -246,6 +306,10 @@ func inferScopeAndTarget(meta *model.Meta) (string, string) {
 	return "global", "gosight-core"
 }
 
+// dispatchFiringEvent dispatches a firing event for the alert instance.
+// It creates an EventEntry with the alert's details and dispatches it to the event dispatcher.
+// The event includes the alert's timestamp, level, category, message, source, scope, target, and metadata.
+// The event is also broadcasted to the websocket hub for real-time updates.
 func (m *Manager) dispatchFiringEvent(ctx context.Context, rule model.AlertRule, meta *model.Meta, target string, now time.Time, message string) {
 	scope, target := inferScopeAndTarget(meta)
 	m.dispatcher.Dispatch(ctx, model.EventEntry{
@@ -260,6 +324,10 @@ func (m *Manager) dispatchFiringEvent(ctx context.Context, rule model.AlertRule,
 	})
 }
 
+// dispatchResolvedEvent dispatches a resolved event for the alert instance.
+// It creates an EventEntry with the alert's details and dispatches it to the event dispatcher.
+// The event includes the alert's timestamp, level, category, message, source, scope, target, and metadata.
+// The event is also broadcasted to the websocket hub for real-time updates.
 func (m *Manager) dispatchResolvedEvent(ctx context.Context, rule model.AlertRule, meta *model.Meta, target string, now time.Time, message string) {
 	scope, target := inferScopeAndTarget(meta)
 	m.dispatcher.Dispatch(ctx, model.EventEntry{

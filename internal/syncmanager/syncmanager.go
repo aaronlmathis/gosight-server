@@ -21,8 +21,9 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 
 // gosight/internal/syncmanager/syncmanager.go
 
-// SyncManager is responsible for managing synchronization between the cache and the datastore.
-
+// Package SyncManager is responsible for managing synchronization between the cache and the datastore.
+// It periodically flushes the cache to the datastore and handles lifecycle events.
+// It is designed to be run as a goroutine and will block until the context is cancelled.
 package syncmanager
 
 import (
@@ -46,7 +47,7 @@ type SyncManager struct {
 	wg        sync.WaitGroup
 }
 
-// New creates a new SyncManager.
+// NewSyncManager creates a new SyncManager.
 func NewSyncManager(ctx context.Context, c *cache.Cache, ds datastore.DataStore, tracker *tracker.EndpointTracker, interval time.Duration) *SyncManager {
 	return &SyncManager{
 		ctx:       ctx,
@@ -72,6 +73,9 @@ func (s *SyncManager) Run() {
 	utils.Info("[syncer] all syncers shut down cleanly")
 }
 
+// runTagSync periodically flushes the tag cache to the datastore.
+// It runs in a separate goroutine and will block until the context is cancelled.
+// The flush interval is configurable and defaults to 30 seconds.
 func (s *SyncManager) runTagSync() {
 	defer s.wg.Done()
 	ticker := time.NewTicker(s.Interval)
@@ -90,6 +94,9 @@ func (s *SyncManager) runTagSync() {
 	}
 }
 
+// runEndpointTrackerSync periodically flushes the endpoint tracker to the datastore.
+// It runs in a separate goroutine and will block until the context is cancelled.
+// The flush interval is configurable and defaults to 30 seconds.
 func (s *SyncManager) runEndpointTrackerSync() {
 
 	defer s.wg.Done()
@@ -109,6 +116,9 @@ func (s *SyncManager) runEndpointTrackerSync() {
 
 }
 
+// runLifecycleEmitter periodically checks the status of agents and containers and emits events.
+// It runs in a separate goroutine and will block until the context is cancelled.
+// The check interval is hardcoded to 30 seconds.
 func (s *SyncManager) runLifecycleEmitter() {
 
 	defer s.wg.Done()

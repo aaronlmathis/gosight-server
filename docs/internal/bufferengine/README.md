@@ -6,7 +6,7 @@
 import "github.com/aaronlmathis/gosight-server/internal/bufferengine"
 ```
 
-File: gosight\-server/internal/bufferengine/databuffer.go Description: Package bufferengine provides a buffered data store implementation for writing process payloads to an underlying data store. It buffers the payloads in memory and flushes them to the underlying store when the buffer reaches a certain size or after a specified interval. The buffered data store is designed to improve performance by reducing the number of write operations to the underlying data store.
+Description: Package bufferengine provides a buffered data store implementation for writing process payloads to an underlying data store. It buffers the payloads in memory and flushes them to the underlying store when the buffer reaches a certain size or after a specified interval. The buffered data store is designed to improve performance by reducing the number of write operations to the underlying data store.
 
 ## Index
 
@@ -93,7 +93,7 @@ func (e *BufferEngine) Stop()
 Stop stops the BufferEngine and all its registered stores. It waits for all background flush routines to finish before closing the stores. The engine will also log any errors encountered while closing the stores. This method should be called when the engine is no longer needed, such as during application shutdown.
 
 <a name="BufferedDataStore"></a>
-## type [BufferedDataStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L54-L62>)
+## type [BufferedDataStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L53-L61>)
 
 BufferedDataStore is a buffered implementation of the DataStore interface. It buffers process payloads in memory and flushes them to the underlying data store when the buffer reaches a certain size or after a specified interval. This helps to reduce the number of write operations and improve performance. The buffer is protected by a mutex to ensure thread safety.
 
@@ -104,7 +104,7 @@ type BufferedDataStore struct {
 ```
 
 <a name="NewBufferedDataStore"></a>
-### func [NewBufferedDataStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L69>)
+### func [NewBufferedDataStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L68>)
 
 ```go
 func NewBufferedDataStore(ctx context.Context, name string, store datastore.DataStore, maxSize int, flushInterval time.Duration) *BufferedDataStore
@@ -113,7 +113,7 @@ func NewBufferedDataStore(ctx context.Context, name string, store datastore.Data
 NewBufferedDataStore creates a new BufferedDataStore instance. It takes a context, a name for the data store, an underlying data store, a maximum buffer size, and a flush interval as parameters. The flush interval is the time duration after which the buffer will be flushed to the underlying data store, even if the buffer size has not reached the maximum.
 
 <a name="BufferedDataStore.Close"></a>
-### func \(\*BufferedDataStore\) [Close](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L151>)
+### func \(\*BufferedDataStore\) [Close](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L150>)
 
 ```go
 func (b *BufferedDataStore) Close() error
@@ -122,7 +122,7 @@ func (b *BufferedDataStore) Close() error
 Close closes the buffered data store. It flushes any remaining payloads in the buffer to the underlying data store and releases any resources held by the buffered data store. This method is called when the buffered data store is no longer needed. It is important to call this method to ensure that all data is written to the underlying data store before closing the application.
 
 <a name="BufferedDataStore.Flush"></a>
-### func \(\*BufferedDataStore\) [Flush](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L125>)
+### func \(\*BufferedDataStore\) [Flush](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L124>)
 
 ```go
 func (b *BufferedDataStore) Flush() error
@@ -131,7 +131,7 @@ func (b *BufferedDataStore) Flush() error
 Flush flushes the buffer to the underlying data store. It is called to ensure that any remaining payloads in the buffer are written to the underlying data store before closing the buffered data store. This method is protected by a mutex to ensure thread safety when accessing the buffer.
 
 <a name="BufferedDataStore.Interval"></a>
-### func \(\*BufferedDataStore\) [Interval](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L88>)
+### func \(\*BufferedDataStore\) [Interval](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L87>)
 
 ```go
 func (b *BufferedDataStore) Interval() time.Duration
@@ -140,7 +140,7 @@ func (b *BufferedDataStore) Interval() time.Duration
 Interval returns the flush interval of the buffered data store. This is the time duration after which the buffer will be flushed
 
 <a name="BufferedDataStore.Name"></a>
-### func \(\*BufferedDataStore\) [Name](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L82>)
+### func \(\*BufferedDataStore\) [Name](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L81>)
 
 ```go
 func (b *BufferedDataStore) Name() string
@@ -149,7 +149,7 @@ func (b *BufferedDataStore) Name() string
 Name returns the name of the buffered data store. This is used to identify the buffered data store in logs and metrics.
 
 <a name="BufferedDataStore.Write"></a>
-### func \(\*BufferedDataStore\) [Write](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L110>)
+### func \(\*BufferedDataStore\) [Write](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L109>)
 
 ```go
 func (b *BufferedDataStore) Write(payload *model.ProcessPayload) error
@@ -158,7 +158,7 @@ func (b *BufferedDataStore) Write(payload *model.ProcessPayload) error
 Write writes a process payload to the buffered data store. It appends the payload to the buffer and checks if the buffer size has reached the maximum size. If it has, it calls the flushLocked method to flush the buffer to the underlying data store. This method is protected by a mutex to ensure thread safety when accessing the buffer.
 
 <a name="BufferedDataStore.WriteAny"></a>
-### func \(\*BufferedDataStore\) [WriteAny](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L97>)
+### func \(\*BufferedDataStore\) [WriteAny](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L96>)
 
 ```go
 func (b *BufferedDataStore) WriteAny(payload interface{}) error
@@ -330,7 +330,7 @@ type BufferedStore interface {
 ```
 
 <a name="DataStore"></a>
-## type [DataStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L45-L47>)
+## type [DataStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L44-L46>)
 
 DataStore is an interface that defines the methods for writing process payloads. It is used to abstract the underlying data store implementation, allowing for different storage engines to be used \(e.g., file, database\).
 

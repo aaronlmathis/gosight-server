@@ -6,6 +6,8 @@
 import "github.com/aaronlmathis/gosight-server/internal/syncmanager"
 ```
 
+Package SyncManager is responsible for managing synchronization between the cache and the datastore. It periodically flushes the cache to the datastore and handles lifecycle events. It is designed to be run as a goroutine and will block until the context is cancelled.
+
 ## Index
 
 - [type SyncManager](<#SyncManager>)
@@ -15,7 +17,7 @@ import "github.com/aaronlmathis/gosight-server/internal/syncmanager"
 
 
 <a name="SyncManager"></a>
-## type [SyncManager](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/syncmanager/syncmanager.go#L40-L47>)
+## type [SyncManager](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/syncmanager/syncmanager.go#L41-L48>)
 
 SyncManager handles periodic persistence of in\-memory caches to the database.
 
@@ -30,16 +32,16 @@ type SyncManager struct {
 ```
 
 <a name="NewSyncManager"></a>
-### func [NewSyncManager](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/syncmanager/syncmanager.go#L50>)
+### func [NewSyncManager](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/syncmanager/syncmanager.go#L51>)
 
 ```go
 func NewSyncManager(ctx context.Context, c *cache.Cache, ds datastore.DataStore, tracker *tracker.EndpointTracker, interval time.Duration) *SyncManager
 ```
 
-New creates a new SyncManager.
+NewSyncManager creates a new SyncManager.
 
 <a name="SyncManager.Run"></a>
-### func \(\*SyncManager\) [Run](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/syncmanager/syncmanager.go#L61>)
+### func \(\*SyncManager\) [Run](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/syncmanager/syncmanager.go#L62>)
 
 ```go
 func (s *SyncManager) Run()
@@ -48,7 +50,7 @@ func (s *SyncManager) Run()
 Run starts the sync manager and blocks until ctx is cancelled. On shutdown, it flushes all caches.
 
 <a name="SyncManager.SyncOnce"></a>
-### func \(\*SyncManager\) [SyncOnce](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/syncmanager/syncmanager.go#L133>)
+### func \(\*SyncManager\) [SyncOnce](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/syncmanager/syncmanager.go#L143>)
 
 ```go
 func (s *SyncManager) SyncOnce()

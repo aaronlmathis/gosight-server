@@ -6,7 +6,7 @@
 import "github.com/aaronlmathis/gosight-server/internal/dispatcher"
 ```
 
-Package dispatcher provides functionality to manage and dispatch
+Package dispatcher provides functionality to manage and dispatch events to various actions based on defined routes. It allows for flexible event handling through the use of webhooks and scripts, enabling integration with external systems and custom processing of events.
 
 ## Index
 
@@ -18,9 +18,9 @@ Package dispatcher provides functionality to manage and dispatch
 
 
 <a name="Dispatcher"></a>
-## type [Dispatcher](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/dispatcher/dispatcher.go#L39-L41>)
+## type [Dispatcher](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/dispatcher/dispatcher.go#L43-L45>)
 
-
+Dispatcher is responsible for managing and dispatching events to various actions based on defined routes.
 
 ```go
 type Dispatcher struct {
@@ -29,7 +29,7 @@ type Dispatcher struct {
 ```
 
 <a name="NewDispatcher"></a>
-### func [NewDispatcher](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/dispatcher/dispatcher.go#L46>)
+### func [NewDispatcher](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/dispatcher/dispatcher.go#L50>)
 
 ```go
 func NewDispatcher(routeMap map[string]model.ActionRoute) *Dispatcher
@@ -38,7 +38,7 @@ func NewDispatcher(routeMap map[string]model.ActionRoute) *Dispatcher
 NewDispatcher initializes a new Dispatcher with the provided route map. The route map should contain action IDs as keys and ActionRoute structs as values. The ActionRoute struct contains the match filter and a list of actions to be executed.
 
 <a name="Dispatcher.Dispatch"></a>
-### func \(\*Dispatcher\) [Dispatch](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/dispatcher/dispatcher.go#L51>)
+### func \(\*Dispatcher\) [Dispatch](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/dispatcher/dispatcher.go#L55>)
 
 ```go
 func (d *Dispatcher) Dispatch(ctx context.Context, event model.EventEntry)
@@ -47,16 +47,16 @@ func (d *Dispatcher) Dispatch(ctx context.Context, event model.EventEntry)
 Dispatch processes an event against all routes and triggers matching actions.
 
 <a name="Dispatcher.ExecuteAction"></a>
-### func \(\*Dispatcher\) [ExecuteAction](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/dispatcher/dispatcher.go#L96>)
+### func \(\*Dispatcher\) [ExecuteAction](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/dispatcher/dispatcher.go#L100>)
 
 ```go
 func (d *Dispatcher) ExecuteAction(ctx context.Context, a model.ActionSpec, e model.EventEntry)
 ```
 
-executeAction executes the action specified in the route. It determines the action type \(webhook or script\) and calls the appropriate function.
+ExecuteAction executes the action specified in the route. It determines the action type \(webhook or script\) and calls the appropriate function.
 
 <a name="Dispatcher.TriggerActionByID"></a>
-### func \(\*Dispatcher\) [TriggerActionByID](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/dispatcher/dispatcher.go#L64>)
+### func \(\*Dispatcher\) [TriggerActionByID](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/dispatcher/dispatcher.go#L68>)
 
 ```go
 func (d *Dispatcher) TriggerActionByID(ctx context.Context, actionID string, event model.EventEntry)

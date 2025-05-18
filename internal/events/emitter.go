@@ -20,6 +20,8 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
 // Package events provides an event emitter for the GoSight application.
+// It allows for the emission of events with various attributes such as level, category, message, source, and metadata.
+// The Emitter struct is responsible for storing events in an event store and broadcasting them to connected clients via a WebSocket hub.
 package events
 
 import (

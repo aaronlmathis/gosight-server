@@ -19,7 +19,6 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// File: gosight-server/internal/bufferengine/databuffer.go
 // Description: Package bufferengine provides a buffered data store implementation
 // for writing process payloads to an underlying data store.
 // It buffers the payloads in memory and flushes them to the underlying store
