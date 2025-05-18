@@ -63,7 +63,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (urlParams.toString()) {
         console.log('Loading filters from URL parameters');
         loadFormFromURL();
-        renderActiveFiltersFromForm();
       }
       
       // Initialize endpoint dropdown
@@ -120,6 +119,154 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Setup dropdown handlers
     setupDropdownHandlers();
+
+    // Add event listeners for table interactions using event delegation
+    elements.resultsTable.addEventListener("click", (e) => {
+      // Handle copy button clicks
+      if (e.target.classList.contains("copy-btn")) {
+        const value = e.target.dataset.copy;
+        if (value) {
+          navigator.clipboard.writeText(value).then(() => {
+            e.target.textContent = "✅";
+            setTimeout(() => e.target.textContent = "📋", 1000);
+          });
+        }
+        return;
+      }
+
+      // Handle tag clicks
+      const tag = e.target?.dataset?.tag;
+      if (tag) {
+        const [key, value] = tag.split(":");
+        if (!key || !value) return;
+
+        const tagContainer = document.getElementById("tag-filters");
+        if ([...tagContainer.querySelectorAll("span")].some(span => span.textContent.includes(`${key}:${value}`))) return;
+
+        const span = document.createElement("span");
+        span.className = "inline-flex items-center px-3 py-1 rounded-sm text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100";
+        span.innerHTML = `${key}:${value} <button class="ml-1 text-xs remove-tag" type="button">&times;</button>`;
+        tagContainer.appendChild(span);
+        updateURLFromForm();
+        return;
+      }
+
+      // Handle filter key clicks
+      if (e.target.matches("[data-filter-key]")) {
+        e.preventDefault();
+
+        const key = e.target.dataset.filterKey;
+        const value = e.target.dataset.filterValue;
+        if (!key || !value) return;
+
+        // Check if this is a regular form field
+        const formFields = ["contains", "source", "endpoint", "container", "app", "level", "category", "start", "end"];
+        if (formFields.includes(key)) {
+          // Handle as form field
+          const mappings = {
+            contains: "filter-keyword",
+            source: "filter-source",
+            endpoint: "endpoint-name",
+            container: "container-name",
+            app: "app-name",
+            start: "start-time",
+            end: "end-time"
+          };
+
+          const id = mappings[key];
+          if (id) {
+            const input = document.getElementById(id);
+            if (input) {
+              input.value = value;
+              // Trigger change event to update filters
+              input.dispatchEvent(new Event("change"));
+            }
+          } else if (key === "level" || key === "category") {
+            // Handle checkbox fields
+            document.querySelectorAll(`.filter-${key}-option`).forEach(cb => {
+              if (cb.value === value) {
+                cb.checked = true;
+                // Trigger change event to update filters
+                cb.dispatchEvent(new Event("change"));
+              }
+            });
+          }
+        } else {
+          // Handle as custom tag
+          addTagFilter(key, value);
+          // Update URL and trigger search
+          updateURLFromForm();
+          fetchLogs();
+        }
+      }
+    });
+
+    // Use event delegation for tag filters
+    document.getElementById("tag-filters").addEventListener("click", (e) => {
+      if (!e.target.classList.contains("remove-tag")) return;
+
+      const pill = e.target.closest("span");
+      if (!pill) return;
+
+      // Get the key and value from the data attributes
+      const key = pill.dataset.key;
+      const value = pill.dataset.value;
+      if (!key || !value) return;
+
+      console.log('Removing pill:', { key, value, isCustomTag: pill.dataset.customTag });
+
+      // Remove matching form values
+      if (key === "level") {
+        document.querySelectorAll(".filter-level-option:checked").forEach(cb => {
+          if (cb.value === value) {
+            cb.checked = false;
+            cb.dispatchEvent(new Event('change'));
+          }
+        });
+      } else if (key === "category") {
+        document.querySelectorAll(".filter-category-option:checked").forEach(cb => {
+          if (cb.value === value) {
+            cb.checked = false;
+            cb.dispatchEvent(new Event('change'));
+          }
+        });
+      } else {
+        const mappings = {
+          contains: "filter-keyword",
+          source: "filter-source",
+          container: "container-name",
+          endpoint: "endpoint-name",
+          app: "app-name",
+          start: "start-time",
+          end: "end-time"
+        };
+        
+        const id = mappings[key];
+        if (id) {
+          const input = document.getElementById(id);
+          if (input) {
+            input.value = "";
+            // Trigger both input and change events to ensure state updates
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
+      }
+
+      // Remove the pill visually
+      pill.remove();
+
+      // Reset pagination state
+      state.currentCursor = null;
+      state.previousCursors = [];
+      state.nextCursor = null;
+      state.hasMore = false;
+      state.cursorStack = [];
+
+      // Update URL and trigger new search
+      updateURLFromForm();
+      fetchLogs();
+    });
   }
 
   function setupDropdownHandlers() {
@@ -509,6 +656,9 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    // Create a document fragment to batch DOM operations
+    const fragment = document.createDocumentFragment();
+
     logs.forEach((log, i) => {
       const timestamp = new Date(log.timestamp).toLocaleString();
       const logKey = getLogKey(log);
@@ -567,11 +717,9 @@ document.addEventListener("DOMContentLoaded", () => {
         </td>
       `;
 
-      elements.resultsTable.appendChild(row);
-      elements.resultsTable.appendChild(detailsRow);
-
       // Add click handler for expand/collapse
-      row.querySelector(".expand-log").addEventListener("click", (e) => {
+      const expandButton = row.querySelector(".expand-log");
+      expandButton.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
 
@@ -592,7 +740,13 @@ document.addEventListener("DOMContentLoaded", () => {
           detailsRow.classList.remove("hidden");
         }
       });
+
+      fragment.appendChild(row);
+      fragment.appendChild(detailsRow);
     });
+
+    // Batch append all rows at once
+    elements.resultsTable.appendChild(fragment);
 
     // Update cursor display
     if (logs.length > 0) {
@@ -678,9 +832,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       return `
         <tr>
-          <td class="text-xs text-gray-500 dark:text-gray-400 font-medium py-1">${safeKey}</td>
+          <td class="text-xs font-semibold text-gray-600 dark:text-gray-300 py-1 min-w-[100px]">${safeKey}</td>
           <td class="text-xs text-gray-700 dark:text-gray-300 font-mono py-1 pl-4">${displayVal}</td>
-          <td class="text-xs py-1 pl-2">
+          <td class="text-xs py-1 pl-2 whitespace-nowrap">
             <button class="text-blue-600 hover:underline text-xs font-medium add-filter"
               data-filter-key="${safeKey}" data-filter-value="${stringVal}">
               + Add Filter
@@ -693,7 +847,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return `
       <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
         <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-          <h3 class="text-xs uppercase font-medium text-gray-500 dark:text-gray-400">${title}</h3>
+          <h3 class="text-xs font-semibold text-gray-600 dark:text-gray-300">${title}</h3>
         </div>
         <div class="p-4">
           <table class="w-full">
@@ -800,20 +954,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const cursor = params.get("cursor");
     if (cursor) {
       state.currentCursor = cursor;
-      state.nextCursor = cursor;
-      if (!state.cursorStack.includes(cursor)) {
-        state.cursorStack.push(cursor);
-      }
-    } else {
-      state.currentCursor = null;
-      state.nextCursor = null;
-      state.cursorStack = [];
     }
 
-    console.log('Form loaded from URL');
-    
-    // After loading all filters, update the URL to ensure consistency
-    updateURLFromForm();
+    // Render active filters after all form fields and tags are set
+    renderActiveFiltersFromForm();
   }
 
   function sanitize(str) {
@@ -835,162 +979,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  document.getElementById("tag-filters").addEventListener("click", (e) => {
-    if (!e.target.classList.contains("remove-tag")) return;
-
-    const pill = e.target.closest("span");
-    if (!pill) return;
-
-    // Get the key and value from the data attributes
-    const key = pill.dataset.key;
-    const value = pill.dataset.value;
-    if (!key || !value) return;
-
-    console.log('Removing pill:', { key, value, isCustomTag: pill.dataset.customTag });
-
-    // Remove matching form values
-    if (key === "level") {
-      document.querySelectorAll(".filter-level-option:checked").forEach(cb => {
-        if (cb.value === value) {
-          cb.checked = false;
-          cb.dispatchEvent(new Event('change'));
-        }
-      });
-    } else if (key === "category") {
-      document.querySelectorAll(".filter-category-option:checked").forEach(cb => {
-        if (cb.value === value) {
-          cb.checked = false;
-          cb.dispatchEvent(new Event('change'));
-        }
-      });
-    } else {
-      const mappings = {
-        contains: "filter-keyword",
-        source: "filter-source",
-        container: "container-name",
-        endpoint: "endpoint-name",
-        app: "app-name",
-        start: "start-time",
-        end: "end-time"
+  // Add debounce function at the top level
+  function debounce(func, wait, immediate = false) {
+    let timeout;
+    
+    return function executedFunction(...args) {
+      const context = this;
+      
+      const later = () => {
+        timeout = null;
+        if (!immediate) func.apply(context, args);
       };
       
-      const id = mappings[key];
-      if (id) {
-        const input = document.getElementById(id);
-        if (input) {
-          input.value = "";
-          // Trigger both input and change events to ensure state updates
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-          input.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-      }
-    }
-
-    // Remove the pill visually
-    pill.remove();
-
-    // Reset pagination state
-    state.currentCursor = null;
-    state.previousCursors = [];
-    state.nextCursor = null;
-    state.hasMore = false;
-    state.cursorStack = [];
-
-    // Update URL and trigger new search
-    updateURLFromForm();
-    fetchLogs();
-  });
-
-  // Add event listeners for table interactions
-  elements.resultsTable.addEventListener("click", (e) => {
-    if (e.target.classList.contains("copy-btn")) {
-      const value = e.target.dataset.copy;
-      if (value) {
-        navigator.clipboard.writeText(value).then(() => {
-          e.target.textContent = "✅";
-          setTimeout(() => e.target.textContent = "📋", 1000);
-        });
-      }
-    }
-  });
-
-  elements.resultsTable.addEventListener("click", (e) => {
-    const tag = e.target?.dataset?.tag;
-    if (!tag) return;
-
-    const [key, value] = tag.split(":");
-    if (!key || !value) return;
-
-    const tagContainer = document.getElementById("tag-filters");
-    if ([...tagContainer.querySelectorAll("span")].some(span => span.textContent.includes(`${key}:${value}`))) return;
-
-    const span = document.createElement("span");
-    span.className = "inline-flex items-center px-3 py-1 rounded-sm text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100";
-    span.innerHTML = `${key}:${value} <button class="ml-1 text-xs remove-tag" type="button">&times;</button>`;
-    tagContainer.appendChild(span);
-    updateURLFromForm();
-  });
-
-  elements.resultsTable.addEventListener("click", (e) => {
-    if (e.target.matches("[data-filter-key]")) {
-      e.preventDefault();
-
-      const key = e.target.dataset.filterKey;
-      const value = e.target.dataset.filterValue;
-      if (!key || !value) return;
-
-      // Check if this is a regular form field
-      const formFields = ["contains", "source", "endpoint", "container", "app", "level", "category", "start", "end"];
-      if (formFields.includes(key)) {
-        // Handle as form field
-        const mappings = {
-          contains: "filter-keyword",
-          source: "filter-source",
-          endpoint: "endpoint-name",
-          container: "container-name",
-          app: "app-name",
-          start: "start-time",
-          end: "end-time"
-        };
-
-        const id = mappings[key];
-        if (id) {
-          const input = document.getElementById(id);
-          if (input) {
-            input.value = value;
-            // Trigger change event to update filters
-            input.dispatchEvent(new Event("change"));
-          }
-        } else if (key === "level" || key === "category") {
-          // Handle checkbox fields
-          document.querySelectorAll(`.filter-${key}-option`).forEach(cb => {
-            if (cb.value === value) {
-              cb.checked = true;
-              // Trigger change event to update filters
-              cb.dispatchEvent(new Event("change"));
-            }
-          });
-        }
-      } else {
-        // Handle as custom tag
-        addTagFilter(key, value);
-        // Update URL and trigger search
-        updateURLFromForm();
-        fetchLogs();
-      }
-    }
-  });
-
-  // Add debounce function at the top level
-  function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-      const later = () => {
-        clearTimeout(timeout);
-        func(...args);
-      };
+      const callNow = immediate && !timeout;
+      
       clearTimeout(timeout);
       timeout = setTimeout(later, wait);
+      
+      if (callNow) func.apply(context, args);
     };
   }
 
@@ -1213,7 +1219,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderActiveFiltersFromForm() {
     const tagContainer = document.getElementById("tag-filters");
-    tagContainer.innerHTML = ""; // clear all first
+    
+    // Save existing custom tags before clearing
+    const existingCustomTags = Array.from(tagContainer.querySelectorAll("span[data-custom-tag='true']"))
+      .map(span => ({
+        key: span.dataset.key,
+        value: span.dataset.value,
+        element: span.cloneNode(true)
+      }));
+    
+    tagContainer.innerHTML = ""; // clear all
 
     // Add pills for regular search inputs
     const mappings = {
@@ -1278,8 +1293,9 @@ document.addEventListener("DOMContentLoaded", () => {
       tagContainer.appendChild(span);
     });
 
-    // Add custom tags already in tag-filters (preserve existing custom tags)
-    const existingCustomTags = document.querySelectorAll("#tag-filters span[data-custom-tag='true']");
-    existingCustomTags.forEach(span => tagContainer.appendChild(span.cloneNode(true)));
+    // Re-add saved custom tags
+    existingCustomTags.forEach(tag => {
+      tagContainer.appendChild(tag.element);
+    });
   }
 });
