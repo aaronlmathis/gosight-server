@@ -3,6 +3,9 @@
 
 GoSight Server is a high-performance observability backend built in Go. It receives telemetry from GoSight Agents, stores metrics and logs, processes alerts, and serves a dynamic web UI for visualization and investigation.
 
+## Documentation
+[Documentation](docs/)
+
 ## Features
 
 - TLS/mTLS-secured gRPC endpoints
