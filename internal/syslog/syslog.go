@@ -285,4 +285,5 @@ func (s *SyslogServer) handleTCPConn(ctx context.Context, conn net.Conn) {
 func (s *SyslogServer) Stop() {
 
 	s.wg.Wait()
+	utils.Info("Syslog server stopped")
 }

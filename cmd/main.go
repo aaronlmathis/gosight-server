@@ -20,13 +20,14 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
 // Package main is the package for the GoSight server.
-// It initializes the server, sets up the gRPC and HTTP servers,
-// and handles graceful shutdown.
+// It initializes the server, sets up the gRPC and HTTP servers, and handles graceful shutdown.
 // It also manages the system context and sync manager for periodic persistence.
 package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -39,14 +40,15 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 )
 
-var Version = "dev" // default
-// go build -ldflags "-X main.Version=0.3.2" -o gosight-agent ./cmd/agent
+var (
+	Version   = "dev"
+	BuildTime = "unknown"
+	GitCommit = "none"
+)
 
-// main is the entry point for the GoSight server.
-// It initializes the server, sets up the gRPC and HTTP servers,
-// and handles graceful shutdown.
-func main() {
-
+// run is the initialization function for the GoSight server.
+// It initializes the server, sets up the gRPC and HTTP servers, and handles graceful shutdown.
+func run() {
 	// Graceful Shutdown Context
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -95,7 +97,7 @@ func main() {
 
 	// register gzip codec for compression
 	_ = gzip.Name // This ensures the gzip codec is registered
-	utils.Debug("Log store is: %T (inner: %T)", sys.Stores.Logs, sys.Buffers.Logs)
+	utils.Debug("Log store is: %T", sys.Stores.Logs)
 	grpcServer, err := grpcserver.NewGRPCServer(sys)
 
 	if err != nil {
@@ -117,12 +119,13 @@ func main() {
 	}
 	// Tell Agents to disconnect gracefully
 	grpcServer.GracefulDisconnectAllAgents()
+	// Close GRPC gracefully.
+	grpcServer.Server.GracefulStop()
+
+	// Stop Syslog server gracefully.
+	syslogServer.Stop()
 
 	// Flush all pending data before shutdown.
-
-	// Close GRPC gracefully.
-
-	grpcServer.Server.GracefulStop()
 
 	// Disconnect from metric store, datastore, and userstore.
 	if err := sys.Stores.Metrics.Close(); err != nil {
@@ -134,5 +137,18 @@ func main() {
 	if err := sys.Stores.Users.Close(); err != nil {
 		utils.Warn("Failed to close userstore: %v", err)
 	}
+}
 
+// main is the entry point for the GoSight server.
+func main() {
+	versionFlag := flag.Bool("version", false, "print version information and exit")
+	flag.Parse()
+	if *versionFlag {
+		fmt.Printf(
+			"GoSight %s (built %s, commit %s)\n",
+			Version, BuildTime, GitCommit,
+		)
+		os.Exit(0)
+	}
+	run()
 }

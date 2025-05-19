@@ -47,3 +47,4 @@ server/logstore
 logstore/
 generatedocs.sh
 format.sh
+bin/
