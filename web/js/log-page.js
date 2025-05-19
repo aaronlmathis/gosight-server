@@ -691,7 +691,7 @@ document.addEventListener("DOMContentLoaded", () => {
       row.innerHTML = `
         <td class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">${timestamp}</td>
         <td class="px-4 py-2">
-          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getColor(log.level)}">${(log.level || 'info').toLowerCase()}</span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getColor(log.level)}">${sanitize(log.level || 'info').toLowerCase()}</span>
         </td>
         <td class="px-4 py-2 text-sm">${sanitize(log.source || '')}</td>
         <td class="px-4 py-2 text-sm">
@@ -699,12 +699,12 @@ document.addEventListener("DOMContentLoaded", () => {
         </td>
         <td class="px-4 py-2 text-xs text-gray-700 dark:text-gray-200 font-mono max-w-[400px] w-full">
           ${sanitize(truncatedMessage).split('\n').map(line => 
-            `<div class="truncate">${line}</div>`
+            `<div class="truncate">${sanitize(line)}</div>`
           ).join('')}
         </td>
         <td class="px-4 py-2 text-sm">${sanitize(log.meta?.user || '')}</td>
         <td class="px-4 py-2 text-sm">
-          <button class="text-blue-600 hover:underline text-xs expand-log" data-log-key="${logKey}">
+          <button class="text-blue-600 hover:underline text-xs expand-log" data-log-key="${sanitize(logKey)}">
             ${isExpanded ? 'Hide Details' : 'Show Details'}
           </button>
         </td>
@@ -747,7 +747,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const logKey = e.target.dataset.logKey;
         const isCurrentlyExpanded = state.expandedLogKeys.has(logKey);
         const mainRow = e.target.closest('tr');
-        const detailsRow = document.querySelector(`tr.details-row[data-log-key="${logKey}"]`);
+        const detailsRow = mainRow.nextElementSibling;
+
+        if (!detailsRow || !detailsRow.classList.contains('details-row')) {
+          console.error('Details row not found for log:', logKey);
+          return;
+        }
         
         if (isCurrentlyExpanded) {
           state.expandedLogKeys.delete(logKey);
@@ -850,6 +855,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const stringVal = typeof val === "object" ? JSON.stringify(val, null, 2) : String(val);
       const safeKey = sanitize(key);
       const displayVal = sanitize(stringVal);
+      const safeFilterValue = stringVal.replace(/"/g, '&quot;'); // Escape quotes for data attributes
 
       return `
         <tr>
@@ -857,7 +863,8 @@ document.addEventListener("DOMContentLoaded", () => {
           <td class="text-xs text-gray-700 dark:text-gray-300 font-mono py-1 pl-4">${displayVal}</td>
           <td class="text-xs py-1 pl-2 whitespace-nowrap">
             <button class="text-blue-600 hover:underline text-xs font-medium add-filter"
-              data-filter-key="${safeKey}" data-filter-value="${stringVal}">
+              data-filter-key="${safeKey}"
+              data-filter-value="${safeFilterValue}">
               + Add Filter
             </button>
           </td>
@@ -868,7 +875,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return `
       <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
         <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-          <h3 class="text-xs font-semibold text-gray-600 dark:text-gray-300">${title}</h3>
+          <h3 class="text-xs font-semibold text-gray-600 dark:text-gray-300">${sanitize(title)}</h3>
         </div>
         <div class="p-4">
           <table class="w-full">
@@ -981,10 +988,30 @@ document.addEventListener("DOMContentLoaded", () => {
     renderActiveFiltersFromForm();
   }
 
-  function sanitize(str) {
-    const div = document.createElement("div");
-    div.innerText = str;
-    return div.innerHTML;
+  function sanitize(input) {
+    if (input === null || input === undefined) {
+      return '';
+    }
+    
+    // Convert to string if not already
+    const str = String(input);
+    
+    // Create a map for HTML entities
+    const entityMap = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+      '/': '&#x2F;',
+      '`': '&#x60;',
+      '=': '&#x3D;'
+    };
+    
+    // Replace special characters with HTML entities
+    return str.replace(/[&<>"'`=\/]/g, function(s) {
+      return entityMap[s];
+    });
   }
 
   function getColor(level) {

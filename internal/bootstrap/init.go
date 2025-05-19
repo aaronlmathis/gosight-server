@@ -116,7 +116,7 @@ func InitGoSight(ctx context.Context) (*sys.SystemContext, error) {
 	// Initialize cache
 	caches, err := InitCaches(ctx, dataStore)
 	utils.Must("Caches", err)
-
+	fmt.Printf(">>> caches.Logs = %#v (type %T)\n", caches.Logs, caches.Logs)
 	// Init metric store
 	metricStore, err := InitMetricStore(ctx, cfg, caches.Metrics)
 	utils.Must("Metric store", err)

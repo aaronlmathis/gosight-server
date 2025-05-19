@@ -31,8 +31,27 @@ import (
 
 	"github.com/aaronlmathis/gosight-server/internal/sys"
 	"github.com/aaronlmathis/gosight-shared/model"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
+/*
+// NetworkDevice represents a syslog-emitting network appliance
+
+	type NetworkDevice struct {
+		ID        string    `db:"id"`         // UUID primary key
+		Name      string    `db:"name"`       // human-readable label
+		Vendor    string    `db:"vendor"`     // e.g. "sonicwall", "fortinet"
+		Address   string    `db:"address"`    // IP or hostname
+		Port      int       `db:"port"`       // syslog port (default 514)
+		Protocol  string    `db:"protocol"`   // "udp", "tcp"
+		Format    string    `db:"format"`     // "rfc3164", "rfc5424", "cef", etc.
+		Facility  string    `db:"facility"`   // syslog facility, e.g. "local0"
+		SyslogID  string    `db:"syslog_id"`  // vendor tag or hostname override
+		RateLimit int       `db:"rate_limit"` // events/sec throttle (optional)
+		CreatedAt time.Time `db:"created_at"` // record creation time
+		UpdatedAt time.Time `db:"updated_at"` // record update time
+	}
+*/
 type SyslogServer struct {
 	listener          net.Listener
 	sys               *sys.SystemContext
@@ -110,6 +129,17 @@ func (s *SyslogServer) Start() error {
 	return nil
 }
 
+// isAuthorizedIP checks if the given IP address matches any of our configured network devices
+func (s *SyslogServer) isAuthorizedIP(ip string) bool {
+	utils.Debug("Checking if %s is authorized", ip)
+	for _, device := range s.NetworkDevices {
+		if device.Address == ip {
+			return true
+		}
+	}
+	return false
+}
+
 // listenUDP reads packets until ctx is canceled or the socket is closed.
 func (s *SyslogServer) listenUDP(ctx context.Context, conn net.PacketConn) {
 	defer s.wg.Done()
@@ -135,6 +165,12 @@ func (s *SyslogServer) listenUDP(ctx context.Context, conn net.PacketConn) {
 		ip := srcStr
 		if host, _, err := net.SplitHostPort(srcStr); err == nil {
 			ip = host
+		}
+
+		// Check if the IP is authorized
+		if !s.isAuthorizedIP(ip) {
+			utils.Warn("Unauthorized syslog UDP connection attempt from %s", ip)
+			continue
 		}
 
 		// Handle the raw syslog packet
@@ -180,7 +216,15 @@ func (s *SyslogServer) listenTCP(ctx context.Context, ln net.Listener) {
 
 		ip, _, err := net.SplitHostPort(conn.RemoteAddr().String())
 		if err != nil {
-			// Handle error
+			utils.Error("Failed to parse remote address: %v", err)
+			conn.Close()
+			continue
+		}
+
+		// Check if the IP is authorized
+		if !s.isAuthorizedIP(ip) {
+			utils.Warn("Unauthorized syslog TCP connection attempt from %s", ip)
+			conn.Close()
 			continue
 		}
 
