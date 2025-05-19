@@ -133,6 +133,8 @@ type Config struct {
 
 	BufferEngine BufferEngineConfig `yaml:"buffer_engine"`
 
+	SyslogCollection SyslogCollectionConfig `yaml:"syslog_collection"`
+
 	Auth struct {
 		SSOEnabled bool         `yaml:"sso_enabled"`
 		MFASecret  string       `yaml:"mfa_secret_key"`
@@ -142,6 +144,19 @@ type Config struct {
 		Azure      AzureConfig  `yaml:"azure"`
 		GitHub     GitHubConfig `yaml:"github"`
 	} `yaml:"auth"`
+}
+
+// SyslogCollectionConfig defines the configuration for syslog collection
+// The syslog collection can be used to collect syslog messages from network devices.
+type SyslogCollectionConfig struct {
+	TCPEnabled     bool `yaml:"tcp_enabled"`
+	UDPEnabled     bool `yaml:"udp_enabled"`
+	TCPPort        int  `yaml:"tcp_port"`
+	UDPPort        int  `yaml:"udp_port"`
+	TCPBufferSize  int  `yaml:"tcp_buffer_size"`
+	UDPBufferSize  int  `yaml:"udp_buffer_size"`
+	MaxConnections int  `yaml:"max_connections"`
+	DefaultIPLimit int  `yaml:"default_ip_limit"`
 }
 
 // GoogleConfig represents the configuration for Google OAuth2 authentication.
