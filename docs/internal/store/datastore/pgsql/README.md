@@ -18,6 +18,8 @@ Package pgstore implements the userstore.Store interface using PostgreSQL
   - [func \(s \*PGDataStore\) GetAgentByID\(ctx context.Context, id string\) \(\*model.Agent, error\)](<#PGDataStore.GetAgentByID>)
   - [func \(s \*PGDataStore\) GetAllTags\(ctx context.Context\) \(\[\]model.Tag, error\)](<#PGDataStore.GetAllTags>)
   - [func \(s \*PGDataStore\) GetContainerByID\(ctx context.Context, id string\) \(\*model.Container, error\)](<#PGDataStore.GetContainerByID>)
+  - [func \(s \*PGDataStore\) GetNetworkDeviceByAddress\(ctx context.Context, address string\) \(\*model.NetworkDevice, error\)](<#PGDataStore.GetNetworkDeviceByAddress>)
+  - [func \(s \*PGDataStore\) GetNetworkDevices\(ctx context.Context\) \(\[\]\*model.NetworkDevice, error\)](<#PGDataStore.GetNetworkDevices>)
   - [func \(s \*PGDataStore\) GetTags\(ctx context.Context, endpointID string\) \(map\[string\]string, error\)](<#PGDataStore.GetTags>)
   - [func \(s \*PGDataStore\) InsertFullProcessPayload\(ctx context.Context, payload \*model.ProcessPayload\) error](<#PGDataStore.InsertFullProcessPayload>)
   - [func \(s \*PGDataStore\) InsertProcessInfos\(ctx context.Context, snapshotID int64, payload \*model.ProcessPayload\) error](<#PGDataStore.InsertProcessInfos>)
@@ -107,6 +109,24 @@ func (s *PGDataStore) GetContainerByID(ctx context.Context, id string) (*model.C
 ```
 
 GetContainerByID retrieves a container by its container\_id
+
+<a name="PGDataStore.GetNetworkDeviceByAddress"></a>
+### func \(\*PGDataStore\) [GetNetworkDeviceByAddress](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/networkdevices.go#L81>)
+
+```go
+func (s *PGDataStore) GetNetworkDeviceByAddress(ctx context.Context, address string) (*model.NetworkDevice, error)
+```
+
+GetNetworkDeviceByAddress looks up a single NetworkDevice by its IP/hostname. Returns \(nil, nil\) if no matching device is found.
+
+<a name="PGDataStore.GetNetworkDevices"></a>
+### func \(\*PGDataStore\) [GetNetworkDevices](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/networkdevices.go#L34>)
+
+```go
+func (s *PGDataStore) GetNetworkDevices(ctx context.Context) ([]*model.NetworkDevice, error)
+```
+
+GetNetworkDevices returns all network devices from the database
 
 <a name="PGDataStore.GetTags"></a>
 ### func \(\*PGDataStore\) [GetTags](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/tags.go#L34>)

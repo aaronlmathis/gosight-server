@@ -12,21 +12,28 @@ Package config provides configuration loading and management for the GoSight ser
 
 - [func ApplyEnvOverrides\(cfg \*Config\)](<#ApplyEnvOverrides>)
 - [func EnsureDefaultConfig\(path string\) error](<#EnsureDefaultConfig>)
+- [type AWSConfig](<#AWSConfig>)
+  - [func \(a \*AWSConfig\) ToOAuthConfig\(\) \*oauth2.Config](<#AWSConfig.ToOAuthConfig>)
 - [type AlertBufferConfig](<#AlertBufferConfig>)
+- [type AzureConfig](<#AzureConfig>)
+  - [func \(a \*AzureConfig\) ToOAuthConfig\(\) \*oauth2.Config](<#AzureConfig.ToOAuthConfig>)
 - [type BufferEngineConfig](<#BufferEngineConfig>)
 - [type Config](<#Config>)
   - [func LoadConfig\(path string\) \(\*Config, error\)](<#LoadConfig>)
 - [type DataBufferConfig](<#DataBufferConfig>)
 - [type DiskBufferConfig](<#DiskBufferConfig>)
 - [type EventBufferConfig](<#EventBufferConfig>)
+- [type GitHubConfig](<#GitHubConfig>)
+  - [func \(g \*GitHubConfig\) ToOAuthConfig\(\) \*oauth2.Config](<#GitHubConfig.ToOAuthConfig>)
 - [type GoogleConfig](<#GoogleConfig>)
   - [func \(g \*GoogleConfig\) ToOAuthConfig\(\) \*oauth2.Config](<#GoogleConfig.ToOAuthConfig>)
 - [type LogBufferConfig](<#LogBufferConfig>)
 - [type MetricBufferConfig](<#MetricBufferConfig>)
+- [type SyslogCollectionConfig](<#SyslogCollectionConfig>)
 
 
 <a name="ApplyEnvOverrides"></a>
-## func [ApplyEnvOverrides](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L169>)
+## func [ApplyEnvOverrides](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L212>)
 
 ```go
 func ApplyEnvOverrides(cfg *Config)
@@ -43,6 +50,30 @@ func EnsureDefaultConfig(path string) error
 
 EnsureDefaultConfig checks if the default configuration file exists at the specified path.
 
+<a name="AWSConfig"></a>
+## type [AWSConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L171-L177>)
+
+AWSConfig represents the configuration for AWS Cognito authentication
+
+```go
+type AWSConfig struct {
+    Region       string `yaml:"region"`
+    UserPoolID   string `yaml:"user_pool_id"`
+    ClientID     string `yaml:"client_id"`
+    ClientSecret string `yaml:"client_secret"`
+    RedirectURI  string `yaml:"redirect_uri"`
+}
+```
+
+<a name="AWSConfig.ToOAuthConfig"></a>
+### func \(\*AWSConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L267>)
+
+```go
+func (a *AWSConfig) ToOAuthConfig() *oauth2.Config
+```
+
+ToOAuthConfig converts the AWSConfig to an OAuth2 configuration
+
 <a name="AlertBufferConfig"></a>
 ## type [AlertBufferConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/bufferConfig.go#L91-L97>)
 
@@ -57,6 +88,29 @@ type AlertBufferConfig struct {
     RetryFailedFlush bool          `yaml:"retry_failed_flush"`
 }
 ```
+
+<a name="AzureConfig"></a>
+## type [AzureConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L180-L185>)
+
+AzureConfig represents the configuration for Azure AD authentication
+
+```go
+type AzureConfig struct {
+    TenantID     string `yaml:"tenant_id"`
+    ClientID     string `yaml:"client_id"`
+    ClientSecret string `yaml:"client_secret"`
+    RedirectURI  string `yaml:"redirect_uri"`
+}
+```
+
+<a name="AzureConfig.ToOAuthConfig"></a>
+### func \(\*AzureConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L281>)
+
+```go
+func (a *AzureConfig) ToOAuthConfig() *oauth2.Config
+```
+
+ToOAuthConfig converts the AzureConfig to an OAuth2 configuration
 
 <a name="BufferEngineConfig"></a>
 ## type [BufferEngineConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/bufferConfig.go#L33-L43>)
@@ -78,7 +132,7 @@ type BufferEngineConfig struct {
 ```
 
 <a name="Config"></a>
-## type [Config](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L42-L141>)
+## type [Config](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L43-L147>)
 
 Config represents the configuration structure for the GoSight server. It includes settings for server address, storage engine, database path, logging, TLS settings, and debug options.
 
@@ -176,17 +230,22 @@ type Config struct {
 
     BufferEngine BufferEngineConfig `yaml:"buffer_engine"`
 
+    SyslogCollection SyslogCollectionConfig `yaml:"syslog_collection"`
+
     Auth struct {
         SSOEnabled bool         `yaml:"sso_enabled"`
         MFASecret  string       `yaml:"mfa_secret_key"`
         JWTSecret  string       `yaml:"jwt_secret"`
         Google     GoogleConfig `yaml:"google"`
+        AWS        AWSConfig    `yaml:"aws"`
+        Azure      AzureConfig  `yaml:"azure"`
+        GitHub     GitHubConfig `yaml:"github"`
     }   `yaml:"auth"`
 }
 ```
 
 <a name="LoadConfig"></a>
-### func [LoadConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L153>)
+### func [LoadConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L196>)
 
 ```go
 func LoadConfig(path string) (*Config, error)
@@ -238,8 +297,30 @@ type EventBufferConfig struct {
 }
 ```
 
+<a name="GitHubConfig"></a>
+## type [GitHubConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L188-L192>)
+
+GitHubConfig represents the configuration for GitHub OAuth authentication
+
+```go
+type GitHubConfig struct {
+    ClientID     string `yaml:"client_id"`
+    ClientSecret string `yaml:"client_secret"`
+    RedirectURI  string `yaml:"redirect_uri"`
+}
+```
+
+<a name="GitHubConfig.ToOAuthConfig"></a>
+### func \(\*GitHubConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L301>)
+
+```go
+func (g *GitHubConfig) ToOAuthConfig() *oauth2.Config
+```
+
+ToOAuthConfig converts the GitHubConfig to an OAuth2 configuration
+
 <a name="GoogleConfig"></a>
-## type [GoogleConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L145-L149>)
+## type [GoogleConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L164-L168>)
 
 GoogleConfig represents the configuration for Google OAuth2 authentication. It includes the client ID, client secret, and redirect URI.
 
@@ -252,7 +333,7 @@ type GoogleConfig struct {
 ```
 
 <a name="GoogleConfig.ToOAuthConfig"></a>
-### func \(\*GoogleConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L213>)
+### func \(\*GoogleConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L256>)
 
 ```go
 func (g *GoogleConfig) ToOAuthConfig() *oauth2.Config
@@ -290,6 +371,24 @@ type MetricBufferConfig struct {
     RetryFailedFlush  bool             `yaml:"retry_failed_flush"`
     FlushOnDisconnect bool             `yaml:"flush_on_disconnect"`
     FallbackDisk      DiskBufferConfig `yaml:"fallback_disk"`
+}
+```
+
+<a name="SyslogCollectionConfig"></a>
+## type [SyslogCollectionConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L151-L160>)
+
+SyslogCollectionConfig defines the configuration for syslog collection The syslog collection can be used to collect syslog messages from network devices.
+
+```go
+type SyslogCollectionConfig struct {
+    TCPEnabled     bool `yaml:"tcp_enabled"`
+    UDPEnabled     bool `yaml:"udp_enabled"`
+    TCPPort        int  `yaml:"tcp_port"`
+    UDPPort        int  `yaml:"udp_port"`
+    TCPBufferSize  int  `yaml:"tcp_buffer_size"`
+    UDPBufferSize  int  `yaml:"udp_buffer_size"`
+    MaxConnections int  `yaml:"max_connections"`
+    DefaultIPLimit int  `yaml:"default_ip_limit"`
 }
 ```
 

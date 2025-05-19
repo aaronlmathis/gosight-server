@@ -15,6 +15,7 @@
 - [runner](./runner/README.md)
 - [store](./store/README.md)
 - [syncmanager](./syncmanager/README.md)
+- [syslog](./syslog/README.md)
 - [sys](./sys/README.md)
 - [telemetry](./telemetry/README.md)
 - [testutils](./testutils/README.md)

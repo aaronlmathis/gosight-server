@@ -53,7 +53,7 @@ type Cache struct {
 ```
 
 <a name="LogCache"></a>
-## type [LogCache](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/cache/logcache.go#L34-L37>)
+## type [LogCache](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/cache/logcache.go#L34-L38>)
 
 LogCache is an interface that defines methods for adding and retrieving log entries. It is used to cache log entries for quick access and retrieval. The cache is thread\-safe and uses a mutex to synchronize access to the underlying data structure.
 
@@ -61,11 +61,12 @@ LogCache is an interface that defines methods for adding and retrieving log entr
 type LogCache interface {
     Add(batch []*model.StoredLog)
     Get(logID string) (*model.LogEntry, bool)
+    GetLogs() []*model.StoredLog
 }
 ```
 
 <a name="NewLogCache"></a>
-### func [NewLogCache](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/cache/logcache.go#L49>)
+### func [NewLogCache](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/cache/logcache.go#L50>)
 
 ```go
 func NewLogCache() LogCache
