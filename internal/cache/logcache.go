@@ -59,16 +59,22 @@ func (c *logCache) Add(batch []*model.StoredLog) {
 	defer c.mu.Unlock()
 
 	for _, storedLog := range batch {
+		if storedLog == nil {
+			utils.Warn("logCache.Add: nil StoredLog in batch")
+			continue
+		}
 		if storedLog.LogID == "" {
 			utils.Warn("log entry found with no LogID")
+			continue
+		}
+		if storedLog.Meta == nil {
+			utils.Warn("log entry found with nil Meta")
 			continue
 		}
 		utils.Debug("Adding logcache: %v", storedLog.Meta.EndpointID)
 		c.store[storedLog.LogID] = storedLog
 		c.endpoints[storedLog.Meta.EndpointID] = struct{}{}
-
 	}
-
 }
 
 func (c *logCache) Get(logID string) (*model.LogEntry, bool) {

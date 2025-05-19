@@ -61,6 +61,10 @@ type DataStore interface {
 	InsertProcessInfos(ctx context.Context, snapshotID int64, payload *model.ProcessPayload) error
 	QueryProcessInfos(ctx context.Context, filter *model.ProcessQueryFilter) ([]model.ProcessInfo, error)
 
+	// Syslog methods
+	GetNetworkDevices(ctx context.Context) ([]*model.NetworkDevice, error)
+	GetNetworkDeviceByAddress(ctx context.Context, address string) (*model.NetworkDevice, error)
+
 	// Lifecycle
 	Close() error
 }

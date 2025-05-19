@@ -34,6 +34,7 @@ import (
 	"github.com/aaronlmathis/gosight-server/internal/bootstrap"
 	grpcserver "github.com/aaronlmathis/gosight-server/internal/grpc"
 	httpserver "github.com/aaronlmathis/gosight-server/internal/http"
+	"github.com/aaronlmathis/gosight-server/internal/syslog"
 	"github.com/aaronlmathis/gosight-shared/utils"
 	"google.golang.org/grpc/encoding/gzip"
 )
@@ -79,10 +80,22 @@ func main() {
 			utils.Info("HTTP server started successfully")
 		}
 	}()
+	utils.Debug("Log store is: %T (inner: %T)", sys.Stores.Logs, sys.Buffers.Logs)
+
+	// Start Syslog server
+	syslogServer, err := syslog.NewSyslogServer(sys)
+	utils.Must("Syslog", err)
+	go func() {
+		if err := syslogServer.Start(); err != nil {
+			utils.Fatal("Syslog server failed: %v", err)
+		} else {
+			utils.Info("Syslog server started successfully: listening on TCP: %d, UDP: %d", sys.Cfg.SyslogCollection.TCPPort, sys.Cfg.SyslogCollection.UDPPort)
+		}
+	}()
 
 	// register gzip codec for compression
 	_ = gzip.Name // This ensures the gzip codec is registered
-
+	utils.Debug("Log store is: %T (inner: %T)", sys.Stores.Logs, sys.Buffers.Logs)
 	grpcServer, err := grpcserver.NewGRPCServer(sys)
 
 	if err != nil {
@@ -97,7 +110,7 @@ func main() {
 	}
 
 	<-ctx.Done()
-	utils.Info("🧹 Shutting down GoSight...")
+	utils.Info("Shutting down GoSight...")
 
 	if err := srv.Shutdown(); err != nil {
 		utils.Warn("Failed to shutdown HTTP server: %v", err)

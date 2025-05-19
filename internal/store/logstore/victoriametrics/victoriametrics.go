@@ -65,9 +65,12 @@ func (v *VictoriaLogStore) Write(batch []model.LogPayload) error {
 	// Wrap all logs once — generates log_id and preserves Meta
 	wrapped := wrapLogs(batch)
 
-	// Store in cache
-	v.cache.Add(wrapped)
-
+	if v.cache == nil {
+		utils.Debug("VictoriaLogStore: cached is nil")
+	} else {
+		// Store in cache
+		v.cache.Add(wrapped)
+	}
 	// Write full logs to compressed JSON (one entry per line)
 	if err := v.writeCompressedWrappedLogs(wrapped); err != nil {
 		utils.Warn("Failed to write logs to JSON: %v", err)

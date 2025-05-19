@@ -98,6 +98,16 @@ auth:
   mfa_secret_key: h5/dLmo1H/OFCjNs2SqTyD5XLL3u7EJy/ipHzf4Ej6c=     # Base64 encoded, at least length 32
   jwt_secret: fV3kTO3e3sP/t+xCe4jC0fj76RSSg5WXRL7CcTGmzxo=         # Base64 encoded, at least length 32
 
+syslog_collection:
+  tcp_enabled: true
+  udp_enabled: true
+  tcp_port: 514
+  udp_port: 514
+  tcp_address: 0.0.0.0
+  udp_address: 0.0.0.0
+  tcp_buffer_size: 1024
+  udp_buffer_size: 1024
+
 buffer_engine:
   enabled: true
   flush_interval: 5s             # Global flush interval for all stores
