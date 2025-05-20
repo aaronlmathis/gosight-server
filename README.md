@@ -10,8 +10,8 @@ GoSight Server is a high-performance observability backend built in Go. It recei
 
 - TLS/mTLS-secured gRPC endpoints
 - RFC 3164 / RFC 5424 / CEF compatible SysLog Server for ingesting logs
-- VictoriaMetrics integration for metric and log storage
-- PostgreSQL or file-backed log/event storage
+- VictoriaMetrics integration for metric and log storage (Time-Series + Compressed JSON for logs)
+- PostgreSQL or file-backed log/event storage (AWS S3 Connector Planned)
 - Rule-based alert evaluation + dispatch
 - Live WebSocket telemetry streaming
 - REST API for metrics, logs, endpoints, and alerts
@@ -38,9 +38,7 @@ go build -o gosight-server ./cmd
 
 See sample config in `./server/config/`.
 
-## Key Components
-
-## Directory Overview
+## Key Components / Directory Overview
 
 - `internal/alerts/` – Alert models and rule evaluation engine
 - `internal/auth/` – JWT-based authentication and session management
