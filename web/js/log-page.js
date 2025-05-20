@@ -1016,6 +1016,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function getColor(level) {
     switch ((level || "").toLowerCase()) {
+      case "emergency": return "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200";
+      case "alert": return "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200";
       case "critical": return "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200";
       case "error": return "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200";
       case "warn":

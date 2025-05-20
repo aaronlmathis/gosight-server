@@ -197,8 +197,19 @@ func (v *VictoriaLogStore) GetLogs(filter model.LogFilter) ([]model.LogEntry, er
 func (v *VictoriaLogStore) GetLogByID(logID string) (*model.LogEntry, error) {
 
 	if entry, ok := v.cache.Get(logID); ok {
-		utils.Debug("Log was found in cache: %v", entry.Message)
-		return entry, nil
+		utils.Debug("Log was found in cache: %v", entry.Log.Message)
+		if entry.Log.Tags == nil {
+			entry.Log.Tags = make(map[string]string)
+		}
+		entry.Log.Tags["endpoint_id"] = entry.Meta.EndpointID
+		entry.Log.Tags["agent_id"] = entry.Meta.AgentID
+		entry.Log.Tags["host_id"] = entry.Meta.HostID
+		entry.Log.Tags["hostname"] = entry.Meta.Hostname
+
+		for k, v := range entry.Meta.Tags {
+			entry.Log.Tags[k] = v
+		}
+		return &entry.Log, nil
 	}
 
 	files, err := filepath.Glob(filepath.Join(v.logsPath, "logs", "*", "*", "*", "*.json.gz"))

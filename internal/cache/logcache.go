@@ -33,7 +33,7 @@ import (
 // The cache is thread-safe and uses a mutex to synchronize access to the underlying data structure.
 type LogCache interface {
 	Add(batch []*model.StoredLog)
-	Get(logID string) (*model.LogEntry, bool)
+	Get(logID string) (*model.StoredLog, bool)
 	GetLogs() []*model.StoredLog
 }
 
@@ -77,14 +77,15 @@ func (c *logCache) Add(batch []*model.StoredLog) {
 	}
 }
 
-func (c *logCache) Get(logID string) (*model.LogEntry, bool) {
+func (c *logCache) Get(logID string) (*model.StoredLog, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	entry, ok := c.store[logID]
 	if !ok {
 		return nil, false
 	}
-	return &entry.Log, true
+	utils.Debug("logCache.Get: %v", entry.Meta.EndpointID)
+	return entry, true
 }
 
 func (c *logCache) GetLogs() []*model.StoredLog {

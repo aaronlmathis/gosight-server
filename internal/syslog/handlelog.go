@@ -74,9 +74,7 @@ func (s *SyslogServer) handleLog(ctx context.Context, raw []byte, srcAddr string
 	}
 	// Wrap in a LogPayload
 	payload := model.LogPayload{
-		AgentID:    "",
-		HostID:     "",
-		Hostname:   host,
+		Hostname:   deviceName,
 		EndpointID: deviceID,
 		Timestamp:  ts,
 		Logs:       []model.LogEntry{entry},

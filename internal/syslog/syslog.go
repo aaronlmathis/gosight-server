@@ -68,7 +68,7 @@ type SyslogServer struct {
 // NewSyslogServer creates a new SyslogServer instance
 func NewSyslogServer(sys *sys.SystemContext) (*SyslogServer, error) {
 
-	networkDevices, err := sys.Stores.Data.GetNetworkDevices(sys.Ctx)
+	networkDevices, err := sys.Stores.Data.GetAllNetworkDevices(sys.Ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get network devices: %w", err)
 	}

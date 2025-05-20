@@ -31,10 +31,10 @@ import (
 )
 
 // GetNetworkDevices returns all network devices from the database
-func (s *PGDataStore) GetNetworkDevices(ctx context.Context) ([]*model.NetworkDevice, error) {
+func (s *PGDataStore) GetAllNetworkDevices(ctx context.Context) ([]*model.NetworkDevice, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, name, vendor, address, port, protocol, format, facility, syslog_id, rate_limit, created_at, updated_at
-		FROM network_devices
+	SELECT id, name, vendor, address, port, protocol, format, facility, syslog_id, rate_limit, status, created_at, updated_at
+	FROM network_devices
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("query failed: %w", err)
@@ -58,6 +58,7 @@ func (s *PGDataStore) GetNetworkDevices(ctx context.Context) ([]*model.NetworkDe
 			&networkDevice.Facility,
 			&networkDevice.SyslogID,
 			&networkDevice.RateLimit,
+			&networkDevice.Status, // added
 			&createdAt,
 			&updatedAt,
 		); err != nil {
@@ -76,11 +77,113 @@ func (s *PGDataStore) GetNetworkDevices(ctx context.Context) ([]*model.NetworkDe
 	return networkDevices, nil
 }
 
+func (s *PGDataStore) GetNetworkDevices(ctx context.Context, filter *model.NetworkDeviceFilter) ([]*model.NetworkDevice, error) {
+	var (
+		query = `
+			SELECT id, name, vendor, address, port, protocol, format, facility, syslog_id, rate_limit, status, created_at, updated_at
+			FROM network_devices
+			WHERE 1=1
+		`
+		args []any
+		argN = 1
+	)
+
+	if filter.Name != "" {
+		query += fmt.Sprintf(" AND name = $%d", argN)
+		args = append(args, filter.Name)
+		argN++
+	}
+	if filter.Vendor != "" {
+		query += fmt.Sprintf(" AND vendor = $%d", argN)
+		args = append(args, filter.Vendor)
+		argN++
+	}
+	if filter.Address != "" {
+		query += fmt.Sprintf(" AND address = $%d", argN)
+		args = append(args, filter.Address)
+		argN++
+	}
+	if filter.Port > 0 {
+		query += fmt.Sprintf(" AND port = $%d", argN)
+		args = append(args, filter.Port)
+		argN++
+	}
+	if filter.Protocol != "" {
+		query += fmt.Sprintf(" AND protocol = $%d", argN)
+		args = append(args, filter.Protocol)
+		argN++
+	}
+	if filter.Format != "" {
+		query += fmt.Sprintf(" AND format = $%d", argN)
+		args = append(args, filter.Format)
+		argN++
+	}
+	if filter.Facility != "" {
+		query += fmt.Sprintf(" AND facility = $%d", argN)
+		args = append(args, filter.Facility)
+		argN++
+	}
+	if filter.SyslogID != "" {
+		query += fmt.Sprintf(" AND syslog_id = $%d", argN)
+		args = append(args, filter.SyslogID)
+		argN++
+	}
+	if filter.RateLimit > 0 {
+		query += fmt.Sprintf(" AND rate_limit = $%d", argN)
+		args = append(args, filter.RateLimit)
+		argN++
+	}
+	if filter.Status != "" {
+		query += fmt.Sprintf(" AND status = $%d", argN)
+		args = append(args, filter.Status)
+		argN++
+	}
+	// Pagination
+	query += fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", argN, argN+1)
+	args = append(args, filter.Limit, filter.Offset)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query failed: %w", err)
+	}
+	defer rows.Close()
+
+	var networkDevices []*model.NetworkDevice
+
+	for rows.Next() {
+		var device model.NetworkDevice
+		if err := rows.Scan(
+			&device.ID,
+			&device.Name,
+			&device.Vendor,
+			&device.Address,
+			&device.Port,
+			&device.Protocol,
+			&device.Format,
+			&device.Facility,
+			&device.SyslogID,
+			&device.RateLimit,
+			&device.Status, // added
+			&device.CreatedAt,
+			&device.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan failed: %w", err)
+		}
+		networkDevices = append(networkDevices, &device)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
+
+	return networkDevices, nil
+}
+
 // GetNetworkDeviceByAddress looks up a single NetworkDevice by its IP/hostname.
 // Returns (nil, nil) if no matching device is found.
 func (s *PGDataStore) GetNetworkDeviceByAddress(ctx context.Context, address string) (*model.NetworkDevice, error) {
 	const q = `
-        SELECT id, name, vendor, address, port, protocol, format, facility, syslog_id, rate_limit, created_at, updated_at
+        SELECT id, name, vendor, address, port, protocol, format, facility, syslog_id, rate_limit, status, created_at, updated_at
         FROM network_devices
         WHERE address = $1
         LIMIT 1
@@ -102,6 +205,7 @@ func (s *PGDataStore) GetNetworkDeviceByAddress(ctx context.Context, address str
 		&nd.Facility,
 		&nd.SyslogID,
 		&nd.RateLimit,
+		&nd.Status, 
 		&createdAt,
 		&updatedAt,
 	); err != nil {
@@ -114,4 +218,44 @@ func (s *PGDataStore) GetNetworkDeviceByAddress(ctx context.Context, address str
 	nd.CreatedAt = createdAt
 	nd.UpdatedAt = updatedAt
 	return &nd, nil
+}
+// UpsertNetworkDevice inserts a new network device or updates an existing one
+func (s *PGDataStore) UpsertNetworkDevice(ctx context.Context, device *model.NetworkDevice) error {
+	const q = `
+		INSERT INTO network_devices
+			(id, name, vendor, address, port, protocol, format, facility, syslog_id, rate_limit, status, created_at, updated_at)
+		VALUES
+			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+		ON CONFLICT (id) DO UPDATE SET
+			name = EXCLUDED.name,
+			vendor = EXCLUDED.vendor,
+			address = EXCLUDED.address,
+			port = EXCLUDED.port,
+			protocol = EXCLUDED.protocol,
+			format = EXCLUDED.format,
+			facility = EXCLUDED.facility,
+			syslog_id = EXCLUDED.syslog_id,
+			rate_limit = EXCLUDED.rate_limit,
+			status = EXCLUDED.status,
+			updated_at = NOW()
+	`
+
+	_, err := s.db.ExecContext(ctx, q,
+		device.ID,
+		device.Name,
+		device.Vendor,
+		device.Address,
+		device.Port,
+		device.Protocol,
+		device.Format,
+		device.Facility,
+		device.SyslogID,
+		device.RateLimit,
+		device.Status,
+	)
+
+	if err != nil {
+		return fmt.Errorf("UpsertNetworkDevice failed: %w", err)
+	}
+	return nil
 }

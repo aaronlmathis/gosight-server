@@ -1,7 +1,7 @@
 cloud.google.com/go/compute/metadata v0.6.0 h1:A6hENjEsCDtC1k8byVsgwvVcioamEHvZ4j01OwKxG9I=
 cloud.google.com/go/compute/metadata v0.6.0/go.mod h1:FjyFAW1MW0C203CEOMDTu3Dk1FlqW3Rga40jzHL4hfg=
-github.com/aaronlmathis/gosight-shared v0.0.0-20250519003907-ebb180193644 h1:7cUZKt1nuIXtmAdK2px+huhyT57EsgliQYPrjgi633Y=
-github.com/aaronlmathis/gosight-shared v0.0.0-20250519003907-ebb180193644/go.mod h1:MrTO9x8sa8hcRf5D9Gy3x0/tZTaYjEpQU8166Vz6m5Y=
+github.com/aaronlmathis/gosight-shared v0.0.0-20250519212040-58aa0dda4ac0 h1:lFiJxBwAcPnkBVmltzy7q/ThHAU/ofwH+1zPFogUgpY=
+github.com/aaronlmathis/gosight-shared v0.0.0-20250519212040-58aa0dda4ac0/go.mod h1:MrTO9x8sa8hcRf5D9Gy3x0/tZTaYjEpQU8166Vz6m5Y=
 github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc h1:biVzkmvwrH8WK8raXaxBx6fRVTlJILwEwQGL1I/ByEI=
 github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
