@@ -62,8 +62,10 @@ type DataStore interface {
 	QueryProcessInfos(ctx context.Context, filter *model.ProcessQueryFilter) ([]model.ProcessInfo, error)
 
 	// Syslog methods
-	GetNetworkDevices(ctx context.Context) ([]*model.NetworkDevice, error)
+	GetAllNetworkDevices(ctx context.Context) ([]*model.NetworkDevice, error)
+	GetNetworkDevices(ctx context.Context, filter *model.NetworkDeviceFilter) ([]*model.NetworkDevice, error)
 	GetNetworkDeviceByAddress(ctx context.Context, address string) (*model.NetworkDevice, error)
+	UpsertNetworkDevice(ctx context.Context, device *model.NetworkDevice) error
 
 	// Lifecycle
 	Close() error

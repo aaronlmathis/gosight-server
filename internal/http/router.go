@@ -19,8 +19,7 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// server/internal/http/router.go
-// Router for HTTPServer
+
 package httpserver
 
 import (
@@ -30,6 +29,29 @@ import (
 	gosightauth "github.com/aaronlmathis/gosight-server/internal/auth"
 )
 
+// withAuth returns the authentication middleware bound to the current user store.
+func (s *HttpServer) withAuth() func(http.Handler) http.Handler {
+	return gosightauth.AuthMiddleware(s.Sys.Stores.Users)
+}
+
+// withAccessLog wraps a handler with access logging middleware.
+func (s *HttpServer) withAccessLog(h http.Handler) http.Handler {
+	return gosightauth.AccessLogMiddleware(h)
+}
+
+// secure wraps a handler with auth, permission check, and access logging.
+func (s *HttpServer) secure(permission string, handler http.HandlerFunc) http.Handler {
+	return s.withAuth()(
+		gosightauth.RequirePermission(permission,
+			s.withAccessLog(handler),
+			s.Sys.Stores.Users,
+		),
+	)
+}
+
+// setupRoutes sets up the routes for the HTTP server.
+// It includes routes for static files, authentication, alerts, logs, metric explorer, activity, endpoints, network devices, API, and index.
+// It also includes routes for websockets.
 func (s *HttpServer) setupRoutes() {
 	s.setupStaticRoutes()
 	s.setupAuthRoutes()
@@ -38,11 +60,14 @@ func (s *HttpServer) setupRoutes() {
 	s.setupMetricExplorerRoutes()
 	s.setupActivityRoutes()
 	s.setupEndpointRoutes()
+	s.setupNetworkDevicesRoutes()
 	s.setupAPIRoutes()
 	s.setupIndexRoutes()
 	s.setupWebSocketRoutes()
 }
 
+// setupStaticRoutes sets up the static routes for the HTTP server.
+// It includes routes for serving static files like /js/, /css/, /images/.
 func (s *HttpServer) setupStaticRoutes() {
 	staticFS := http.FileServer(http.Dir(s.Sys.Cfg.Web.StaticDir))
 
@@ -89,22 +114,16 @@ func (s *HttpServer) setupStaticRoutes() {
 // The routes are protected by middleware that checks for injects context and trace identifiers.
 // The routes are also logged for access control.
 func (s *HttpServer) setupAuthRoutes() {
-	withAccessLog := gosightauth.AccessLogMiddleware
-	withAuth := gosightauth.AuthMiddleware(s.Sys.Stores.Users)
+	withAuth := s.withAuth()
+	withLog := s.withAccessLog
 
-	// These routes require no auth — public-facing
-	s.Router.Handle("/login", withAccessLog(http.HandlerFunc(s.HandleLogin))).Methods("GET")
-	s.Router.Handle("/login/start", withAccessLog(http.HandlerFunc(s.HandleLoginStart))).Methods("GET")
-	s.Router.Handle("/callback", withAccessLog(http.HandlerFunc(s.HandleCallback))).Methods("GET", "POST")
-	s.Router.Handle("/mfa", withAccessLog(http.HandlerFunc(s.HandleMFA))).Methods("GET", "POST")
+	// Public
+	s.Router.Handle("/login", withLog(http.HandlerFunc(s.HandleLogin))).Methods("GET")
+	s.Router.Handle("/login/start", withLog(http.HandlerFunc(s.HandleLoginStart))).Methods("GET")
+	s.Router.Handle("/callback", withLog(http.HandlerFunc(s.HandleCallback))).Methods("GET", "POST")
+	s.Router.Handle("/mfa", withLog(http.HandlerFunc(s.HandleMFA))).Methods("GET", "POST")
 
-	s.Router.Handle("/logout",
-		withAccessLog(
-			withAuth(
-				http.HandlerFunc(s.HandleLogout),
-			),
-		),
-	).Methods("GET")
+	s.Router.Handle("/logout", withLog(withAuth(http.HandlerFunc(s.HandleLogout)))).Methods("GET")
 }
 
 // setupIndexRoutes sets up the index routes for the HTTP server.
@@ -112,80 +131,22 @@ func (s *HttpServer) setupAuthRoutes() {
 // The routes are protected by middleware that checks for injects context and trace identifiers.
 // The routes are also logged for access control.
 func (s *HttpServer) setupIndexRoutes() {
-	s.Router.Handle("/",
-		gosightauth.AuthMiddleware(s.Sys.Stores.Users)(
-			gosightauth.RequirePermission("gosight:dashboard:view",
-				gosightauth.AccessLogMiddleware(
-					http.HandlerFunc(s.HandleIndexPage),
-				),
-				s.Sys.Stores.Users,
-			),
-		),
-	)
+	s.Router.Handle("/", s.secure("gosight:dashboard:view", s.HandleIndexPage))
 }
 
 // setupLogRoutes sets up the log routes for the HTTP server.
 // This includes the log explorer page
 func (s *HttpServer) setupLogRoutes() {
-	s.Router.Handle("/logs",
-		gosightauth.AuthMiddleware(s.Sys.Stores.Users)(
-			gosightauth.RequirePermission("gosight:dashboard:view",
-				gosightauth.AccessLogMiddleware(
-					http.HandlerFunc(s.HandleLogsPage),
-				),
-				s.Sys.Stores.Users,
-			),
-		),
-	)
+	s.Router.Handle("/logs", s.secure("gosight:dashboard:view", s.HandleLogsPage))
 }
 
 // setupAlertsRoutes sets up the  alerts routes for the HTTP server.
 // This includes the alerts page as well as the rule builder page.
 func (s *HttpServer) setupAlertsRoutes() {
-
-	s.Router.Handle("/alerts/active",
-		gosightauth.AuthMiddleware(s.Sys.Stores.Users)(
-			gosightauth.RequirePermission("gosight:dashboard:view",
-				gosightauth.AccessLogMiddleware(
-					http.HandlerFunc(s.HandleAlertsActivePage),
-				),
-				s.Sys.Stores.Users,
-			),
-		),
-	)
-	s.Router.Handle("/alerts/history",
-		gosightauth.AuthMiddleware(s.Sys.Stores.Users)(
-			gosightauth.RequirePermission("gosight:dashboard:view",
-				gosightauth.AccessLogMiddleware(
-					http.HandlerFunc(s.HandleAlertsHistoryPage),
-				),
-				s.Sys.Stores.Users,
-			),
-		),
-	)
-	// TODO permissions
-	// Add Alert Rule Page
-	s.Router.Handle("/alerts/rules",
-		gosightauth.AuthMiddleware(s.Sys.Stores.Users)(
-			gosightauth.RequirePermission("gosight:dashboard:view",
-				gosightauth.AccessLogMiddleware(
-					http.HandlerFunc(s.HandleAddAlertRulePage),
-				),
-				s.Sys.Stores.Users,
-			),
-		),
-	)
-	s.Router.Handle("/alerts",
-		gosightauth.AuthMiddleware(s.Sys.Stores.Users)(
-			gosightauth.RequirePermission("gosight:dashboard:view",
-				gosightauth.AccessLogMiddleware(
-					http.HandlerFunc(s.HandleAlertsPage),
-				),
-				s.Sys.Stores.Users,
-			),
-		),
-	)
-
+	s.Router.Handle("/alerts/active", s.secure("gosight:dashboard:view", s.HandleAlertsActivePage))
+	s.Router.Handle("/alerts/history", s.secure("gosight:dashboard:view", s.HandleAlertsHistoryPage))
+	s.Router.Handle("/alerts/rules", s.secure("gosight:dashboard:view", s.HandleAddAlertRulePage))
+	s.Router.Handle("/alerts", s.secure("gosight:dashboard:view", s.HandleAlertsPage))
 }
 
 // setupMetricExplorerRoutes sets up the metric explorer routes for the HTTP server.
@@ -193,16 +154,7 @@ func (s *HttpServer) setupAlertsRoutes() {
 // The routes are protected by middleware that checks for injects context and trace identifiers.
 // The routes are also logged for access control.
 func (s *HttpServer) setupMetricExplorerRoutes() {
-	s.Router.Handle("/metrics",
-		gosightauth.AuthMiddleware(s.Sys.Stores.Users)(
-			gosightauth.RequirePermission("gosight:dashboard:view",
-				gosightauth.AccessLogMiddleware(
-					http.HandlerFunc(s.HandleMetricExplorerPage),
-				),
-				s.Sys.Stores.Users,
-			),
-		),
-	)
+	s.Router.Handle("/metrics", s.secure("gosight:dashboard:view", s.HandleMetricExplorerPage))
 }
 
 // setupActivityRoutes sets up the activity routes for the HTTP server.
@@ -211,26 +163,8 @@ func (s *HttpServer) setupMetricExplorerRoutes() {
 // The routes are also logged for access control.
 
 func (s *HttpServer) setupActivityRoutes() {
-	s.Router.Handle("/activity",
-		gosightauth.AuthMiddleware(s.Sys.Stores.Users)(
-			gosightauth.RequirePermission("gosight:dashboard:view",
-				gosightauth.AccessLogMiddleware(
-					http.HandlerFunc(s.HandleActivityPage),
-				),
-				s.Sys.Stores.Users,
-			),
-		),
-	)
-	s.Router.Handle("/activity/{stream}",
-		gosightauth.AuthMiddleware(s.Sys.Stores.Users)(
-			gosightauth.RequirePermission("gosight:dashboard:view",
-				gosightauth.AccessLogMiddleware(
-					http.HandlerFunc(s.HandleEndpointDetail),
-				),
-				s.Sys.Stores.Users,
-			),
-		),
-	)
+	s.Router.Handle("/activity", s.secure("gosight:dashboard:view", s.HandleActivityPage))
+	s.Router.Handle("/activity/{stream}", s.secure("gosight:dashboard:view", s.HandleEndpointDetail))
 }
 
 // setupEndpointRoutes sets up the endpoint routes for the HTTP server.
@@ -239,27 +173,8 @@ func (s *HttpServer) setupActivityRoutes() {
 // The routes are also logged for access control.
 
 func (s *HttpServer) setupEndpointRoutes() {
-	s.Router.Handle("/endpoints",
-		gosightauth.AuthMiddleware(s.Sys.Stores.Users)(
-			gosightauth.RequirePermission("gosight:dashboard:view",
-				gosightauth.AccessLogMiddleware(
-					http.HandlerFunc(s.HandleEndpointPage),
-				),
-				s.Sys.Stores.Users,
-			),
-		),
-	)
-	s.Router.Handle("/endpoints/{endpoint_id}",
-		gosightauth.AuthMiddleware(s.Sys.Stores.Users)(
-			gosightauth.RequirePermission("gosight:dashboard:view",
-				gosightauth.AccessLogMiddleware(
-					http.HandlerFunc(s.HandleEndpointDetail),
-				),
-				s.Sys.Stores.Users,
-			),
-		),
-	)
-
+	s.Router.Handle("/endpoints", s.secure("gosight:dashboard:view", s.HandleEndpointPage))
+	s.Router.Handle("/endpoints/{endpoint_id}", s.secure("gosight:dashboard:view", s.HandleEndpointDetail))
 }
 
 // setupAPIRoutes sets up the API routes for the HTTP server.
@@ -273,6 +188,7 @@ func (s *HttpServer) setupAPIRoutes() {
 	secure := func(permission string, handler http.HandlerFunc) http.Handler {
 		return withAuth(gosightauth.RequirePermission(permission, handler, s.Sys.Stores.Users))
 	}
+	api.Handle("/network-devices", secure("gosight:dashboard:view", http.HandlerFunc(s.HandleNetworkDevicesAPI))).Methods("GET")
 
 	api.Handle("/debug/cache", secure("gosight:dashboard:view", http.HandlerFunc(s.HandleCacheAudit))).Methods("GET")
 
@@ -326,11 +242,21 @@ func (s *HttpServer) setupAPIRoutes() {
 
 }
 
+// setupWebSocketRoutes sets up the websocket routes for the HTTP server.
+// It includes routes for websocket connections for metrics, alerts, events, logs, commands, and processes.
 func (s *HttpServer) setupWebSocketRoutes() {
-	s.Router.HandleFunc("/ws/metrics", s.Sys.WSHub.Metrics.ServeWS)
-	s.Router.HandleFunc("/ws/alerts", s.Sys.WSHub.Alerts.ServeWS)
-	s.Router.HandleFunc("/ws/events", s.Sys.WSHub.Events.ServeWS)
-	s.Router.HandleFunc("/ws/logs", s.Sys.WSHub.Logs.ServeWS)
-	s.Router.HandleFunc("/ws/command", s.Sys.WSHub.Commands.ServeWS)
-	s.Router.HandleFunc("/ws/process", s.Sys.WSHub.Processes.ServeWS)
+	withAuth := s.withAuth()
+
+	s.Router.Handle("/ws/metrics", withAuth(http.HandlerFunc(s.Sys.WSHub.Metrics.ServeWS)))
+	s.Router.Handle("/ws/alerts", withAuth(http.HandlerFunc(s.Sys.WSHub.Alerts.ServeWS)))
+	s.Router.Handle("/ws/events", withAuth(http.HandlerFunc(s.Sys.WSHub.Events.ServeWS)))
+	s.Router.Handle("/ws/logs", withAuth(http.HandlerFunc(s.Sys.WSHub.Logs.ServeWS)))
+	s.Router.Handle("/ws/command", withAuth(http.HandlerFunc(s.Sys.WSHub.Commands.ServeWS)))
+	s.Router.Handle("/ws/process", withAuth(http.HandlerFunc(s.Sys.WSHub.Processes.ServeWS)))
+}
+
+// setupNetworkDevicesRoutes sets up the network devices routes for the HTTP server.
+// It includes routes for the network devices page and the network devices API.
+func (s *HttpServer) setupNetworkDevicesRoutes() {
+	s.Router.Handle("/network-devices", s.secure("gosight:dashboard:view", s.HandleNetworkDevicesPage))
 }

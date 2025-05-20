@@ -3,7 +3,7 @@ module github.com/aaronlmathis/gosight-server
 go 1.23.7
 
 require (
-	github.com/aaronlmathis/gosight-shared v0.0.0-20250519003907-ebb180193644
+	github.com/aaronlmathis/gosight-shared v0.0.0-20250519212040-58aa0dda4ac0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.6.0

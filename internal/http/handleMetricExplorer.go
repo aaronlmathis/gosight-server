@@ -19,8 +19,6 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// File: server/internal/http/handleMetricExplorer.go
-// Description: This file contains the HTTP handlers for the GoSight server's metric explorer API.
 
 package httpserver
 
@@ -36,7 +34,6 @@ import (
 // It checks if the user is authenticated and authorized to view the page.
 // If the user is not authenticated, they are redirected to the login page.
 // If the user is authenticated, the page is rendered with the user's data and breadcrumbs.
-
 func (s *HttpServer) HandleMetricExplorerPage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
