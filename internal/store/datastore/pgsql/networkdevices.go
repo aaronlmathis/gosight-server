@@ -205,7 +205,7 @@ func (s *PGDataStore) GetNetworkDeviceByAddress(ctx context.Context, address str
 		&nd.Facility,
 		&nd.SyslogID,
 		&nd.RateLimit,
-		&nd.Status, 
+		&nd.Status,
 		&createdAt,
 		&updatedAt,
 	); err != nil {
@@ -219,6 +219,7 @@ func (s *PGDataStore) GetNetworkDeviceByAddress(ctx context.Context, address str
 	nd.UpdatedAt = updatedAt
 	return &nd, nil
 }
+
 // UpsertNetworkDevice inserts a new network device or updates an existing one
 func (s *PGDataStore) UpsertNetworkDevice(ctx context.Context, device *model.NetworkDevice) error {
 	const q = `
@@ -239,7 +240,6 @@ func (s *PGDataStore) UpsertNetworkDevice(ctx context.Context, device *model.Net
 			status = EXCLUDED.status,
 			updated_at = NOW()
 	`
-
 	_, err := s.db.ExecContext(ctx, q,
 		device.ID,
 		device.Name,
@@ -253,9 +253,24 @@ func (s *PGDataStore) UpsertNetworkDevice(ctx context.Context, device *model.Net
 		device.RateLimit,
 		device.Status,
 	)
+	return err
+}
 
-	if err != nil {
-		return fmt.Errorf("UpsertNetworkDevice failed: %w", err)
-	}
-	return nil
+// DeleteNetworkDeviceByID deletes a network device by its ID
+func (s *PGDataStore) DeleteNetworkDeviceByID(ctx context.Context, id string) error {
+	const q = `DELETE FROM network_devices WHERE id = $1`
+	_, err := s.db.ExecContext(ctx, q, id)
+	return err
+}
+
+// ToggleNetworkDeviceStatus toggles the status (enabled/disabled) of a device by ID
+func (s *PGDataStore) ToggleNetworkDeviceStatus(ctx context.Context, id string) error {
+	const q = `
+		UPDATE network_devices
+		SET status = CASE WHEN status = 'enabled' THEN 'disabled' ELSE 'enabled' END,
+		    updated_at = NOW()
+		WHERE id = $1
+	`
+	_, err := s.db.ExecContext(ctx, q, id)
+	return err
 }

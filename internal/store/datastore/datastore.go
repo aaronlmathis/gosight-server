@@ -67,6 +67,10 @@ type DataStore interface {
 	GetNetworkDeviceByAddress(ctx context.Context, address string) (*model.NetworkDevice, error)
 	UpsertNetworkDevice(ctx context.Context, device *model.NetworkDevice) error
 
+	// New for device management
+	DeleteNetworkDeviceByID(ctx context.Context, id string) error
+	ToggleNetworkDeviceStatus(ctx context.Context, id string) error
+
 	// Lifecycle
 	Close() error
 }

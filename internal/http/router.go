@@ -19,7 +19,6 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-
 package httpserver
 
 import (
@@ -188,7 +187,10 @@ func (s *HttpServer) setupAPIRoutes() {
 	secure := func(permission string, handler http.HandlerFunc) http.Handler {
 		return withAuth(gosightauth.RequirePermission(permission, handler, s.Sys.Stores.Users))
 	}
-	api.Handle("/network-devices", secure("gosight:dashboard:view", http.HandlerFunc(s.HandleNetworkDevicesAPI))).Methods("GET")
+	api.Handle("/network-devices", secure("gosight:dashboard:view", http.HandlerFunc(s.HandleNetworkDevicesAPI))).Methods("GET", "POST")
+	api.Handle("/network-devices/{id}", secure("gosight:dashboard:view", http.HandlerFunc(s.HandleDeleteNetworkDeviceAPI))).Methods("DELETE")
+	api.Handle("/network-devices/{id}", secure("gosight:dashboard:view", http.HandlerFunc(s.HandleUpdateNetworkDeviceAPI))).Methods("PUT")
+	api.Handle("/network-devices/{id}/toggle", secure("gosight:dashboard:view", http.HandlerFunc(s.HandleToggleNetworkDeviceStatusAPI))).Methods("POST")
 
 	api.Handle("/debug/cache", secure("gosight:dashboard:view", http.HandlerFunc(s.HandleCacheAudit))).Methods("GET")
 

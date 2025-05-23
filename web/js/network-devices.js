@@ -19,28 +19,84 @@ async function init() {
     await loadDevices();
 }
 
-
+// Show Edit Device Modal
+window.showEditDeviceModal = function(deviceId) {
+    const device = devices.find(d => d.ID === deviceId);
+    if (!device) {
+        showToast('Device not found', 'failure');
+        return;
+    }
+    // Populate the form with device data
+    const form = document.getElementById('add-device-form');
+    form.elements['name'].value = device.Name || '';
+    form.elements['vendor'].value = device.Vendor || '';
+    form.elements['address'].value = device.Address || '';
+    form.elements['protocol'].value = device.Protocol ? device.Protocol.toLowerCase() : '';
+    form.elements['format'].value = device.Format || '';
+    form.elements['facility'].value = device.Facility || '';
+    form.elements['syslog_id'].value = device.SyslogID || '';
+    form.elements['rate_limit'].value = device.RateLimit || '';
+    // Store editing state
+    form.setAttribute('data-edit-id', deviceId);
+    // Show the modal
+    document.querySelector('[data-modal-target="add-device-modal"]').click();
+}
 
 // Setup the modal
 function setupModal() {
     // Handle form submission
     document.getElementById('add-device-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData(e.target);
+        const form = e.target;
+        const formData = new FormData(form);
         const device = Object.fromEntries(formData.entries());
 
+        // Basic validation (use lowercase keys)
+        if (!device.name || !device.address || !device.protocol) {
+            showToast('Name, Address, and Protocol are required.', 'failure');
+            return;
+        }
+
+        // Sanitize
+        device.name = device.name.trim();
+        device.vendor = device.vendor ? device.vendor.trim() : '';
+        device.address = device.address.trim();
+        device.protocol = device.protocol.trim().toUpperCase(); // Ensure uppercase for backend
+        device.format = device.format ? device.format.trim() : '';
+        device.facility = device.facility ? device.facility.trim() : '';
+        // Fix: use correct keys for backend (SyslogID, RateLimit)
+        device.SyslogID = device.syslog_id ? device.syslog_id.trim() : '';
+        device.RateLimit = device.rate_limit ? parseInt(device.rate_limit, 10) : 0;
+        delete device.syslog_id;
+        delete device.rate_limit;
+
+        // If editing, send PUT to /api/v1/network-devices/{id}
+        const editId = form.getAttribute('data-edit-id');
+        let url = '/api/v1/network-devices';
+        let method = 'POST';
+        if (editId) {
+            url = `/api/v1/network-devices/${editId}`;
+            method = 'PUT';
+        }
+
         try {
-            await gosightFetch('/api/v1/network-devices', {
-                method: 'POST',
+            const response = await gosightFetch(url, {
+                method,
                 body: JSON.stringify(device)
             });
-            // Hide modal using data attribute
+            if (!response.ok) {
+                const errorText = await response.text();
+                showToast('Failed to save device: ' + errorText, 'failure');
+                return;
+            }
             document.querySelector('[data-modal-hide="add-device-modal"]').click();
-            showToast('Device added successfully', 'success');
+            showToast('Device saved successfully', 'success');
             await loadDevices();
         } catch (error) {
-            console.error('Failed to add device:', error);
-            showToast('Failed to add device', 'failure');
+            console.error('Failed to save device:', error);
+            showToast('Failed to save device', 'failure');
+        } finally {
+            form.removeAttribute('data-edit-id');
         }
     });
 }
@@ -146,6 +202,9 @@ function renderDevices() {
                     <button onclick="deleteDevice('${device.ID}')" class="font-medium text-red-600 dark:text-red-500 hover:underline">
                         <i class="fas fa-trash"></i>
                     </button>
+                    <button onclick="showEditDeviceModal('${device.ID}')" class="font-medium text-yellow-600 dark:text-yellow-400 hover:underline">
+                        <i class="fas fa-edit"></i>
+                    </button>
                 </div>
             </td>
         `;
@@ -184,18 +243,15 @@ async function deleteDevice(id) {
 }
 
 // Show toast notification
-// Show toast notification
 function showToast(message, type = 'success') {
     const toastElement = document.getElementById('toast');
-    // Update the message text
-    document.querySelector('.toast-message').textContent = message;
-    // Use the global Toast constructor
-    const toast = new Toast(toastElement, {
-        position: 'top-right'
-    });
-    toast.show();
-}
+    const messageElement = toastElement.querySelector('.toast-message');
+    messageElement.textContent = message;
 
+    // Optionally set color based on type
+    toastElement.classList.remove('hidden');
+    setTimeout(() => toastElement.classList.add('hidden'), 3000);
+}
 
 // Utility function for debouncing
 function debounce(func, wait) {
