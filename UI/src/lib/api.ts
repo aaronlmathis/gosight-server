@@ -122,17 +122,20 @@ this.api = api;
 		type?: string;
 		status?: string;
 		hostname?: string;
+		endpointID?: string;
+		hostID?: string;
+		limit?: number;
 	}): Promise<Endpoint[]> {
 		const searchParams = appendSearchParams(new URLSearchParams(), params ?? {});
 		const query = searchParams.toString();
 		const response = await this.api.request(`/endpoints${query ? `?${query}` : ''}`);
 		// Backend returns array directly, not wrapped in data object
-		return response || [];
+		return Array.isArray(response) ? response : [];
+	}	async get(id: string) {
+		// Backend doesn't have /endpoints/{id} route, use query parameter instead
+		const response = await this.getAll({ endpointID: id });
+		return { data: response[0] || null };
 	}
-
-async get(id: string) {
-return this.api.request(`/endpoints/${id}`);
-}
 
 async getByType(type: 'hosts' | 'containers', params?: any) {
 const searchParams = appendSearchParams(new URLSearchParams(), params ?? {});
