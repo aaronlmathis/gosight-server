@@ -1,54 +1,43 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
-	import { alertsWS } from '$lib/websocket';
-	import { activeAlerts, globalSearchQuery } from '$lib/stores';
-	import { formatDate, getStatusBadgeClass } from '$lib/utils';
-	import type { Alert } from '$lib/types';
+	import type { AlertRule, AlertSummary, AlertTableData } from '$lib/types';
 
-	let alerts: Alert[] = [];
-	let filteredAlerts: Alert[] = [];
+	let rules: AlertRule[] = [];
+	let summaries: AlertSummary[] = [];
+	let tableData: AlertTableData[] = [];
+	let filteredData: AlertTableData[] = [];
 	let loading = true;
 	let error = '';
 	let searchTerm = '';
-	let statusFilter = 'all';
-	let severityFilter = 'all';
-	let sortBy = 'created_at';
-	let sortOrder = 'desc';
+	let sortBy = 'name';
+	let sortOrder: 'asc' | 'desc' = 'asc';
 
-	// Pagination
-	let currentPage = 1;
-	let pageSize = 20;
-	let totalAlerts = 0;
+	// Bulk selection state
+	let selectedIds: Set<string> = new Set();
+	let selectAll = false;
+	let bulkActionsOpen = false;
 
 	onMount(async () => {
 		await loadAlerts();
-		
-		// Subscribe to real-time alert updates
-		websocketManager.connect();
-		websocketManager.subscribeToAlerts((alert: Alert) => {
-			alerts = [alert, ...alerts];
-			filterAndSortAlerts();
-		});
-
-		// Subscribe to search store
-		searchStore.subscribe(term => {
-			searchTerm = term;
-			filterAndSortAlerts();
-		});
 	});
 
 	async function loadAlerts() {
 		try {
 			loading = true;
-			const response = await api.getAlerts({
-				page: currentPage,
-				limit: pageSize,
-				sort: `${sortBy}:${sortOrder}`
-			});
-			alerts = response.alerts || [];
-			totalAlerts = response.total || 0;
-			filterAndSortAlerts();
+			error = '';
+
+			// Load rules and summaries like the old frontend
+			const [rulesResponse, summariesResponse] = await Promise.all([
+				api.getAlertRules(),
+				api.getSummary()
+			]);
+
+			rules = rulesResponse;
+			summaries = summariesResponse;
+
+			buildTableData();
+			filterAndSortData();
 		} catch (err) {
 			error = 'Failed to load alerts: ' + (err as Error).message;
 		} finally {
@@ -56,36 +45,91 @@
 		}
 	}
 
-	function filterAndSortAlerts() {
-		let filtered = [...alerts];
+	function renderExpression(expr: any): string {
+		if (typeof expr === 'object' && expr !== null) {
+			const left = expr.datatype || 'value';
+			const op = expr.operator || '?';
+			let val = expr.value;
+
+			if (typeof val === 'number' && expr.datatype === 'percent') {
+				val = `${val}%`;
+			} else if (typeof val === 'string') {
+				val = `"${val}"`;
+			}
+
+			return `${left} ${op} ${val}`;
+		}
+		return typeof expr === 'string' ? expr : '-';
+	}
+
+	function formatMatchCriteria(match: any): string {
+		if (!match || Object.keys(match).length === 0) {
+			return '';
+		}
+		let criteria: string[] = [];
+
+		if (match.labels && typeof match.labels === 'object') {
+			for (const [k, v] of Object.entries(match.labels)) {
+				criteria.push(`label:${k}=${v}`);
+			}
+		}
+
+		for (const [k, v] of Object.entries(match)) {
+			if (k !== 'labels') {
+				criteria.push(`${k}=${v}`);
+			}
+		}
+
+		return '(' + criteria.join(', ') + ')';
+	}
+
+	function buildTableData() {
+		tableData = rules.map((rule) => {
+			const summary = summaries.find((s) => s.rule_id === rule.id);
+
+			let state = 'Insufficient Data';
+			let lastStateChange = '-';
+
+			if (summary) {
+				if (summary.state === 'firing') {
+					state = 'Alarm';
+				} else if (summary.state === 'resolved') {
+					state = 'OK';
+				}
+				lastStateChange = summary.last_change;
+			}
+
+			return {
+				id: rule.id,
+				name: rule.name,
+				state: state,
+				last_state_change: lastStateChange,
+				conditions_summary: `${renderExpression(rule.expression)} ${formatMatchCriteria(rule.match)}`,
+				actions: rule.actions || []
+			};
+		});
+	}
+
+	function filterAndSortData() {
+		let filtered = [...tableData];
 
 		// Search filter
 		if (searchTerm) {
-			filtered = filtered.filter(alert =>
-				alert.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				alert.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				alert.endpoint_name?.toLowerCase().includes(searchTerm.toLowerCase())
+			filtered = filtered.filter(
+				(alert) =>
+					alert.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+					alert.conditions_summary.toLowerCase().includes(searchTerm.toLowerCase())
 			);
-		}
-
-		// Status filter
-		if (statusFilter !== 'all') {
-			filtered = filtered.filter(alert => alert.status === statusFilter);
-		}
-
-		// Severity filter
-		if (severityFilter !== 'all') {
-			filtered = filtered.filter(alert => alert.severity === severityFilter);
 		}
 
 		// Sort
 		filtered.sort((a, b) => {
-			let aValue = a[sortBy as keyof Alert];
-			let bValue = b[sortBy as keyof Alert];
-			
+			let aValue = a[sortBy as keyof AlertTableData];
+			let bValue = b[sortBy as keyof AlertTableData];
+
 			if (typeof aValue === 'string') aValue = aValue.toLowerCase();
 			if (typeof bValue === 'string') bValue = bValue.toLowerCase();
-			
+
 			if (sortOrder === 'asc') {
 				return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
 			} else {
@@ -93,7 +137,8 @@
 			}
 		});
 
-		filteredAlerts = filtered;
+		filteredData = filtered;
+		updateSelectAllState();
 	}
 
 	function handleSort(field: string) {
@@ -101,237 +146,288 @@
 			sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
 		} else {
 			sortBy = field;
-			sortOrder = 'desc';
+			sortOrder = 'asc';
 		}
-		filterAndSortAlerts();
+		filterAndSortData();
 	}
 
-	async function acknowledgeAlert(alertId: string) {
-		try {
-			await api.acknowledgeAlert(alertId);
-			alerts = alerts.map(alert =>
-				alert.id === alertId ? { ...alert, status: 'acknowledged' } : alert
-			);
-			filterAndSortAlerts();
-		} catch (err) {
-			console.error('Failed to acknowledge alert:', err);
+	function handleSearch() {
+		filterAndSortData();
+	}
+
+	function editAlert(alertId: string) {
+		window.location.href = `/alerts/edit/${alertId}`;
+	}
+
+	// Bulk selection functions
+	function handleSelectAll() {
+		if (selectAll) {
+			selectedIds = new Set(filteredData.map((alert) => alert.id));
+		} else {
+			selectedIds = new Set();
+		}
+		updateBulkActionsState();
+	}
+
+	function handleRowSelect(alertId: string) {
+		if (selectedIds.has(alertId)) {
+			selectedIds.delete(alertId);
+		} else {
+			selectedIds.add(alertId);
+		}
+		selectedIds = new Set(selectedIds); // Trigger reactivity
+		updateSelectAllState();
+		updateBulkActionsState();
+	}
+
+	function updateSelectAllState() {
+		selectAll = filteredData.length > 0 && filteredData.every((alert) => selectedIds.has(alert.id));
+	}
+
+	function updateBulkActionsState() {
+		// Enable/disable bulk actions button based on selection
+	}
+
+	function handleBulkDisable() {
+		console.log('Disabling selected:', Array.from(selectedIds));
+		bulkActionsOpen = false;
+		// TODO: Implement bulk disable API call
+	}
+
+	function handleBulkDelete() {
+		if (confirm('Are you sure you want to delete the selected alerts?')) {
+			console.log('Deleting selected:', Array.from(selectedIds));
+			bulkActionsOpen = false;
+			// TODO: Implement bulk delete API call
 		}
 	}
 
-	async function resolveAlert(alertId: string) {
-		try {
-			await api.resolveAlert(alertId);
-			alerts = alerts.map(alert =>
-				alert.id === alertId ? { ...alert, status: 'resolved' } : alert
-			);
-			filterAndSortAlerts();
-		} catch (err) {
-			console.error('Failed to resolve alert:', err);
+	function getStateBadgeClass(state: string): string {
+		switch (state) {
+			case 'Alarm':
+				return 'bg-red-100 text-red-800';
+			case 'OK':
+				return 'bg-green-100 text-green-800';
+			default:
+				return 'bg-gray-300 text-gray-800';
 		}
 	}
 
-	function getSeverityColor(severity: string): string {
-		switch (severity) {
-			case 'critical': return 'text-red-600 bg-red-100';
-			case 'high': return 'text-orange-600 bg-orange-100';
-			case 'medium': return 'text-yellow-600 bg-yellow-100';
-			case 'low': return 'text-blue-600 bg-blue-100';
-			default: return 'text-gray-600 bg-gray-100';
+	function handleRowClick(event: MouseEvent, alertId: string) {
+		// Prevent row click when clicking on checkbox or buttons
+		const target = event.target as HTMLElement;
+		if (target.tagName === 'INPUT' || target.tagName === 'BUTTON' || target.closest('button')) {
+			return;
+		}
+		handleRowSelect(alertId);
+	}
+
+	// Close bulk actions menu when clicking outside
+	function handleClickOutside(event: MouseEvent) {
+		const target = event.target as HTMLElement;
+		if (!target.closest('.bulk-actions-container')) {
+			bulkActionsOpen = false;
 		}
 	}
 
-	$: totalPages = Math.ceil(totalAlerts / pageSize);
+	$: bulkActionsEnabled = selectedIds.size > 0;
 </script>
 
 <svelte:head>
 	<title>Alerts - GoSight</title>
 </svelte:head>
 
+<svelte:window on:click={handleClickOutside} />
+
 <div class="p-6">
 	<div class="mb-6">
 		<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Alerts</h1>
-		<p class="text-gray-600 dark:text-gray-400">Monitor and manage system alerts</p>
+		<p class="text-gray-600 dark:text-gray-400">Monitor and manage alert rules</p>
 	</div>
 
-	<!-- Filters and Controls -->
-	<div class="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-		<div class="flex flex-wrap gap-4 items-center justify-between">
-			<div class="flex flex-wrap gap-4 items-center">
+	<!-- Search and Controls -->
+	<div class="mb-6 rounded-lg bg-white p-4 shadow dark:bg-gray-800">
+		<div class="flex flex-wrap items-center justify-between gap-4">
+			<div class="flex flex-wrap items-center gap-4">
 				<!-- Search -->
 				<div class="relative">
-					<i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+					<i class="fas fa-search absolute top-1/2 left-3 -translate-y-1/2 transform text-gray-400"
+					></i>
 					<input
 						type="text"
 						placeholder="Search alerts..."
 						bind:value={searchTerm}
-						on:input={filterAndSortAlerts}
-						class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+						on:input={handleSearch}
+						class="rounded-lg border border-gray-300 bg-white py-2 pr-4 pl-10 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
 					/>
 				</div>
 
-				<!-- Status Filter -->
-				<select
-					bind:value={statusFilter}
-					on:change={filterAndSortAlerts}
-					class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-				>
-					<option value="all">All Status</option>
-					<option value="active">Active</option>
-					<option value="acknowledged">Acknowledged</option>
-					<option value="resolved">Resolved</option>
-				</select>
+				<!-- Bulk Actions -->
+				<div class="bulk-actions-container relative">
+					<button
+						on:click={() => (bulkActionsOpen = !bulkActionsOpen)}
+						disabled={!bulkActionsEnabled}
+						class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+					>
+						Actions
+						<i class="fas fa-chevron-down ml-2"></i>
+					</button>
 
-				<!-- Severity Filter -->
-				<select
-					bind:value={severityFilter}
-					on:change={filterAndSortAlerts}
-					class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-				>
-					<option value="all">All Severity</option>
-					<option value="critical">Critical</option>
-					<option value="high">High</option>
-					<option value="medium">Medium</option>
-					<option value="low">Low</option>
-				</select>
+					{#if bulkActionsOpen}
+						<div
+							class="absolute left-0 z-10 mt-2 w-48 rounded-md border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-600 dark:bg-gray-700"
+						>
+							<button
+								on:click={handleBulkDisable}
+								class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600"
+							>
+								<i class="fas fa-pause mr-2"></i>
+								Disable Selected
+							</button>
+							<button
+								on:click={handleBulkDelete}
+								class="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-600"
+							>
+								<i class="fas fa-trash mr-2"></i>
+								Delete Selected
+							</button>
+						</div>
+					{/if}
+				</div>
 			</div>
 
 			<div class="flex gap-2">
 				<a
-					href="/alerts/rules"
-					class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+					href="/alerts/add"
+					class="rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
 				>
-					<i class="fas fa-cog mr-2"></i>
-					Alert Rules
+					<i class="fas fa-plus mr-2"></i>
+					Add
 				</a>
 			</div>
 		</div>
 	</div>
 
 	{#if loading}
-		<div class="flex justify-center items-center py-12">
-			<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+		<div class="flex items-center justify-center py-12">
+			<div class="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
 		</div>
 	{:else if error}
-		<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+		<div
+			class="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20"
+		>
 			<div class="flex">
-				<i class="fas fa-exclamation-triangle text-red-500 mr-3 mt-0.5"></i>
+				<i class="fas fa-exclamation-triangle mt-0.5 mr-3 text-red-500"></i>
 				<div>
 					<h3 class="text-sm font-medium text-red-800 dark:text-red-200">Error</h3>
-					<p class="text-sm text-red-600 dark:text-red-300 mt-1">{error}</p>
+					<p class="mt-1 text-sm text-red-600 dark:text-red-300">{error}</p>
 				</div>
 			</div>
 		</div>
 	{:else}
 		<!-- Alerts Table -->
-		<div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+		<div class="overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800">
 			<div class="overflow-x-auto">
 				<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
 					<thead class="bg-gray-50 dark:bg-gray-700">
 						<tr>
 							<th
-								class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-								on:click={() => handleSort('severity')}
+								class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-300"
 							>
-								Severity
-								{#if sortBy === 'severity'}
-									<i class="fas fa-sort-{sortOrder === 'asc' ? 'up' : 'down'} ml-1"></i>
-								{/if}
+								<input
+									type="checkbox"
+									bind:checked={selectAll}
+									on:change={handleSelectAll}
+									class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+								/>
 							</th>
 							<th
-								class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+								class="cursor-pointer px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600"
 								on:click={() => handleSort('name')}
 							>
-								Alert
+								Name
 								{#if sortBy === 'name'}
 									<i class="fas fa-sort-{sortOrder === 'asc' ? 'up' : 'down'} ml-1"></i>
 								{/if}
 							</th>
 							<th
-								class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-								on:click={() => handleSort('endpoint_name')}
+								class="cursor-pointer px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600"
+								on:click={() => handleSort('state')}
 							>
-								Endpoint
-								{#if sortBy === 'endpoint_name'}
+								State
+								{#if sortBy === 'state'}
 									<i class="fas fa-sort-{sortOrder === 'asc' ? 'up' : 'down'} ml-1"></i>
 								{/if}
 							</th>
 							<th
-								class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-								on:click={() => handleSort('status')}
+								class="cursor-pointer px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600"
+								on:click={() => handleSort('last_state_change')}
 							>
-								Status
-								{#if sortBy === 'status'}
+								Last Fired
+								{#if sortBy === 'last_state_change'}
 									<i class="fas fa-sort-{sortOrder === 'asc' ? 'up' : 'down'} ml-1"></i>
 								{/if}
 							</th>
 							<th
-								class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-								on:click={() => handleSort('created_at')}
+								class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-300"
 							>
-								Created
-								{#if sortBy === 'created_at'}
-									<i class="fas fa-sort-{sortOrder === 'asc' ? 'up' : 'down'} ml-1"></i>
-								{/if}
+								Conditions
 							</th>
-							<th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+							<th
+								class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-300"
+							>
 								Actions
 							</th>
 						</tr>
 					</thead>
-					<tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-						{#each filteredAlerts as alert (alert.id)}
-							<tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+					<tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
+						{#each filteredData as alert (alert.id)}
+							<tr
+								class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 {selectedIds.has(
+									alert.id
+								)
+									? 'bg-blue-50 dark:bg-blue-900/20'
+									: ''}"
+								on:click={(e) => handleRowClick(e, alert.id)}
+							>
 								<td class="px-6 py-4 whitespace-nowrap">
-									<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {getSeverityColor(alert.severity)}">
-										{alert.severity}
-									</span>
+									<input
+										type="checkbox"
+										checked={selectedIds.has(alert.id)}
+										on:change={() => handleRowSelect(alert.id)}
+										class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+									/>
 								</td>
 								<td class="px-6 py-4">
 									<div class="text-sm font-medium text-gray-900 dark:text-white">
 										{alert.name}
 									</div>
-									<div class="text-sm text-gray-500 dark:text-gray-400">
-										{alert.description}
-									</div>
-								</td>
-								<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-									{alert.endpoint_name || '-'}
 								</td>
 								<td class="px-6 py-4 whitespace-nowrap">
-									<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {getStatusBadgeClass(alert.status)}">
-										{alert.status}
+									<span
+										class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {getStateBadgeClass(
+											alert.state
+										)}"
+									>
+										{alert.state}
 									</span>
 								</td>
-								<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-									{formatDate(alert.created_at)}
+								<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900 dark:text-white">
+									{alert.last_state_change}
 								</td>
-								<td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-									<div class="flex justify-end gap-2">
-										{#if alert.status === 'active'}
-											<button
-												on:click={() => acknowledgeAlert(alert.id)}
-												class="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300"
-												title="Acknowledge"
-											>
-												<i class="fas fa-check"></i>
-											</button>
-										{/if}
-										{#if alert.status !== 'resolved'}
-											<button
-												on:click={() => resolveAlert(alert.id)}
-												class="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
-												title="Resolve"
-											>
-												<i class="fas fa-check-double"></i>
-											</button>
-										{/if}
-										<a
-											href="/alerts/{alert.id}"
+								<td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
+									{alert.conditions_summary}
+								</td>
+								<td class="px-6 py-4 text-sm whitespace-nowrap">
+									<div class="flex gap-2">
+										<button
+											on:click={() => editAlert(alert.id)}
 											class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-											title="View Details"
+											title="Edit"
+											aria-label="Edit alert"
 										>
-											<i class="fas fa-eye"></i>
-										</a>
+											<i class="fas fa-edit"></i>
+										</button>
 									</div>
 								</td>
 							</tr>
@@ -340,70 +436,13 @@
 				</table>
 			</div>
 
-			<!-- Pagination -->
-			{#if totalPages > 1}
-				<div class="bg-white dark:bg-gray-800 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6">
-					<div class="flex-1 flex justify-between sm:hidden">
-						<button
-							on:click={() => currentPage > 1 && (currentPage--, loadAlerts())}
-							disabled={currentPage === 1}
-							class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-						>
-							Previous
-						</button>
-						<button
-							on:click={() => currentPage < totalPages && (currentPage++, loadAlerts())}
-							disabled={currentPage === totalPages}
-							class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-						>
-							Next
-						</button>
-					</div>
-					<div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-						<div>
-							<p class="text-sm text-gray-700 dark:text-gray-300">
-								Showing
-								<span class="font-medium">{(currentPage - 1) * pageSize + 1}</span>
-								to
-								<span class="font-medium">{Math.min(currentPage * pageSize, totalAlerts)}</span>
-								of
-								<span class="font-medium">{totalAlerts}</span>
-								results
-							</p>
-						</div>
-						<div>
-							<nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-								<button
-									on:click={() => currentPage > 1 && (currentPage--, loadAlerts())}
-									disabled={currentPage === 1}
-									class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									<i class="fas fa-chevron-left"></i>
-								</button>
-								{#each Array(totalPages) as _, i}
-									{#if i + 1 === currentPage || i + 1 === 1 || i + 1 === totalPages || Math.abs(i + 1 - currentPage) <= 2}
-										<button
-											on:click={() => (currentPage = i + 1, loadAlerts())}
-											class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 {currentPage === i + 1 ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 text-blue-600 dark:text-blue-400' : ''}"
-										>
-											{i + 1}
-										</button>
-									{:else if i + 1 === currentPage - 3 || i + 1 === currentPage + 3}
-										<span class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300">
-											...
-										</span>
-									{/if}
-								{/each}
-								<button
-									on:click={() => currentPage < totalPages && (currentPage++, loadAlerts())}
-									disabled={currentPage === totalPages}
-									class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									<i class="fas fa-chevron-right"></i>
-								</button>
-							</nav>
-						</div>
-					</div>
+			{#if filteredData.length === 0}
+				<div class="py-12 text-center">
+					<i class="fas fa-exclamation-triangle mb-4 text-4xl text-gray-400"></i>
+					<h3 class="mb-2 text-lg font-medium text-gray-900 dark:text-white">No alerts found</h3>
+					<p class="text-gray-500 dark:text-gray-400">
+						Try adjusting your search criteria or create a new alert rule.
+					</p>
 				</div>
 			{/if}
 		</div>

@@ -65,7 +65,7 @@
 	<div id="alert-spacer" class="h-0 transition-all duration-300"></div>
 
 	<!-- Top Navbar -->
-	<Navbar user={data.user} {currentPath} />
+	<Navbar user={data.user} />
 
 	<!-- Sidebar -->
 	<Sidebar {currentPath} />

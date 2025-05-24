@@ -68,6 +68,7 @@
 	<div
 		role="dialog"
 		aria-modal="true"
+		tabindex="-1"
 		class="fixed inset-0 z-50 overflow-y-auto"
 		on:click={handleBackdropClick}
 		on:keydown={() => {}}

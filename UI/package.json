@@ -38,6 +38,8 @@
 	"dependencies": {
 		"@floating-ui/dom": "^1.6.12",
 		"apexcharts": "^4.7.0",
+		"flowbite-svelte": "^1.4.3",
+		"flowbite-svelte-icons": "^2.2.0",
 		"lucide-svelte": "^0.468.0",
 		"svelte-apexcharts": "^1.0.2"
 	}

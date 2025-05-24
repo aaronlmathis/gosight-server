@@ -185,32 +185,76 @@ return this.api.request(`/events/recent?limit=${limit}`);
 
 // Logs API
 export class LogsApi {
-private api: ApiClient;
+	private api: ApiClient;
 
-constructor(api: ApiClient) {
-this.api = api;
-}
+	constructor(api: ApiClient) {
+		this.api = api;
+	}
 
-async getAll(params: {
-limit?: number;
-page?: number;
-level?: string;
-contains?: string;
-start?: string;
-end?: string;
-hostID?: string;
-endpointID?: string;
-endpoint_id?: string;
-sort?: string;
-}) {
-const searchParams = appendSearchParams(new URLSearchParams(), params ?? {});
-const query = searchParams.toString();
-return this.api.request(`/logs${query ? `?${query}` : ''}`);
-}
+	async getAll(params: {
+		limit?: number;
+		page?: number;
+		level?: string;
+		levels?: string[];
+		category?: string;
+		categories?: string[];
+		contains?: string;
+		start?: string;
+		end?: string;
+		hostID?: string;
+		endpointID?: string;
+		endpoint_id?: string;
+		source?: string;
+		container?: string;
+		container_name?: string;
+		app?: string;
+		app_name?: string;
+		sort?: string;
+		order?: string;
+		cursor?: string;
+		target?: string;
+		unit?: string;
+		service?: string;
+		event_id?: string;
+		user?: string;
+		container_id?: string;
+		platform?: string;
+		[key: string]: any; // for dynamic tag_* and field_* and meta_* parameters
+	} = {}) {
+		const searchParams = new URLSearchParams();
+		
+		// Handle array parameters (levels, categories)
+		if (params.levels?.length) {
+			params.levels.forEach(level => searchParams.append('level', level));
+		} else if (params.level) {
+			searchParams.append('level', params.level);
+		}
+		
+		if (params.categories?.length) {
+			params.categories.forEach(cat => searchParams.append('category', cat));
+		} else if (params.category) {
+			searchParams.append('category', params.category);
+		}
+		
+		// Handle all other parameters
+		Object.entries(params).forEach(([key, value]) => {
+			if (value !== undefined && value !== null && value !== '' && 
+				!['levels', 'categories'].includes(key)) {
+				if (Array.isArray(value)) {
+					value.forEach(v => searchParams.append(key, String(v)));
+				} else {
+					searchParams.append(key, String(value));
+				}
+			}
+		});
+		
+		const query = searchParams.toString();
+		return this.api.request(`/logs${query ? `?${query}` : ''}`);
+	}
 
-async getRecent(limit = 50) {
-return this.api.request(`/logs/latest?limit=${limit}`);
-}
+	async getRecent(limit = 50) {
+		return this.api.request(`/logs/latest?limit=${limit}`);
+	}
 }
 
 // Metrics API
@@ -596,6 +640,10 @@ return this.alerts.deleteRule(id);
 
 async getAlertRules(): Promise<AlertRule[]> {
 	return this.alerts.getRules();
+}
+
+async getSummary() {
+	return this.alerts.getSummary();
 }
 
 async createAlertRule(rule: any) {
