@@ -188,6 +188,7 @@ export interface Endpoint {
 	id: string;
 	name: string;
 	hostname: string;
+	ip?: string;
 	ipAddress?: string;
 	ip_address?: string;
 	port: number;

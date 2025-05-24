@@ -51,7 +51,10 @@
 	onMount(async () => {
 		await loadEndpointData();
 		setupRealTimeUpdates();
-		// Charts will be initialized when tabs are activated
+		// Initialize Overview charts since it's the default active tab
+		setTimeout(() => {
+			initOverviewCharts();
+		}, 100);
 	});
 
 	onDestroy(() => {
@@ -156,125 +159,259 @@
 	}
 
 	function initOverviewCharts() {
-		if (typeof window === 'undefined' || !window.ApexCharts) return;
+		console.log('Initializing overview charts...');
+		if (typeof window === 'undefined' || !window.ApexCharts) {
+			console.log('ApexCharts not available, skipping chart initialization');
+			return;
+		}
+
+		// Initialize chart data storage
+		if (!(window as any).chartData) {
+			(window as any).chartData = {
+				cpu: [],
+				memory: [],
+				swap: [],
+				cpu_mini: [],
+				memory_mini: [],
+				swap_mini: [],
+				compute_cpu: []
+			};
+		}
 
 		// Main Performance Metrics Chart
 		if (!overviewCharts.main) {
+			console.log('Creating main performance chart...');
+
+			// Check if container exists
+			const container = document.querySelector('#metrics-chart');
+			if (!container) {
+				console.error('Main chart container #metrics-chart not found');
+				return;
+			}
+
+			// Prepare initial data from existing metrics
+			const initialCpuData = metrics
+				.filter((m) => m.name === 'cpu_usage')
+				.slice(-20) // Last 20 points
+				.map((m) => ({
+					x: new Date(m.timestamp).getTime(),
+					y: m.value
+				}));
+
+			const initialMemoryData = metrics
+				.filter((m) => m.name === 'memory_usage')
+				.slice(-20) // Last 20 points
+				.map((m) => ({
+					x: new Date(m.timestamp).getTime(),
+					y: m.value
+				}));
+
+			// Store initial data
+			(window as any).chartData.cpu = initialCpuData;
+			(window as any).chartData.memory = initialMemoryData;
+
 			const mainOptions = {
 				chart: {
 					type: 'line',
 					height: 300,
 					toolbar: { show: false },
-					animations: { enabled: true }
+					animations: {
+						enabled: true,
+						easing: 'linear',
+						speed: 800,
+						animateGradually: {
+							enabled: true,
+							delay: 150
+						},
+						dynamicAnimation: {
+							enabled: true,
+							speed: 350
+						}
+					}
 				},
 				series: [
 					{
 						name: 'CPU Usage %',
-						data: metrics
-							.filter((m) => m.name === 'cpu_usage')
-							.map((m) => ({
-								x: new Date(m.timestamp).getTime(),
-								y: m.value
-							}))
+						data: initialCpuData
 					},
 					{
 						name: 'Memory Usage %',
-						data: metrics
-							.filter((m) => m.name === 'memory_usage')
-							.map((m) => ({
-								x: new Date(m.timestamp).getTime(),
-								y: m.value
-							}))
+						data: initialMemoryData
 					}
 				],
-				xaxis: { type: 'datetime', labels: { format: 'HH:mm' } },
-				yaxis: { labels: { formatter: (val: number) => val.toFixed(1) + '%' } },
+				xaxis: {
+					type: 'datetime',
+					labels: { format: 'HH:mm' },
+					range: 600000 // Show last 10 minutes
+				},
+				yaxis: {
+					labels: { formatter: (val: number) => val.toFixed(1) + '%' },
+					min: 0,
+					max: 100
+				},
 				colors: ['#3b82f6', '#10b981'],
 				stroke: { curve: 'smooth', width: 2 },
 				legend: { show: true },
-				tooltip: { shared: true, intersect: false }
+				tooltip: { shared: true, intersect: false },
+				grid: {
+					show: true,
+					borderColor: '#374151',
+					strokeDashArray: 0,
+					position: 'back',
+					xaxis: {
+						lines: {
+							show: false
+						}
+					},
+					yaxis: {
+						lines: {
+							show: true
+						}
+					}
+				}
 			};
-			overviewCharts.main = new window.ApexCharts(
-				document.querySelector('#metrics-chart'),
-				mainOptions
-			);
-			overviewCharts.main.render();
+
+			try {
+				overviewCharts.main = new window.ApexCharts(container, mainOptions);
+				overviewCharts.main.render();
+				console.log('Main performance chart created and rendered');
+			} catch (err) {
+				console.error('Error creating main chart:', err);
+			}
+		} else {
+			console.log('Main chart already exists');
 		}
 
 		// Mini CPU Chart
 		if (!overviewCharts.cpu) {
+			const cpuContainer = document.querySelector('#miniCpuChart');
+			if (!cpuContainer) {
+				console.error('CPU mini chart container #miniCpuChart not found');
+				return;
+			}
+
 			const cpuOptions = {
 				chart: {
 					type: 'area',
 					height: 80,
 					toolbar: { show: false },
-					animations: { enabled: true }
+					animations: { enabled: true },
+					sparkline: { enabled: true }
 				},
 				series: [{ name: 'CPU', data: [] }],
 				xaxis: { type: 'datetime', labels: { show: false } },
-				yaxis: { show: false },
+				yaxis: { show: false, min: 0, max: 100 },
 				colors: ['#3b82f6'],
 				stroke: { curve: 'smooth', width: 2 },
-				fill: { type: 'gradient' },
+				fill: {
+					type: 'gradient',
+					gradient: {
+						shadeIntensity: 1,
+						opacityFrom: 0.7,
+						opacityTo: 0.1,
+						stops: [0, 100]
+					}
+				},
 				grid: { show: false },
 				tooltip: { enabled: false }
 			};
-			overviewCharts.cpu = new window.ApexCharts(
-				document.querySelector('#miniCpuChart'),
-				cpuOptions
-			);
-			overviewCharts.cpu.render();
+
+			try {
+				overviewCharts.cpu = new window.ApexCharts(cpuContainer, cpuOptions);
+				overviewCharts.cpu.render();
+				console.log('Mini CPU chart created');
+			} catch (err) {
+				console.error('Error creating mini CPU chart:', err);
+			}
 		}
 
 		// Mini Memory Chart
 		if (!overviewCharts.memory) {
+			const memContainer = document.querySelector('#miniMemoryChart');
+			if (!memContainer) {
+				console.error('Memory mini chart container #miniMemoryChart not found');
+				return;
+			}
+
 			const memOptions = {
 				chart: {
 					type: 'area',
 					height: 80,
 					toolbar: { show: false },
-					animations: { enabled: true }
+					animations: { enabled: true },
+					sparkline: { enabled: true }
 				},
 				series: [{ name: 'Memory', data: [] }],
 				xaxis: { type: 'datetime', labels: { show: false } },
-				yaxis: { show: false },
+				yaxis: { show: false, min: 0, max: 100 },
 				colors: ['#10b981'],
 				stroke: { curve: 'smooth', width: 2 },
-				fill: { type: 'gradient' },
+				fill: {
+					type: 'gradient',
+					gradient: {
+						shadeIntensity: 1,
+						opacityFrom: 0.7,
+						opacityTo: 0.1,
+						stops: [0, 100]
+					}
+				},
 				grid: { show: false },
 				tooltip: { enabled: false }
 			};
-			overviewCharts.memory = new window.ApexCharts(
-				document.querySelector('#miniMemoryChart'),
-				memOptions
-			);
-			overviewCharts.memory.render();
+
+			try {
+				overviewCharts.memory = new window.ApexCharts(memContainer, memOptions);
+				overviewCharts.memory.render();
+				console.log('Mini Memory chart created');
+			} catch (err) {
+				console.error('Error creating mini Memory chart:', err);
+			}
 		}
 
 		// Mini Swap Chart
 		if (!overviewCharts.swap) {
+			const swapContainer = document.querySelector('#miniSwapChart');
+			if (!swapContainer) {
+				console.error('Swap mini chart container #miniSwapChart not found');
+				return;
+			}
+
 			const swapOptions = {
 				chart: {
 					type: 'area',
 					height: 80,
 					toolbar: { show: false },
-					animations: { enabled: true }
+					animations: { enabled: true },
+					sparkline: { enabled: true }
 				},
 				series: [{ name: 'Swap', data: [] }],
 				xaxis: { type: 'datetime', labels: { show: false } },
-				yaxis: { show: false },
+				yaxis: { show: false, min: 0, max: 100 },
 				colors: ['#f87171'],
 				stroke: { curve: 'smooth', width: 2 },
-				fill: { type: 'gradient' },
+				fill: {
+					type: 'gradient',
+					gradient: {
+						shadeIntensity: 1,
+						opacityFrom: 0.7,
+						opacityTo: 0.1,
+						stops: [0, 100]
+					}
+				},
 				grid: { show: false },
 				tooltip: { enabled: false }
 			};
-			overviewCharts.swap = new window.ApexCharts(
-				document.querySelector('#miniSwapChart'),
-				swapOptions
-			);
-			overviewCharts.swap.render();
+
+			try {
+				overviewCharts.swap = new window.ApexCharts(swapContainer, swapOptions);
+				overviewCharts.swap.render();
+				console.log('Mini Swap chart created');
+			} catch (err) {
+				console.error('Error creating mini Swap chart:', err);
+			}
 		}
+
+		console.log('Overview charts initialization complete');
 	}
 
 	function initComputeCharts() {
@@ -398,19 +535,19 @@
 		// Connect websockets with endpoint filtering (like the original implementation)
 		websocketManager.connect(endpointId);
 
-	// Subscribe to metrics updates
-	unsubscribeMetrics = websocketManager.subscribeToMetrics((metricsPayload) => {
-		console.log('Received metric update:', metricsPayload);
-		if (metricsPayload && metricsPayload.endpoint_id === endpointId) {
-			// The payload contains an array of metrics in the 'metrics' property
-			if (Array.isArray(metricsPayload.metrics)) {
-				// Ensure metrics is an array before using slice
-				const existingMetrics = Array.isArray(metrics) ? metrics : [];
-				metrics = [metricsPayload, ...existingMetrics.slice(0, 99)];
-				updateCharts(metricsPayload);
+		// Subscribe to metrics updates
+		unsubscribeMetrics = websocketManager.subscribeToMetrics((metricsPayload) => {
+			console.log('Received metric update:', metricsPayload);
+			if (metricsPayload && metricsPayload.endpoint_id === endpointId) {
+				// The payload contains an array of metrics in the 'metrics' property
+				if (Array.isArray(metricsPayload.metrics)) {
+					// Ensure metrics is an array before using slice
+					const existingMetrics = Array.isArray(metrics) ? metrics : [];
+					metrics = [metricsPayload, ...existingMetrics.slice(0, 99)];
+					updateCharts(metricsPayload);
+				}
 			}
-		}
-	});
+		});
 
 		// Subscribe to events updates
 		unsubscribeEvents = websocketManager.subscribeToEvents((latestEvent) => {
@@ -450,60 +587,193 @@
 		}
 
 		const timestamp = new Date(metricsPayload.timestamp).getTime();
-		
+		console.log('Updating charts with timestamp:', timestamp);
+		console.log('Available chart instances:', {
+			main: !!overviewCharts.main,
+			cpu: !!overviewCharts.cpu,
+			memory: !!overviewCharts.memory,
+			swap: !!overviewCharts.swap
+		});
+
+		// Store current data for charts (using global state)
+		if (!(window as any).chartData) {
+			(window as any).chartData = {
+				cpu: [],
+				memory: [],
+				swap: []
+			};
+		}
+
 		// Process each metric in the array
 		metricsPayload.metrics.forEach((metric: any) => {
-			const metricValue = metric.value;
+			const metricValue = parseFloat(metric.value);
 			const metricName = metric.name;
-			
+
 			console.log(`Processing metric: ${metricName} = ${metricValue}`);
 
+			// Update percentage labels in the UI
+			if (metricName === 'cpu_usage') {
+				const label = document.getElementById('cpu-percent-label');
+				if (label) label.textContent = `${metricValue.toFixed(1)}%`;
+			}
+			if (metricName === 'memory_usage') {
+				const label = document.getElementById('mem-percent-label');
+				if (label) label.textContent = `${metricValue.toFixed(1)}%`;
+			}
+			if (metricName === 'swap_usage') {
+				const label = document.getElementById('swap-percent-label');
+				if (label) label.textContent = `${metricValue.toFixed(1)}%`;
+			}
+
 			// Update main performance metrics chart in overview
-			if (overviewCharts.main) {
+			if (overviewCharts.main && (metricName === 'cpu_usage' || metricName === 'memory_usage')) {
+				console.log('Updating main chart for metric:', metricName);
+
 				if (metricName === 'cpu_usage') {
-					const cpuSeries = overviewCharts.main.w.config.series[0];
+					// Store CPU data
+					(window as any).chartData.cpu.push({ x: timestamp, y: metricValue });
+					(window as any).chartData.cpu = (window as any).chartData.cpu.slice(-50); // Keep last 50 points
+				}
+				if (metricName === 'memory_usage') {
+					// Store Memory data
+					(window as any).chartData.memory.push({ x: timestamp, y: metricValue });
+					(window as any).chartData.memory = (window as any).chartData.memory.slice(-50); // Keep last 50 points
+				}
+
+				// Always update both series to maintain chart integrity
+				try {
 					overviewCharts.main.updateSeries(
 						[
 							{
 								name: 'CPU Usage %',
-								data: [...(cpuSeries?.data || []), { x: timestamp, y: metricValue }].slice(-50) // Keep last 50 points
+								data: (window as any).chartData.cpu
 							},
-							overviewCharts.main.w.config.series[1] || { name: 'Memory Usage %', data: [] } // Keep memory series
-						],
-						false
-					);
-				}
-				if (metricName === 'memory_usage') {
-					const memorySeries = overviewCharts.main.w.config.series[1];
-					overviewCharts.main.updateSeries(
-						[
-							overviewCharts.main.w.config.series[0] || { name: 'CPU Usage %', data: [] }, // Keep CPU series
 							{
 								name: 'Memory Usage %',
-								data: [...(memorySeries?.data || []), { x: timestamp, y: metricValue }].slice(-50) // Keep last 50 points
+								data: (window as any).chartData.memory
+							}
+						],
+						false
+					); // false = don't redraw each update
+					console.log(
+						'Updated main chart series with',
+						(window as any).chartData.cpu.length,
+						'CPU points and',
+						(window as any).chartData.memory.length,
+						'memory points'
+					);
+				} catch (err) {
+					console.error('Error updating main chart:', err);
+				}
+			}
+
+			// Update overview mini charts using updateSeries (more reliable than appendData)
+			if (metricName === 'cpu_usage' && overviewCharts.cpu) {
+				console.log('Updating mini CPU chart');
+				try {
+					(window as any).chartData.cpu_mini = (window as any).chartData.cpu_mini || [];
+					(window as any).chartData.cpu_mini.push({ x: timestamp, y: metricValue });
+					(window as any).chartData.cpu_mini = (window as any).chartData.cpu_mini.slice(-20); // Keep last 20 points
+
+					overviewCharts.cpu.updateSeries(
+						[
+							{
+								name: 'CPU',
+								data: (window as any).chartData.cpu_mini
 							}
 						],
 						false
 					);
+				} catch (err) {
+					console.error('Error updating mini CPU chart:', err);
 				}
 			}
-
-			// Update overview mini charts
-			if (metricName === 'cpu_usage' && overviewCharts.cpu) {
-				overviewCharts.cpu.appendData([{ data: [{ x: timestamp, y: metricValue }] }]);
-			}
 			if (metricName === 'memory_usage' && overviewCharts.memory) {
-				overviewCharts.memory.appendData([{ data: [{ x: timestamp, y: metricValue }] }]);
+				console.log('Updating mini Memory chart');
+				try {
+					(window as any).chartData.memory_mini = (window as any).chartData.memory_mini || [];
+					(window as any).chartData.memory_mini.push({ x: timestamp, y: metricValue });
+					(window as any).chartData.memory_mini = (window as any).chartData.memory_mini.slice(-20); // Keep last 20 points
+
+					overviewCharts.memory.updateSeries(
+						[
+							{
+								name: 'Memory',
+								data: (window as any).chartData.memory_mini
+							}
+						],
+						false
+					);
+				} catch (err) {
+					console.error('Error updating mini Memory chart:', err);
+				}
 			}
 			if (metricName === 'swap_usage' && overviewCharts.swap) {
-				overviewCharts.swap.appendData([{ data: [{ x: timestamp, y: metricValue }] }]);
+				console.log('Updating mini Swap chart');
+				try {
+					(window as any).chartData.swap_mini = (window as any).chartData.swap_mini || [];
+					(window as any).chartData.swap_mini.push({ x: timestamp, y: metricValue });
+					(window as any).chartData.swap_mini = (window as any).chartData.swap_mini.slice(-20); // Keep last 20 points
+
+					overviewCharts.swap.updateSeries(
+						[
+							{
+								name: 'Swap',
+								data: (window as any).chartData.swap_mini
+							}
+						],
+						false
+					);
+				} catch (err) {
+					console.error('Error updating mini Swap chart:', err);
+				}
 			}
 
 			// Update compute charts
 			if (metricName === 'cpu_usage' && computeCharts.cpuUsage) {
-				computeCharts.cpuUsage.appendData([{ data: [{ x: timestamp, y: metricValue }] }]);
+				try {
+					(window as any).chartData.compute_cpu = (window as any).chartData.compute_cpu || [];
+					(window as any).chartData.compute_cpu.push({ x: timestamp, y: metricValue });
+					(window as any).chartData.compute_cpu = (window as any).chartData.compute_cpu.slice(-50);
+
+					computeCharts.cpuUsage.updateSeries(
+						[
+							{
+								name: 'CPU Usage %',
+								data: (window as any).chartData.compute_cpu
+							}
+						],
+						false
+					);
+				} catch (err) {
+					console.error('Error updating compute CPU chart:', err);
+				}
 			}
 		});
+
+		// Force chart redraws with proper ApexCharts methods
+		setTimeout(() => {
+			try {
+				// Use updateOptions to force a refresh instead of redrawPaths
+				if (overviewCharts.main) {
+					overviewCharts.main.updateOptions({}, true, true); // redrawPaths: true, animate: true
+				}
+				if (overviewCharts.cpu) {
+					overviewCharts.cpu.updateOptions({}, true, true);
+				}
+				if (overviewCharts.memory) {
+					overviewCharts.memory.updateOptions({}, true, true);
+				}
+				if (overviewCharts.swap) {
+					overviewCharts.swap.updateOptions({}, true, true);
+				}
+				if (computeCharts.cpuUsage) {
+					computeCharts.cpuUsage.updateOptions({}, true, true);
+				}
+			} catch (err) {
+				console.error('Error refreshing charts:', err);
+			}
+		}, 50);
 	}
 
 	async function runCommand(command: string) {
@@ -582,10 +852,10 @@
 					</a>
 					<div>
 						<h1 class="text-xl font-semibold text-gray-900 dark:text-white">
-							{endpoint?.name || 'Loading...'}
+							{endpoint?.hostname || 'Loading...'}
 						</h1>
 						<p class="text-sm text-gray-500 dark:text-gray-400">
-							{endpoint?.ip_address || ''}
+							{endpoint?.ip || ''}
 						</p>
 					</div>
 				</div>
@@ -663,7 +933,7 @@
 									</div>
 									<div>
 										<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">IP Address</dt>
-										<dd class="text-sm text-gray-900 dark:text-white">{endpoint.ip_address}</dd>
+										<dd class="text-sm text-gray-900 dark:text-white">{endpoint.ip}</dd>
 									</div>
 									<div>
 										<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
