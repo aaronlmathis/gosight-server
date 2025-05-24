@@ -11,6 +11,7 @@
 	let error = '';
 	let providers: { name: string; display_name: string }[] = [];
 	let next = '';
+	let shakeError = false;
 
 	onMount(async () => {
 		// Get redirect parameter
@@ -53,6 +54,7 @@
 	async function handleLogin() {
 		if (!username || !password) {
 			error = 'Please enter both username and password';
+			triggerShake();
 			return;
 		}
 
@@ -72,9 +74,11 @@
 				goto(`/auth/mfa?next=${encodeURIComponent(next)}`);
 			} else {
 				error = response.message || 'Login failed';
+				triggerShake();
 			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Login failed. Please try again.';
+			triggerShake();
 		} finally {
 			loading = false;
 		}
@@ -92,12 +96,12 @@
 
 	function getProviderIcon(provider: string): string {
 		const icons: Record<string, string> = {
-			google: 'https://simpleicons.org/icons/google.svg',
-			github: 'https://simpleicons.org/icons/github.svg',
-			azure: 'https://simpleicons.org/icons/microsoftazure.svg',
-			aws: 'https://simpleicons.org/icons/amazonaws.svg'
+			google: 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/google.svg',
+			github: 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/github.svg',
+			azure: 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/microsoftazure.svg',
+			aws: 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/amazonaws.svg'
 		};
-		return icons[provider] || `https://simpleicons.org/icons/${provider}.svg`;
+		return icons[provider] || `https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/${provider}.svg`;
 	}
 
 	function capitalizeProvider(provider: string): string {
@@ -105,13 +109,20 @@
 		if (provider === 'azure') return 'Azure';
 		return provider.charAt(0).toUpperCase() + provider.slice(1);
 	}
+
+	function triggerShake() {
+		shakeError = true;
+		setTimeout(() => {
+			shakeError = false;
+		}, 800);
+	}
 </script>
 
 <svelte:head>
 	<title>Login – GoSight</title>
 </svelte:head>
 
-<div class="mx-auto w-full max-w-md transition-all">
+<div class="mx-auto w-full max-w-md transition-all" class:animate-shake={shakeError}>
 	<div
 		class="w-full max-w-md rounded-lg border border-gray-200 bg-white p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
 	>
@@ -194,3 +205,29 @@
 		</div>
 	</div>
 </div>
+
+<style>
+	@keyframes shake {
+		10%,
+		90% {
+			transform: translateX(-1px);
+		}
+		20%,
+		80% {
+			transform: translateX(2px);
+		}
+		30%,
+		50%,
+		70% {
+			transform: translateX(-4px);
+		}
+		40%,
+		60% {
+			transform: translateX(4px);
+		}
+	}
+
+	:global(.animate-shake) {
+		animation: shake 0.8s ease-in-out;
+	}
+</style>

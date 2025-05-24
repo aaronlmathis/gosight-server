@@ -2,23 +2,31 @@
  * Auth Layout
  * This layout provides the centered auth container with dark background
  * matching the original design from web/templates/layouts/layout_auth.html
+ * This layout completely replaces the main layout for auth pages
 -->
 <script lang="ts">
-	import '../../app.html';
+	import '../../app.css';
+	import { onMount } from 'svelte';
+	import { auth } from '$lib/stores/auth';
+
+	onMount(async () => {
+		// Initialize auth store
+		await auth.init();
+
+		// Set dark theme for auth pages
+		document.documentElement.classList.add('dark');
+		document.body.style.backgroundColor = '#111827';
+	});
 </script>
 
 <svelte:head>
-	<title>Login – GoSight</title>
-	<style>
-		body {
-			background-color: #111827; /* Tailwind's gray-900 */
-		}
-	</style>
+	<title>Authentication – GoSight</title>
 </svelte:head>
 
-<main class="flex min-h-screen items-center justify-center bg-gray-900 px-4">
+<!-- Full screen auth layout that replaces the main layout -->
+<div class="flex min-h-screen items-center justify-center bg-gray-900 px-4">
 	<slot />
-</main>
+</div>
 
 <style>
 	:global(html) {
@@ -26,5 +34,14 @@
 	}
 	:global(body) {
 		background-color: #111827 !important;
+		overflow: hidden !important;
+	}
+
+	/* Hide any main layout elements that might leak through */
+	:global(nav),
+	:global(aside),
+	:global(.sidebar),
+	:global(.navbar) {
+		display: none !important;
 	}
 </style>

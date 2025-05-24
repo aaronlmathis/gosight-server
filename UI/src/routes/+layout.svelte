@@ -61,35 +61,41 @@
 	});
 
 	$: currentPath = $page.url.pathname;
+	$: isAuthPage = currentPath.startsWith('/auth');
 </script>
 
 <svelte:head>
 	<title>{data.title || 'GoSight'}</title>
 </svelte:head>
 
-<div class="min-h-screen bg-white dark:bg-gray-900">
-	<!-- Alert spacer for notifications -->
-	<div id="alert-spacer" class="h-0 transition-all duration-300"></div>
+{#if isAuthPage}
+	<!-- Auth pages use their own layout -->
+	<slot />
+{:else}
+	<div class="min-h-screen bg-white dark:bg-gray-900">
+		<!-- Alert spacer for notifications -->
+		<div id="alert-spacer" class="h-0 transition-all duration-300"></div>
 
-	<!-- Top Navbar -->
-	<Navbar />
+		<!-- Top Navbar -->
+		<Navbar />
 
-	<!-- Sidebar -->
-	<Sidebar {currentPath} />
+		<!-- Sidebar -->
+		<Sidebar {currentPath} />
 
-	<!-- Sidebar backdrop for mobile -->
-	<div
-		class="fixed inset-0 z-10 hidden bg-gray-900/50 dark:bg-gray-900/90"
-		id="sidebarBackdrop"
-	></div>
+		<!-- Sidebar backdrop for mobile -->
+		<div
+			class="fixed inset-0 z-10 hidden bg-gray-900/50 dark:bg-gray-900/90"
+			id="sidebarBackdrop"
+		></div>
 
-	<!-- Main content -->
-	<main class="relative pt-16 lg:pl-64">
-		<div class="p-4">
-			<slot />
-		</div>
-	</main>
-</div>
+		<!-- Main content -->
+		<main class="relative pt-16 lg:pl-64">
+			<div class="p-4">
+				<slot />
+			</div>
+		</main>
+	</div>
+{/if}
 
 <style>
 	:global(.sidebar-link::before) {
