@@ -4,13 +4,12 @@
 	import type { User } from '$lib/types';
 
 	export let user: User | null;
-	export let currentPath: string;
 
 	let dropdownOpen = false;
 	let alertDropdownOpen = false;
 
 	function toggleTheme() {
-		darkMode.update(isDark => !isDark);
+		darkMode.update((isDark) => !isDark);
 	}
 
 	function toggleSidebar() {
@@ -22,7 +21,7 @@
 		if (isMobile) {
 			const isNowHidden = sidebar?.classList.toggle('hidden');
 			backdrop?.classList.toggle('hidden');
-			submenus.forEach(ul => {
+			submenus.forEach((ul) => {
 				if (ul instanceof HTMLElement) {
 					ul.style.display = isNowHidden ? 'none' : '';
 				}
@@ -55,26 +54,28 @@
 
 <svelte:window on:click={handleClickOutside} />
 
-<nav class="fixed z-30 w-full bg-gray-800 border-b border-gray-700 text-white">
+<nav class="fixed z-30 w-full border-b border-gray-700 bg-gray-800 text-white">
 	<div class="px-3 py-3 lg:px-5 lg:pl-3">
 		<div class="flex items-center justify-between">
 			<div class="flex items-center justify-start">
 				<!-- Mobile sidebar toggle -->
 				<button
 					on:click={toggleSidebar}
-					class="p-2 text-gray-400 rounded hover:text-white hover:bg-gray-700 focus:ring-2 focus:ring-gray-600"
+					class="rounded p-2 text-gray-400 hover:bg-gray-700 hover:text-white focus:ring-2 focus:ring-gray-600"
 					aria-label="Toggle sidebar"
 				>
-					<Menu class="w-6 h-6" />
+					<Menu class="h-6 w-6" />
 				</button>
-				
-				<a href="/" class="flex ml-2 md:mr-24">
-					<span class="self-center text-xl sm:text-2xl whitespace-nowrap font-bold text-blue-400 tracking-wide">
+
+				<a href="/" class="ml-2 flex md:mr-24">
+					<span
+						class="self-center text-xl font-bold tracking-wide whitespace-nowrap text-blue-400 sm:text-2xl"
+					>
 						GoSight
 					</span>
 				</a>
 			</div>
-			
+
 			<div class="flex items-center space-x-4">
 				<!-- Theme toggle -->
 				<button
@@ -83,12 +84,12 @@
 					aria-label="Toggle theme"
 				>
 					{#if !$darkMode}
-						<Moon class="w-5 h-5" />
+						<Moon class="h-5 w-5" />
 					{:else}
-						<Sun class="w-5 h-5" />
+						<Sun class="h-5 w-5" />
 					{/if}
 				</button>
-				
+
 				<!-- Notification bell -->
 				<div class="relative">
 					<button
@@ -97,18 +98,18 @@
 						class="relative text-gray-400 hover:text-white focus:outline-none"
 						aria-label="Notifications"
 					>
-						<Bell class="w-5 h-5" />
+						<Bell class="h-5 w-5" />
 						{#if $activeAlertsCount > 0}
-							<span class="absolute -top-1 -right-1 w-2 h-2 bg-red-600 rounded-full"></span>
+							<span class="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-600"></span>
 						{/if}
 					</button>
-					
+
 					{#if alertDropdownOpen}
 						<div
 							id="alert-dropdown"
-							class="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+							class="absolute right-0 z-50 mt-2 w-80 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
 						>
-							<div class="p-4 border-b border-gray-200 dark:border-gray-700">
+							<div class="border-b border-gray-200 p-4 dark:border-gray-700">
 								<h3 class="font-semibold text-gray-900 dark:text-white">Notifications</h3>
 							</div>
 							<div class="max-h-64 overflow-y-auto">
@@ -126,32 +127,33 @@
 						</div>
 					{/if}
 				</div>
-				
+
 				<!-- User dropdown -->
 				{#if user}
 					<div class="relative">
 						<button
 							id="dropdownUserAvatarButton"
 							on:click={toggleDropdown}
-							class="w-11 h-11 rounded-full shadow-md object-cover focus:ring-2 focus:ring-gray-600"
+							class="h-11 w-11 rounded-full object-cover shadow-md focus:ring-2 focus:ring-gray-600"
 						>
 							<img
-								class="w-11 h-11 rounded-full object-cover"
+								class="h-11 w-11 rounded-full object-cover"
 								src={user.avatar || '/default-avatar.png'}
 								alt="User avatar"
 							/>
 						</button>
-						
+
 						{#if dropdownOpen}
 							<div
 								id="dropdownUserAvatar"
-								class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+								class="absolute right-0 z-50 mt-2 w-48 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
 							>
-								<div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+								<div class="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
 									<span class="block text-sm text-gray-900 dark:text-white">
-										{user.firstName} {user.lastName}
+										{user.firstName}
+										{user.lastName}
 									</span>
-									<span class="block text-sm text-gray-500 dark:text-gray-400 truncate">
+									<span class="block truncate text-sm text-gray-500 dark:text-gray-400">
 										{user.email}
 									</span>
 								</div>
@@ -159,7 +161,7 @@
 									<li>
 										<a
 											href="/profile"
-											class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+											class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
 										>
 											Profile
 										</a>
@@ -167,7 +169,7 @@
 									<li>
 										<a
 											href="/settings"
-											class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+											class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
 										>
 											Settings
 										</a>
@@ -175,7 +177,7 @@
 									<li>
 										<a
 											href="/logout"
-											class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+											class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-700"
 										>
 											Sign out
 										</a>
@@ -185,12 +187,7 @@
 						{/if}
 					</div>
 				{:else}
-					<a
-						href="/login"
-						class="text-blue-400 hover:text-blue-300 font-medium"
-					>
-						Sign in
-					</a>
+					<a href="/login" class="font-medium text-blue-400 hover:text-blue-300"> Sign in </a>
 				{/if}
 			</div>
 		</div>

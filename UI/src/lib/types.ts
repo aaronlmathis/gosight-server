@@ -49,7 +49,7 @@ export interface Alert {
 
 // API Response types
 export interface ApiResponse<T = any> {
-	success?: boolean;
+	success: boolean;
 	data?: T;
 	error?: string;
 	message?: string;
@@ -104,6 +104,23 @@ export interface MatchCriteria {
 	category?: string;
 	source?: string;
 	scope?: string;
+}
+
+// Alert summary for combining with rules
+export interface AlertSummary {
+	rule_id: string;
+	state: string; // "firing", "resolved", etc.
+	last_change: string; // ISO date string
+}
+
+// Combined alert table data (like old frontend)
+export interface AlertTableData {
+	id: string;
+	name: string;
+	state: string;
+	last_state_change: string;
+	conditions_summary: string;
+	actions: string[];
 }
 
 // Frontend form data (simplified structure for UI)
@@ -205,13 +222,26 @@ export interface Event {
 export interface LogEntry {
 	id: string;
 	timestamp: string;
-	level: 'debug' | 'info' | 'warning' | 'error' | 'fatal';
+	level: 'debug' | 'info' | 'warning' | 'error' | 'fatal' | 'critical';
 	message: string;
 	source: string;
+	category?: string;
 	endpointId?: string;
 	endpoint_id?: string;
 	endpoint_name?: string;
 	metadata?: Record<string, any>;
+	meta?: Record<string, any>;
+	tags?: Record<string, string>;
+	target?: string;
+	unit?: string;
+	app_name?: string;
+	service?: string;
+	event_id?: string;
+	user?: string;
+	container_id?: string;
+	container_name?: string;
+	platform?: string;
+	fields?: Record<string, any>;
 }
 
 // Process types
@@ -273,13 +303,7 @@ export interface WebSocketMessage {
 	timestamp: string;
 }
 
-// API Response types
-export interface ApiResponse<T = any> {
-	success: boolean;
-	data?: T;
-	error?: string;
-	message?: string;
-}
+
 
 export interface PaginatedResponse<T = any> {
 	data: T[];
