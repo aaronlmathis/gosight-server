@@ -23,7 +23,7 @@ type GitHubAuth struct {
 func (g *GitHubAuth) StartLogin(w http.ResponseWriter, r *http.Request) {
 	next := r.URL.Query().Get("next")
 	if next == "" {
-		next = "/dashboard"
+		next = "/"
 	}
 
 	state := base64.URLEncoding.EncodeToString([]byte(next))
@@ -122,7 +122,7 @@ func (g *GitHubAuth) HandleCallback(w http.ResponseWriter, r *http.Request) (*us
 	// Always update last_login
 	user.LastLogin = time.Now()
 	if err := g.Store.SaveUser(ctx, user); err != nil {
-		utils.Warn("⚠Failed to update user login metadata: %v", err)
+		utils.Warn("Failed to update user login metadata: %v", err)
 	}
 
 	// Authorized user

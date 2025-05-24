@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { api } from '$lib/api';
-	import { user } from '$lib/stores';
+	import { auth } from '$lib/stores/auth';
 	import { Shield, ArrowLeft } from 'lucide-svelte';
 
 	let code = '';
@@ -17,8 +17,8 @@
 		next = $page.url.searchParams.get('next') || '/';
 
 		// Redirect if already logged in
-		user.subscribe((user) => {
-			if (user) {
+		auth.subscribe((authState) => {
+			if (authState.isAuthenticated && authState.user) {
 				goto(next);
 			}
 		});
@@ -42,8 +42,8 @@
 			const response = await api.auth.verifyMFA({ code, remember });
 
 			if (response.success) {
-				// Set user in store
-				user.set(response.user);
+				// Set user in auth store
+				auth.setUser(response.user);
 
 				// Redirect to original page or dashboard
 				goto(next);

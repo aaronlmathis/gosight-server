@@ -3,29 +3,47 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { api } from '$lib/api';
-	import { user } from '$lib/stores';
+	import { auth } from '$lib/stores/auth';
 
 	let username = '';
 	let password = '';
 	let loading = false;
 	let error = '';
-	let providers: string[] = [];
+	let providers: { name: string; display_name: string }[] = [];
 	let next = '';
 
 	onMount(async () => {
 		// Get redirect parameter
-		next = $page.url.searchParams.get('next') || '/';
+		next = $page.url.searchParams.get('next') || '/dashboard';
+
+		// Check for error parameter from OAuth callback
+		const errorParam = $page.url.searchParams.get('error');
+		if (errorParam) {
+			switch (errorParam) {
+				case 'invalid_provider':
+					error = 'Invalid authentication provider selected';
+					break;
+				case 'auth_failed':
+					error = 'Authentication failed. Please try again.';
+					break;
+				case 'user_load_failed':
+					error = 'Failed to load user information. Please contact support.';
+					break;
+				default:
+					error = 'Authentication error occurred';
+			}
+		}
 
 		// Redirect if already logged in
-		user.subscribe((user) => {
-			if (user) {
+		auth.subscribe((authState) => {
+			if (authState.isAuthenticated && authState.user) {
 				goto(next);
 			}
 		});
 
 		// Load authentication providers
 		try {
-			const providerData = await api.getProviders();
+			const providerData = await api.auth.getProviders();
 			providers = providerData.providers || [];
 		} catch (err) {
 			console.error('Failed to load providers:', err);
@@ -45,8 +63,8 @@
 			const response = await api.login({ username, password });
 
 			if (response.success) {
-				// Set user in store
-				user.set(response.user);
+				// Set user in auth store
+				auth.setUser(response.user);
 				// Redirect to original page or dashboard
 				goto(next);
 			} else if (response.mfa_required) {
@@ -158,18 +176,18 @@
 
 		<div class="mt-4 space-y-2">
 			{#each providers as provider}
-				{#if provider !== 'local'}
+				{#if provider.name !== 'local'}
 					<button
 						type="button"
-						on:click={() => handleSSOLogin(provider)}
+						on:click={() => handleSSOLogin(provider.name)}
 						class="inline-flex w-full items-center justify-center rounded-md border border-gray-300 bg-gray-200 px-4 py-2 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:hover:bg-gray-800"
 					>
 						<img
-							src={getProviderIcon(provider)}
+							src={getProviderIcon(provider.name)}
 							class="mr-2 h-5 w-5"
-							alt={capitalizeProvider(provider)}
+							alt={provider.display_name}
 						/>
-						Sign in with {capitalizeProvider(provider)}
+						Sign in with {provider.display_name}
 					</button>
 				{/if}
 			{/each}

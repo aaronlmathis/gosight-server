@@ -137,7 +137,7 @@ function formatUptime(seconds) {
   return `${d > 0 ? d + 'd ' : ''}${h}h ${m}m`;
 }
 export async function fetchGlobalContainerMetrics() {
-  const metricNames = ["cpu_percent", "uptime_seconds", "status"];  // any others you care about
+  const metricNames = ["cpu_percent", "uptime_seconds"];  // any others you care about
   const query = metricNames.map(m => `metric=${encodeURIComponent(m)}`).join("&");
 
   try {

@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { api } from '$lib/api';
-	import { user } from '$lib/stores';
+	import { auth } from '$lib/stores/auth';
 	import { Eye, EyeOff, UserPlus } from 'lucide-svelte';
 
 	let formData = {
@@ -21,11 +21,9 @@
 
 	onMount(() => {
 		// Redirect if already logged in
-		user.subscribe(user => {
-			if (user) {
-				goto('/');
-			}
-		});
+		if ($auth.isAuthenticated) {
+			goto('/');
+		}
 	});
 
 	function validateForm() {
@@ -74,7 +72,6 @@
 		try {
 			loading = true;
 			error = '';
-
 			const response = await api.register({
 				username: formData.username,
 				email: formData.email,
@@ -82,12 +79,16 @@
 				first_name: formData.firstName,
 				last_name: formData.lastName
 			});
-			
-			if (response.success) {
+
+			if (response && typeof response === 'object' && 'success' in response && response.success) {
 				// Redirect to login with success message
 				goto('/auth/login?message=Registration successful. Please log in.');
 			} else {
-				error = response.message || 'Registration failed';
+				const errorMsg =
+					response && typeof response === 'object' && 'message' in response
+						? response.message
+						: 'Registration failed';
+				error = typeof errorMsg === 'string' ? errorMsg : 'Registration failed';
 			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Registration failed. Please try again.';
@@ -107,10 +108,14 @@
 	<title>Register - GoSight</title>
 </svelte:head>
 
-<div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-	<div class="max-w-md w-full space-y-8">
+<div
+	class="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8 dark:bg-gray-900"
+>
+	<div class="w-full max-w-md space-y-8">
 		<div>
-			<div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+			<div
+				class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900"
+			>
 				<UserPlus class="h-6 w-6 text-green-600 dark:text-green-400" />
 			</div>
 			<h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
@@ -123,7 +128,9 @@
 
 		<form class="mt-8 space-y-6" on:submit|preventDefault={handleRegister}>
 			{#if error}
-				<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-4">
+				<div
+					class="rounded-md border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20"
+				>
 					<div class="text-sm text-red-800 dark:text-red-200">{error}</div>
 				</div>
 			{/if}
@@ -132,7 +139,10 @@
 				<!-- Name Fields -->
 				<div class="grid grid-cols-2 gap-4">
 					<div>
-						<label for="firstName" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+						<label
+							for="firstName"
+							class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+						>
 							First Name
 						</label>
 						<input
@@ -142,16 +152,23 @@
 							required
 							bind:value={formData.firstName}
 							on:keypress={handleKeyPress}
-							class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm {validationErrors.firstName ? 'border-red-500' : ''}"
+							class="relative mt-1 block w-full appearance-none rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500 focus:outline-none sm:text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 {validationErrors.firstName
+								? 'border-red-500'
+								: ''}"
 							placeholder="First name"
 						/>
 						{#if validationErrors.firstName}
-							<p class="mt-1 text-sm text-red-600 dark:text-red-400">{validationErrors.firstName}</p>
+							<p class="mt-1 text-sm text-red-600 dark:text-red-400">
+								{validationErrors.firstName}
+							</p>
 						{/if}
 					</div>
 
 					<div>
-						<label for="lastName" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+						<label
+							for="lastName"
+							class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+						>
 							Last Name
 						</label>
 						<input
@@ -161,7 +178,9 @@
 							required
 							bind:value={formData.lastName}
 							on:keypress={handleKeyPress}
-							class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm {validationErrors.lastName ? 'border-red-500' : ''}"
+							class="relative mt-1 block w-full appearance-none rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500 focus:outline-none sm:text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 {validationErrors.lastName
+								? 'border-red-500'
+								: ''}"
 							placeholder="Last name"
 						/>
 						{#if validationErrors.lastName}
@@ -183,7 +202,9 @@
 						required
 						bind:value={formData.username}
 						on:keypress={handleKeyPress}
-						class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm {validationErrors.username ? 'border-red-500' : ''}"
+						class="relative mt-1 block w-full appearance-none rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500 focus:outline-none sm:text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 {validationErrors.username
+							? 'border-red-500'
+							: ''}"
 						placeholder="Choose a username"
 					/>
 					{#if validationErrors.username}
@@ -204,7 +225,9 @@
 						required
 						bind:value={formData.email}
 						on:keypress={handleKeyPress}
-						class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm {validationErrors.email ? 'border-red-500' : ''}"
+						class="relative mt-1 block w-full appearance-none rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500 focus:outline-none sm:text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 {validationErrors.email
+							? 'border-red-500'
+							: ''}"
 						placeholder="Enter your email"
 					/>
 					{#if validationErrors.email}
@@ -217,7 +240,7 @@
 					<label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
 						Password
 					</label>
-					<div class="mt-1 relative">
+					<div class="relative mt-1">
 						<input
 							id="password"
 							name="password"
@@ -226,13 +249,15 @@
 							required
 							bind:value={formData.password}
 							on:keypress={handleKeyPress}
-							class="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm {validationErrors.password ? 'border-red-500' : ''}"
+							class="relative block w-full appearance-none rounded-md border border-gray-300 bg-white px-3 py-2 pr-10 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500 focus:outline-none sm:text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 {validationErrors.password
+								? 'border-red-500'
+								: ''}"
 							placeholder="Create a password"
 						/>
 						<button
 							type="button"
-							class="absolute inset-y-0 right-0 pr-3 flex items-center"
-							on:click={() => showPassword = !showPassword}
+							class="absolute inset-y-0 right-0 flex items-center pr-3"
+							on:click={() => (showPassword = !showPassword)}
 						>
 							{#if showPassword}
 								<EyeOff class="h-4 w-4 text-gray-400 hover:text-gray-500" />
@@ -248,10 +273,13 @@
 
 				<!-- Confirm Password -->
 				<div>
-					<label for="confirmPassword" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+					<label
+						for="confirmPassword"
+						class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+					>
 						Confirm Password
 					</label>
-					<div class="mt-1 relative">
+					<div class="relative mt-1">
 						<input
 							id="confirmPassword"
 							name="confirmPassword"
@@ -260,13 +288,15 @@
 							required
 							bind:value={formData.confirmPassword}
 							on:keypress={handleKeyPress}
-							class="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm {validationErrors.confirmPassword ? 'border-red-500' : ''}"
+							class="relative block w-full appearance-none rounded-md border border-gray-300 bg-white px-3 py-2 pr-10 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500 focus:outline-none sm:text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 {validationErrors.confirmPassword
+								? 'border-red-500'
+								: ''}"
 							placeholder="Confirm your password"
 						/>
 						<button
 							type="button"
-							class="absolute inset-y-0 right-0 pr-3 flex items-center"
-							on:click={() => showConfirmPassword = !showConfirmPassword}
+							class="absolute inset-y-0 right-0 flex items-center pr-3"
+							on:click={() => (showConfirmPassword = !showConfirmPassword)}
 						>
 							{#if showConfirmPassword}
 								<EyeOff class="h-4 w-4 text-gray-400 hover:text-gray-500" />
@@ -276,7 +306,9 @@
 						</button>
 					</div>
 					{#if validationErrors.confirmPassword}
-						<p class="mt-1 text-sm text-red-600 dark:text-red-400">{validationErrors.confirmPassword}</p>
+						<p class="mt-1 text-sm text-red-600 dark:text-red-400">
+							{validationErrors.confirmPassword}
+						</p>
 					{/if}
 				</div>
 			</div>
@@ -285,10 +317,10 @@
 				<button
 					type="submit"
 					disabled={loading}
-					class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-green-700 dark:hover:bg-green-600"
+					class="group relative flex w-full justify-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-green-700 dark:hover:bg-green-600"
 				>
 					{#if loading}
-						<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+						<div class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
 					{/if}
 					Create Account
 				</button>
@@ -297,7 +329,10 @@
 			<div class="text-center">
 				<p class="text-sm text-gray-600 dark:text-gray-400">
 					Already have an account?
-					<a href="/auth/login" class="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">
+					<a
+						href="/auth/login"
+						class="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+					>
 						Sign in
 					</a>
 				</p>

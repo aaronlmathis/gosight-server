@@ -16,14 +16,14 @@
 	// Initialize stores with server data
 	$: if (data.user) {
 		user.set(data.user);
-		// Also initialize auth store if we have user data from server
-		auth.init();
+		// Also set user in auth store if we have user data from server
+		auth.setUser(data.user);
 	}
 
 	// Initialize theme
-	onMount(() => {
-		// Initialize auth store with server-injected user data
-		auth.init();
+	onMount(async () => {
+		// Initialize auth store to check for existing session
+		await auth.init();
 
 		// Initialize theme
 		const savedTheme = localStorage.getItem('color-theme');
@@ -72,7 +72,7 @@
 	<div id="alert-spacer" class="h-0 transition-all duration-300"></div>
 
 	<!-- Top Navbar -->
-	<Navbar user={data.user} />
+	<Navbar />
 
 	<!-- Sidebar -->
 	<Sidebar {currentPath} />

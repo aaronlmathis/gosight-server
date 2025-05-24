@@ -23,7 +23,7 @@ type AzureAuth struct {
 func (a *AzureAuth) StartLogin(w http.ResponseWriter, r *http.Request) {
 	next := r.URL.Query().Get("next")
 	if next == "" {
-		next = "/dashboard"
+		next = "/"
 	}
 
 	state := base64.URLEncoding.EncodeToString([]byte(next))

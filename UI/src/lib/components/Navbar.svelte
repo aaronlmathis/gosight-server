@@ -1,9 +1,7 @@
 <script lang="ts">
 	import { darkMode, activeAlertsCount } from '$lib/stores';
+	import { auth } from '$lib/stores/auth';
 	import { Moon, Sun, Bell, Menu } from 'lucide-svelte';
-	import type { User } from '$lib/types';
-
-	export let user: User | null;
 
 	let dropdownOpen = false;
 	let alertDropdownOpen = false;
@@ -129,7 +127,7 @@
 				</div>
 
 				<!-- User dropdown -->
-				{#if user}
+				{#if $auth.isAuthenticated && $auth.user}
 					<div class="relative">
 						<button
 							id="dropdownUserAvatarButton"
@@ -138,7 +136,7 @@
 						>
 							<img
 								class="h-11 w-11 rounded-full object-cover"
-								src={user.avatar || '/default-avatar.png'}
+								src={$auth.user.avatar || '/default-avatar.png'}
 								alt="User avatar"
 							/>
 						</button>
@@ -150,11 +148,11 @@
 							>
 								<div class="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
 									<span class="block text-sm text-gray-900 dark:text-white">
-										{user.firstName}
-										{user.lastName}
+										{$auth.user.firstName}
+										{$auth.user.lastName}
 									</span>
 									<span class="block truncate text-sm text-gray-500 dark:text-gray-400">
-										{user.email}
+										{$auth.user.email}
 									</span>
 								</div>
 								<ul class="py-2">
@@ -175,19 +173,19 @@
 										</a>
 									</li>
 									<li>
-										<a
-											href="/logout"
-											class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-700"
+										<button
+											on:click={() => auth.logout()}
+											class="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-700"
 										>
 											Sign out
-										</a>
+										</button>
 									</li>
 								</ul>
 							</div>
 						{/if}
 					</div>
 				{:else}
-					<a href="/login" class="font-medium text-blue-400 hover:text-blue-300"> Sign in </a>
+					<a href="/auth/login" class="font-medium text-blue-400 hover:text-blue-300"> Sign in </a>
 				{/if}
 			</div>
 		</div>
