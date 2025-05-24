@@ -19,7 +19,6 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-
 package httpserver
 
 import (
@@ -38,13 +37,13 @@ func (s *HttpServer) HandleMetricExplorerPage(w http.ResponseWriter, r *http.Req
 	ctx := r.Context()
 
 	if forbidden, ok := ctx.Value("forbidden").(bool); ok && forbidden {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 		return
 	}
 
 	userID, ok := contextutil.GetUserID(ctx)
 	if !ok {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 		return
 	}
 

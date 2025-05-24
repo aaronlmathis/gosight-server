@@ -79,7 +79,7 @@ func (s *HttpServer) HandleCallback(w http.ResponseWriter, r *http.Request) {
 			},
 		})
 		SetFlash(w, "Invalid username or password")
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 		return
 	}
 
@@ -199,7 +199,7 @@ func (s *HttpServer) HandleMFA(w http.ResponseWriter, r *http.Request) {
 		userID, err := gosightauth.LoadPendingMFA(r)
 		if err != nil || userID == "" {
 			utils.Debug("No pending MFA for %s", userID)
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 			return
 		}
 		utils.Debug("Code Check for %s", userID)
@@ -308,7 +308,7 @@ func (s *HttpServer) HandleLogout(w http.ResponseWriter, r *http.Request) {
 			"user_agent": r.UserAgent(),
 		},
 	})
-	http.Redirect(w, r, "/login", http.StatusSeeOther)
+	http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 }
 
 func (s *HttpServer) createFinalSessionAndRedirect(w http.ResponseWriter, r *http.Request, user *usermodel.User) {

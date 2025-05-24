@@ -370,12 +370,21 @@ private api: ApiClient;
 
 constructor(api: ApiClient) {
 this.api = api;
-}
+}	async login(credentials: { username: string; password: string }) {
+		return this.api.request('/auth/login', {
+			method: 'POST',
+			body: JSON.stringify(credentials)
+		});
+	}
 
-async login(credentials: { username: string; password: string }) {
-return this.api.request('/auth/login', {
+	async getProviders() {
+		return this.api.request('/auth/providers');
+	}
+
+	async verifyMFA(mfaData: { code: string; remember?: boolean }) {
+return this.api.request('/auth/mfa/verify', {
 method: 'POST',
-body: JSON.stringify(credentials)
+body: JSON.stringify(mfaData)
 });
 }
 

@@ -36,13 +36,13 @@ func (s *HttpServer) HandleIndexPage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	if forbidden, ok := ctx.Value("forbidden").(bool); ok && forbidden {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 		return
 	}
 
 	userID, ok := contextutil.GetUserID(ctx)
 	if !ok {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 		return
 	}
 

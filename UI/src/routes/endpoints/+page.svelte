@@ -30,11 +30,11 @@
 				api.endpoints.getAll(),
 				api.endpoints.getByType('containers')
 			]);
-			
+
 			// API returns array directly, not wrapped in data object
 			const rawEndpoints: any[] = hostsResponse || [];
 			const rawContainers: any[] = containersResponse || [];
-			
+
 			endpoints = rawEndpoints.map(
 				(endpoint): Endpoint => ({
 					id: endpoint.id,
@@ -55,7 +55,7 @@
 					uptimeSeconds: endpoint.uptime_seconds || 0
 				})
 			);
-			
+
 			containers = rawContainers;
 			filterEndpoints();
 		} catch (error) {
@@ -94,11 +94,11 @@
 
 		try {
 			// Find the endpoint to get hostname
-			const endpoint = endpoints.find(e => e.id === endpointId);
+			const endpoint = endpoints.find((e) => e.id === endpointId);
 			if (!endpoint) return;
 
 			// Filter containers for this host
-			const hostContainers = containers.filter(c => c.host_id === endpoint.hostId);
+			const hostContainers = containers.filter((c) => c.host_id === endpoint.hostId);
 			containerData.set(endpointId, hostContainers);
 			containerData = containerData; // Trigger reactivity
 		} catch (error) {
@@ -277,7 +277,7 @@
 			>
 				<div class="text-sm font-medium text-gray-500 dark:text-gray-400">Runtimes</div>
 				<div class="text-xl font-bold text-gray-900 dark:text-white">
-					{[...new Set(containers.map(c => c.runtime).filter(Boolean))].join(', ') || '—'}
+					{[...new Set(containers.map((c) => c.runtime).filter(Boolean))].join(', ') || '—'}
 				</div>
 			</div>
 		</div>
@@ -367,16 +367,16 @@
 								<tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
 									<td class="px-3 py-2">
 										{#if endpoint.status === 'online'}
-											<span class="text-green-500 font-medium">● Online</span>
+											<span class="font-medium text-green-500">● Online</span>
 										{:else}
-											<span class="text-red-500 font-medium">● Offline</span>
+											<span class="font-medium text-red-500">● Offline</span>
 										{/if}
 									</td>
 									<td class="px-3 py-2 font-medium">
 										{#if endpoint.status === 'online'}
 											<a
 												href="/endpoints/{endpoint.id}"
-												class="text-blue-800 dark:text-blue-400 hover:underline"
+												class="text-blue-800 hover:underline dark:text-blue-400"
 											>
 												{endpoint.hostname}
 											</a>
@@ -391,12 +391,12 @@
 										{endpoint.os}
 									</td>
 									<td class="px-3 py-2 text-sm text-gray-900 dark:text-white">
-										{endpoint.tags.find(t => t.startsWith('platform:'))?.split(':')[1] || '—'}
+										{endpoint.tags.find((t) => t.startsWith('platform:'))?.split(':')[1] || '—'}
 									</td>
 									<td class="px-3 py-2 text-sm text-gray-900 dark:text-white">
 										{endpoint.architecture}
 									</td>
-									<td class="px-3 py-2 text-sm text-gray-900 dark:text-white font-mono">
+									<td class="px-3 py-2 font-mono text-sm text-gray-900 dark:text-white">
 										{endpoint.agentId}
 									</td>
 									<td class="px-3 py-2 text-sm text-gray-900 dark:text-white">
@@ -420,12 +420,12 @@
 										{#if endpoint.status === 'online'}
 											<button
 												on:click={() => toggleRowExpansion(endpoint.id)}
-												class="text-blue-500 hover:text-blue-700 flex items-center"
+												class="flex items-center text-blue-500 hover:text-blue-700"
 											>
 												{#if expandedRows.has(endpoint.id)}
-													<ChevronDown class="w-4 h-4" />
+													<ChevronDown class="h-4 w-4" />
 												{:else}
-													<ChevronRight class="w-4 h-4" />
+													<ChevronRight class="h-4 w-4" />
 												{/if}
 											</button>
 										{:else}
@@ -438,7 +438,7 @@
 								{#if expandedRows.has(endpoint.id)}
 									<tr class="container-subtable">
 										<td colspan="11" class="p-0">
-											<div class="p-4 bg-gray-50 dark:bg-gray-800">
+											<div class="bg-gray-50 p-4 dark:bg-gray-800">
 												{#if containerData.has(endpoint.id)}
 													{@const hostContainers = containerData.get(endpoint.id) || []}
 													{#if hostContainers.length > 0}
@@ -446,17 +446,34 @@
 															<table class="min-w-full text-sm">
 																<thead>
 																	<tr class="border-b border-gray-200 dark:border-gray-600">
-																		<th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Container</th>
-																		<th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Image</th>
-																		<th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
-																		<th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Runtime</th>
-																		<th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Last Seen</th>
+																		<th
+																			class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
+																			>Container</th
+																		>
+																		<th
+																			class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
+																			>Image</th
+																		>
+																		<th
+																			class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
+																			>Status</th
+																		>
+																		<th
+																			class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
+																			>Runtime</th
+																		>
+																		<th
+																			class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
+																			>Last Seen</th
+																		>
 																	</tr>
 																</thead>
 																<tbody>
 																	{#each hostContainers as container}
 																		<tr class="border-b border-gray-100 dark:border-gray-700">
-																			<td class="px-3 py-2 font-medium text-gray-900 dark:text-white">
+																			<td
+																				class="px-3 py-2 font-medium text-gray-900 dark:text-white"
+																			>
 																				{container.name || container.Name || '—'}
 																			</td>
 																			<td class="px-3 py-2 text-gray-600 dark:text-gray-300">
@@ -475,7 +492,9 @@
 																				{container.runtime || container.Runtime || '—'}
 																			</td>
 																			<td class="px-3 py-2 text-gray-500 dark:text-gray-400">
-																				{formatLastSeen(container.last_seen || container.LastSeen || '')}
+																				{formatLastSeen(
+																					container.last_seen || container.LastSeen || ''
+																				)}
 																			</td>
 																		</tr>
 																	{/each}
@@ -483,7 +502,9 @@
 															</table>
 														</div>
 													{:else}
-														<div class="text-sm text-gray-500 dark:text-gray-400">No containers found for this host</div>
+														<div class="text-sm text-gray-500 dark:text-gray-400">
+															No containers found for this host
+														</div>
 													{/if}
 												{:else}
 													<div class="text-sm text-gray-400">Loading containers...</div>

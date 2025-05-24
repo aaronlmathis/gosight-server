@@ -64,13 +64,13 @@ func (s *HttpServer) HandleEndpointPage(w http.ResponseWriter, r *http.Request) 
 	ctx := r.Context()
 
 	if forbidden, ok := ctx.Value("forbidden").(bool); ok && forbidden {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 		return
 	}
 
 	userID, ok := contextutil.GetUserID(ctx)
 	if !ok {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 		return
 	}
 
@@ -106,14 +106,14 @@ func (s *HttpServer) HandleEndpointDetail(w http.ResponseWriter, r *http.Request
 
 	// Check for forbidden access first
 	if forbidden, ok := ctx.Value("forbidden").(bool); ok && forbidden {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 		return
 	}
 
 	// Check if user is authenticated
 	userID, ok := contextutil.GetUserID(ctx)
 	if !ok {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 		return
 	}
 	// Check if user has permission to view the dashboard

@@ -98,7 +98,7 @@ func AuthMiddleware(userStore userstore.UserStore) mux.MiddlewareFunc {
 				if isAPIRequest(r) {
 					http.Error(w, "unauthorized", http.StatusUnauthorized)
 				} else {
-					http.Redirect(w, r, "/login", http.StatusSeeOther)
+					http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 				}
 				return
 			}
@@ -109,7 +109,7 @@ func AuthMiddleware(userStore userstore.UserStore) mux.MiddlewareFunc {
 				if isAPIRequest(r) {
 					http.Error(w, "unauthorized", http.StatusUnauthorized)
 				} else {
-					http.Redirect(w, r, "/login", http.StatusSeeOther)
+					http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 				}
 				return
 			}
