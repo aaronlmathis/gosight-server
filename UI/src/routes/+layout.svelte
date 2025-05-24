@@ -3,6 +3,8 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { browser } from '$app/environment';
+	import { auth } from '$lib/stores/auth';
+	import Navigation from '$lib/components/Navigation.svelte';
 	import Navbar from '$lib/components/Navbar.svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import { darkMode, user, activeAlertsCount } from '$lib/stores';
@@ -14,10 +16,15 @@
 	// Initialize stores with server data
 	$: if (data.user) {
 		user.set(data.user);
+		// Also initialize auth store if we have user data from server
+		auth.init();
 	}
 
 	// Initialize theme
 	onMount(() => {
+		// Initialize auth store with server-injected user data
+		auth.init();
+
 		// Initialize theme
 		const savedTheme = localStorage.getItem('color-theme');
 		const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -42,7 +49,7 @@
 		});
 
 		// Initialize WebSocket connections for real-time updates
-		if (browser && data.user) {
+		if (browser && (data.user || $auth.isAuthenticated)) {
 			// WebSocket connections are already initialized via imports
 			// Individual pages will connect to their specific WebSocket endpoints as needed
 		}

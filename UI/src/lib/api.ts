@@ -126,8 +126,8 @@ this.api = api;
 		const searchParams = appendSearchParams(new URLSearchParams(), params ?? {});
 		const query = searchParams.toString();
 		const response = await this.api.request(`/endpoints${query ? `?${query}` : ''}`);
-		// Backend returns { data: Endpoint[] } structure
-		return (response as any).data || [];
+		// Backend returns array directly, not wrapped in data object
+		return response || [];
 	}
 
 async get(id: string) {

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import PermissionGuard from '$lib/components/PermissionGuard.svelte';
 	import { api } from '$lib/api';
 	import type { Endpoint } from '$lib/types';
 
@@ -549,250 +550,256 @@
 	<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 </svelte:head>
 
-<section class="space-y-6 p-4">
-	<!-- Header -->
-	<div class="mb-4 flex flex-wrap items-center justify-between">
-		<div>
-			<h1 class="text-2xl font-semibold text-gray-800 dark:text-white">📊 Metric Explorer</h1>
-			<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-				Explore and compare metrics with full control over aggregation, filters, and visualization.
-			</p>
-		</div>
-		<div class="flex flex-wrap items-center gap-2">
-			<select
-				bind:value={selectedTimeRange}
-				class="rounded border-gray-300 text-sm dark:border-gray-600"
-			>
-				{#each timeRanges as range}
-					<option value={range.value}>{range.label}</option>
-				{/each}
-			</select>
-			<button
-				class="rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 dark:border-gray-600 dark:text-gray-300"
-			>
-				UTC
-			</button>
-			<button
-				on:click={loadData}
-				class="text-sm text-gray-600 hover:text-blue-600 dark:text-gray-400"
-			>
-				↻ Refresh
-			</button>
-			<button class="rounded bg-orange-600 px-3 py-1.5 text-sm text-white hover:bg-orange-700">
-				+ Add to Dashboard
-			</button>
-		</div>
-	</div>
-
-	<!-- Grid Layout -->
-	<div class="grid grid-cols-4 gap-4">
-		<!-- LEFT COLUMN: Control Panel -->
-		<div
-			class="col-span-1 max-h-[80vh] space-y-4 overflow-y-auto rounded-lg border border-gray-100 bg-white p-4 shadow dark:border-gray-800 dark:bg-gray-900"
-		>
-			<!-- Metrics Search -->
+<PermissionGuard requiredPermission="gosight:dashboard:view">
+	<section class="space-y-6 p-4">
+		<!-- Header -->
+		<div class="mb-4 flex flex-wrap items-center justify-between">
 			<div>
-				<label for="metric-search" class="text-xs font-semibold text-gray-500 dark:text-gray-400"
-					>Metrics</label
-				>
-				<input
-					id="metric-search"
-					bind:value={metricInput}
-					on:input={handleMetricInput}
-					type="text"
-					placeholder="Search metrics..."
-					class="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-800"
-				/>
-
-				<!-- Metric Suggestions -->
-				{#if showMetricSuggestions}
-					<div class="mt-2 max-h-40 space-y-1 overflow-y-auto text-sm">
-						{#each filteredMetrics as metric}
-							<button
-								tabindex="0"
-								class="cursor-pointer rounded px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-								on:click={() => addSelectedMetric(metric)}
-								on:keydown={(e) => e.key === 'Enter' && addSelectedMetric(metric)}
-							>
-								{metric.label}
-							</button>
-						{/each}
-					</div>
-				{/if}
-
-				<!-- Selected Metrics -->
-				{#if activePanel}
-					<div class="mt-2 flex flex-wrap gap-1">
-						{#each activePanel.metrics as metric}
-							<span
-								class="mr-1 mb-1 inline-flex items-center rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-							>
-								{metric.label}
-								<button
-									on:click={() => removeMetric(metric)}
-									class="ml-2 text-sm text-blue-500 hover:text-red-500"
-								>
-									&times;
-								</button>
-							</span>
-						{/each}
-					</div>
-				{/if}
+				<h1 class="text-2xl font-semibold text-gray-800 dark:text-white">📊 Metric Explorer</h1>
+				<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+					Explore and compare metrics with full control over aggregation, filters, and
+					visualization.
+				</p>
 			</div>
-
-			<!-- Filter Search -->
-			<div>
-				<label
-					for="filter-search"
-					class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">From</label
+			<div class="flex flex-wrap items-center gap-2">
+				<select
+					bind:value={selectedTimeRange}
+					class="rounded border-gray-300 text-sm dark:border-gray-600"
 				>
-				<div class="relative w-full">
+					{#each timeRanges as range}
+						<option value={range.value}>{range.label}</option>
+					{/each}
+				</select>
+				<button
+					class="rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 dark:border-gray-600 dark:text-gray-300"
+				>
+					UTC
+				</button>
+				<button
+					on:click={loadData}
+					class="text-sm text-gray-600 hover:text-blue-600 dark:text-gray-400"
+				>
+					↻ Refresh
+				</button>
+				<button class="rounded bg-orange-600 px-3 py-1.5 text-sm text-white hover:bg-orange-700">
+					+ Add to Dashboard
+				</button>
+			</div>
+		</div>
+
+		<!-- Grid Layout -->
+		<div class="grid grid-cols-4 gap-4">
+			<!-- LEFT COLUMN: Control Panel -->
+			<div
+				class="col-span-1 max-h-[80vh] space-y-4 overflow-y-auto rounded-lg border border-gray-100 bg-white p-4 shadow dark:border-gray-800 dark:bg-gray-900"
+			>
+				<!-- Metrics Search -->
+				<div>
+					<label for="metric-search" class="text-xs font-semibold text-gray-500 dark:text-gray-400"
+						>Metrics</label
+					>
 					<input
-						id="filter-search"
-						bind:value={tagInput}
-						on:input={handleTagInput}
+						id="metric-search"
+						bind:value={metricInput}
+						on:input={handleMetricInput}
 						type="text"
-						placeholder="Filter by hostname, tag, or endpoint..."
-						class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:placeholder-gray-500"
+						placeholder="Search metrics..."
+						class="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-800"
 					/>
 
-					<!-- Tag Suggestions -->
-					{#if showTagSuggestions}
-						<div
-							class="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
-						>
-							{#each filteredTags as tag}
+					<!-- Metric Suggestions -->
+					{#if showMetricSuggestions}
+						<div class="mt-2 max-h-40 space-y-1 overflow-y-auto text-sm">
+							{#each filteredMetrics as metric}
 								<button
-									class="w-full cursor-pointer px-3 py-2 text-left text-sm whitespace-nowrap hover:bg-gray-100 dark:hover:bg-gray-700"
-									on:click={() => addSelectedFilter(tag)}
+									tabindex="0"
+									class="cursor-pointer rounded px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+									on:click={() => addSelectedMetric(metric)}
+									on:keydown={(e) => e.key === 'Enter' && addSelectedMetric(metric)}
 								>
-									{tag}
+									{metric.label}
 								</button>
+							{/each}
+						</div>
+					{/if}
+
+					<!-- Selected Metrics -->
+					{#if activePanel}
+						<div class="mt-2 flex flex-wrap gap-1">
+							{#each activePanel.metrics as metric}
+								<span
+									class="mr-1 mb-1 inline-flex items-center rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+								>
+									{metric.label}
+									<button
+										on:click={() => removeMetric(metric)}
+										class="ml-2 text-sm text-blue-500 hover:text-red-500"
+									>
+										&times;
+									</button>
+								</span>
 							{/each}
 						</div>
 					{/if}
 				</div>
 
-				<!-- Selected Filters -->
-				{#if activePanel}
-					<div class="mt-2 flex flex-wrap gap-2 text-sm">
-						{#each Object.keys(activePanel.filters) as filterStr}
-							<span
-								class="mr-1 mb-1 inline-flex items-center rounded bg-gray-200 px-2 py-1 text-xs dark:bg-gray-800"
+				<!-- Filter Search -->
+				<div>
+					<label
+						for="filter-search"
+						class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">From</label
+					>
+					<div class="relative w-full">
+						<input
+							id="filter-search"
+							bind:value={tagInput}
+							on:input={handleTagInput}
+							type="text"
+							placeholder="Filter by hostname, tag, or endpoint..."
+							class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:placeholder-gray-500"
+						/>
+
+						<!-- Tag Suggestions -->
+						{#if showTagSuggestions}
+							<div
+								class="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
 							>
-								{filterStr}
-								<button
-									on:click={() => removeFilter(filterStr)}
-									class="ml-1 text-red-500 hover:text-red-700"
-								>
-									&times;
-								</button>
-							</span>
-						{/each}
+								{#each filteredTags as tag}
+									<button
+										class="w-full cursor-pointer px-3 py-2 text-left text-sm whitespace-nowrap hover:bg-gray-100 dark:hover:bg-gray-700"
+										on:click={() => addSelectedFilter(tag)}
+									>
+										{tag}
+									</button>
+								{/each}
+							</div>
+						{/if}
 					</div>
-				{/if}
-			</div>
 
-			<!-- Aggregate By -->
-			<div>
-				<label for="aggregate-select" class="text-xs font-semibold text-gray-500 dark:text-gray-400"
-					>Aggregate by</label
-				>
-				<select
-					id="aggregate-select"
-					on:change={handleAggregateChange}
-					value={activePanel?.aggregate || ''}
-					class="mt-1 w-full rounded border border-gray-300 text-sm dark:border-gray-600"
-				>
-					<option value="">None</option>
-					<option value="sum">Sum</option>
-					<option value="avg">Average</option>
-					<option value="min">Minimum</option>
-					<option value="max">Maximum</option>
-					<option value="stddev">Std Deviation</option>
-				</select>
-			</div>
-
-			<!-- Group By -->
-			<div>
-				<label for="groupby-select" class="text-xs font-semibold text-gray-500 dark:text-gray-400"
-					>Group by</label
-				>
-				<select
-					id="groupby-select"
-					on:change={handleGroupByChange}
-					value={activePanel?.groupBy || ''}
-					class="mt-1 w-full rounded border border-gray-300 text-sm dark:border-gray-600"
-				>
-					<option value="">None</option>
-					<option value="hostname">Hostname</option>
-					<option value="endpoint_id">Endpoint ID</option>
-					<option value="platform">Platform</option>
-					<option value="os_version">OS Version</option>
-					<option value="interface">Interface</option>
-					<option value="container_name">Container Name</option>
-					<option value="job">Job</option>
+					<!-- Selected Filters -->
 					{#if activePanel}
-						{#each activePanel.availableDimensions as dim}
-							<option value={dim}>{dim}</option>
-						{/each}
+						<div class="mt-2 flex flex-wrap gap-2 text-sm">
+							{#each Object.keys(activePanel.filters) as filterStr}
+								<span
+									class="mr-1 mb-1 inline-flex items-center rounded bg-gray-200 px-2 py-1 text-xs dark:bg-gray-800"
+								>
+									{filterStr}
+									<button
+										on:click={() => removeFilter(filterStr)}
+										class="ml-1 text-red-500 hover:text-red-700"
+									>
+										&times;
+									</button>
+								</span>
+							{/each}
+						</div>
 					{/if}
-				</select>
-			</div>
+				</div>
 
-			<!-- Graph Options -->
-			<div class="border-t pt-3">
-				<div class="mb-2 text-xs font-semibold text-gray-500 dark:text-gray-400">Graph Options</div>
-				<div class="mt-1 space-y-2">
-					<div class="flex justify-between gap-2">
-						<label for="period-select" class="w-1/2 text-xs">Period</label>
-						<select
-							id="period-select"
-							on:change={handlePeriodChange}
-							value={activePanel?.period || '5m'}
-							class="w-1/2 rounded border border-gray-300 text-sm dark:border-gray-600"
-						>
-							<option value="5m">5m</option>
-							<option value="10m">10m</option>
-							<option value="30m">30m</option>
-							<option value="1h">1h</option>
-						</select>
+				<!-- Aggregate By -->
+				<div>
+					<label
+						for="aggregate-select"
+						class="text-xs font-semibold text-gray-500 dark:text-gray-400">Aggregate by</label
+					>
+					<select
+						id="aggregate-select"
+						on:change={handleAggregateChange}
+						value={activePanel?.aggregate || ''}
+						class="mt-1 w-full rounded border border-gray-300 text-sm dark:border-gray-600"
+					>
+						<option value="">None</option>
+						<option value="sum">Sum</option>
+						<option value="avg">Average</option>
+						<option value="min">Minimum</option>
+						<option value="max">Maximum</option>
+						<option value="stddev">Std Deviation</option>
+					</select>
+				</div>
+
+				<!-- Group By -->
+				<div>
+					<label for="groupby-select" class="text-xs font-semibold text-gray-500 dark:text-gray-400"
+						>Group by</label
+					>
+					<select
+						id="groupby-select"
+						on:change={handleGroupByChange}
+						value={activePanel?.groupBy || ''}
+						class="mt-1 w-full rounded border border-gray-300 text-sm dark:border-gray-600"
+					>
+						<option value="">None</option>
+						<option value="hostname">Hostname</option>
+						<option value="endpoint_id">Endpoint ID</option>
+						<option value="platform">Platform</option>
+						<option value="os_version">OS Version</option>
+						<option value="interface">Interface</option>
+						<option value="container_name">Container Name</option>
+						<option value="job">Job</option>
+						{#if activePanel}
+							{#each activePanel.availableDimensions as dim}
+								<option value={dim}>{dim}</option>
+							{/each}
+						{/if}
+					</select>
+				</div>
+
+				<!-- Graph Options -->
+				<div class="border-t pt-3">
+					<div class="mb-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
+						Graph Options
 					</div>
-					<div class="flex justify-between gap-2">
-						<label for="graphtype-select" class="w-1/2 text-xs">Graph Type</label>
-						<select
-							id="graphtype-select"
-							on:change={handleGraphTypeChange}
-							value={activePanel?.graphType || 'area'}
-							class="w-1/2 rounded border border-gray-300 text-sm dark:border-gray-600"
-						>
-							<option value="area">Area</option>
-							<option value="stacked-area">Stacked Area</option>
-							<option value="line">Line</option>
-							<option value="bar">Bar</option>
-						</select>
+					<div class="mt-1 space-y-2">
+						<div class="flex justify-between gap-2">
+							<label for="period-select" class="w-1/2 text-xs">Period</label>
+							<select
+								id="period-select"
+								on:change={handlePeriodChange}
+								value={activePanel?.period || '5m'}
+								class="w-1/2 rounded border border-gray-300 text-sm dark:border-gray-600"
+							>
+								<option value="5m">5m</option>
+								<option value="10m">10m</option>
+								<option value="30m">30m</option>
+								<option value="1h">1h</option>
+							</select>
+						</div>
+						<div class="flex justify-between gap-2">
+							<label for="graphtype-select" class="w-1/2 text-xs">Graph Type</label>
+							<select
+								id="graphtype-select"
+								on:change={handleGraphTypeChange}
+								value={activePanel?.graphType || 'area'}
+								class="w-1/2 rounded border border-gray-300 text-sm dark:border-gray-600"
+							>
+								<option value="area">Area</option>
+								<option value="stacked-area">Stacked Area</option>
+								<option value="line">Line</option>
+								<option value="bar">Bar</option>
+							</select>
+						</div>
 					</div>
 				</div>
 			</div>
-		</div>
 
-		<!-- RIGHT COLUMN: Chart Grid -->
-		<div class="col-span-3">
-			<div bind:this={metricPanelsEl} class="flex flex-col gap-4">
-				{#each chartSlots as slot}
-					<div
-						id={slot.id}
-						class="rounded border-2 {activeSlotId === slot.id
-							? 'border-blue-400'
-							: 'border-gray-200 dark:border-gray-700'} flex h-[250px] cursor-pointer items-center justify-center bg-white p-4 text-gray-400 dark:bg-gray-900"
-						on:click={() => setActiveSlot(slot.id)}
-					>
-						{#if slot.metrics.length === 0}
-							<span class="text-sm">➕ New Chart</span>
-						{/if}
-					</div>
-				{/each}
+			<!-- RIGHT COLUMN: Chart Grid -->
+			<div class="col-span-3">
+				<div bind:this={metricPanelsEl} class="flex flex-col gap-4">
+					{#each chartSlots as slot}
+						<div
+							id={slot.id}
+							class="rounded border-2 {activeSlotId === slot.id
+								? 'border-blue-400'
+								: 'border-gray-200 dark:border-gray-700'} flex h-[250px] cursor-pointer items-center justify-center bg-white p-4 text-gray-400 dark:bg-gray-900"
+							on:click={() => setActiveSlot(slot.id)}
+						>
+							{#if slot.metrics.length === 0}
+								<span class="text-sm">➕ New Chart</span>
+							{/if}
+						</div>
+					{/each}
+				</div>
 			</div>
 		</div>
-	</div>
-</section>
+	</section>
+</PermissionGuard>

@@ -152,6 +152,24 @@ export interface AlertNotification {
 }
 
 // Endpoint types
+// Endpoint from API (raw format)
+export interface EndpointApiResponse {
+	id: string;
+	hostname: string;
+	ip?: string;
+	arch?: string;
+	last_seen?: string;
+	os: string;
+	status: string;
+	type: string;
+	uptime?: number;
+	version?: string;
+	agent_id?: string;
+	host_id?: string;
+	labels?: Record<string, string>;
+}
+
+// Endpoint for frontend use (normalized format)
 export interface Endpoint {
 	id: string;
 	name: string;
