@@ -406,6 +406,14 @@ method: 'POST'
 
 async getCurrentUser() {
 return this.api.request('/auth/me');
+}	async getUserProfile() {
+		// The profile data is included in the /auth/me response, so we can extract it from there
+		const currentUser: any = await this.getCurrentUser();
+		return currentUser?.profile || {};
+	}
+
+async getUserSettings() {
+return this.getUserPreferences();
 }
 
 async updateProfile(profileData: any) {
@@ -436,11 +444,25 @@ body: JSON.stringify(preferences)
 async uploadAvatar(file: File) {
 const formData = new FormData();
 formData.append('avatar', file);
-return this.api.request('/users/avatar', {
+
+try {
+const response = await fetch('/api/v1/users/avatar', {
 method: 'POST',
+credentials: 'include',
 body: formData,
-isFormData: true
+// Don't set Content-Type - let the browser set it with the boundary
 });
+
+if (!response.ok) {
+const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+}
+
+return await response.json();
+} catch (error) {
+console.error('Avatar upload error:', error);
+throw error;
+}
 }
 
 async cropAvatar(cropData: { x: number; y: number; width: number; height: number }): Promise<{ success: boolean; avatar_url: string; message: string }> {
@@ -650,7 +672,7 @@ return this.auth.getCurrentUser();
 
 async updateProfile(data: { full_name: string; phone: string }): Promise<{ success: boolean; message: string }> {
     try {
-        const response = await fetch('/api/v1/user/profile', {
+        const response = await fetch('/api/v1/users/profile', {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -677,6 +699,10 @@ return this.auth.updatePassword(passwordData);
 
 async getUserPreferences() {
 return this.auth.getUserPreferences();
+}
+
+async getUserSettings() {
+return this.auth.getUserSettings();
 }
 
 async updateUserPreferences(preferences: any) {

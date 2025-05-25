@@ -80,7 +80,7 @@
 
 	async function loadUserPreferences() {
 		try {
-			const response = await api.getUserPreferences();
+			const response: any = await api.getUserPreferences();
 			if (response && typeof response === 'object') {
 				// Update preferences with individual settings from user_settings table
 				if (response.theme) {
@@ -93,11 +93,21 @@
 				}
 				if (response.notifications) {
 					try {
-						const notificationSettings = JSON.parse(response.notifications);
-						preferences.notifications = {
-							...defaultSettings.notifications,
-							...notificationSettings
-						};
+						const notificationSetting = JSON.parse(response.notifications);
+						// If backend returns boolean, convert it to our frontend structure
+						if (typeof notificationSetting === 'boolean') {
+							preferences.notifications = {
+								email_alerts: notificationSetting,
+								push_alerts: notificationSetting,
+								alert_frequency: defaultSettings.notifications.alert_frequency
+							};
+						} else if (typeof notificationSetting === 'object') {
+							// If backend returns object structure, use it
+							preferences.notifications = {
+								...defaultSettings.notifications,
+								...notificationSetting
+							};
+						}
 					} catch (e) {
 						console.warn('Failed to parse notification settings:', e);
 						preferences.notifications = { ...defaultSettings.notifications };
@@ -128,11 +138,11 @@
 		error = '';
 
 		try {
-			// Get current user
-			currentUser = await api.getCurrentUser();
+			// Get current user (this updates the userData object with latest info)
+			currentUser = (await api.getCurrentUser()) as any;
 
 			if (currentUser) {
-				// Populate read-only user data
+				// Update read-only user data if needed
 				userData = {
 					first_name: currentUser.first_name || '',
 					last_name: currentUser.last_name || '',
@@ -140,30 +150,27 @@
 					username: currentUser.username || ''
 				};
 
-				// Try to get profile data, but don't fail if it doesn't exist
-				try {
-					const profile = await api.getUserProfile();
+				// Update profile data if it exists in the current user response
+				if (currentUser.profile) {
 					profileData = {
-						full_name: profile.full_name || '',
-						phone: profile.phone || ''
+						full_name: currentUser.profile.full_name || '',
+						phone: currentUser.profile.phone || ''
 					};
-				} catch (profileError) {
-					console.log('No profile found, using defaults');
-					profileData = {
-						full_name: '',
-						phone: ''
-					};
+					console.log('Updated profile data from current user:', profileData);
 				}
 
 				// Try to get settings
 				try {
 					const settings = await api.getUserSettings();
-					// Use defaultSettings as fallback
-					const settingsData = { ...defaultSettings, ...settings };
-					console.log('Loaded settings:', settingsData);
+					if (settings && typeof settings === 'object') {
+						// Merge settings with defaults
+						preferences = { ...defaultSettings, ...settings };
+						console.log('Loaded settings:', preferences);
+					} else {
+						console.log('No settings found, using defaults');
+					}
 				} catch (settingsError) {
-					console.log('No settings found, using defaults');
-					// settingsData is not used elsewhere, so we can remove this line
+					console.log('Error loading settings, using defaults:', settingsError);
 				}
 			}
 		} catch (err) {
@@ -269,8 +276,23 @@
 		try {
 			saving = true;
 			error = '';
-			message = '';
-			const response = await api.updateUserPreferences(preferences);
+			message = ''; // Transform preferences to match backend UserPreferencesRequest structure
+			const backendPreferences = {
+				theme: preferences.theme,
+				// Send detailed notifications structure
+				notifications: {
+					email_alerts: preferences.notifications.email_alerts,
+					push_alerts: preferences.notifications.push_alerts,
+					alert_frequency: preferences.notifications.alert_frequency
+				},
+				dashboard: {
+					refresh_interval: preferences.dashboard.refresh_interval,
+					default_time_range: preferences.dashboard.default_time_range,
+					show_system_metrics: preferences.dashboard.show_system_metrics
+				}
+			};
+
+			const response = await api.updateUserPreferences(backendPreferences);
 			if (response && typeof response === 'object' && 'success' in response && response.success) {
 				message = 'Preferences updated successfully';
 			} else {

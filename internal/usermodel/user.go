@@ -64,9 +64,16 @@ type PasswordChangeRequest struct {
 
 // UserPreferencesRequest represents the request payload for user preferences
 type UserPreferencesRequest struct {
-	Theme         string                 `json:"theme"`
-	Notifications bool                   `json:"notifications"`
-	Dashboard     map[string]interface{} `json:"dashboard"`
+	Theme         string                  `json:"theme"`
+	Notifications NotificationPreferences `json:"notifications"`
+	Dashboard     map[string]interface{}  `json:"dashboard"`
+}
+
+// NotificationPreferences represents detailed notification settings
+type NotificationPreferences struct {
+	EmailAlerts    bool   `json:"email_alerts"`
+	PushAlerts     bool   `json:"push_alerts"`
+	AlertFrequency string `json:"alert_frequency"`
 }
 
 // CompleteUser represents a user with their profile and settings

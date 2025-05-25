@@ -6,6 +6,7 @@ package httpserver
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -197,9 +198,55 @@ func (s *HttpServer) HandleGetUserPreferences(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Return settings
+	// Transform flattened settings back to nested structure for frontend
+	response := make(map[string]interface{})
+	notifications := make(map[string]interface{})
+	dashboard := make(map[string]interface{})
+
+	for key, rawValue := range settings {
+		var value interface{}
+		if err := json.Unmarshal(rawValue, &value); err != nil {
+			utils.Warn("Failed to unmarshal setting %s: %v", key, err)
+			continue
+		}
+
+		switch {
+		case key == "theme":
+			response["theme"] = value
+		case strings.HasPrefix(key, "notifications."):
+			subKey := strings.TrimPrefix(key, "notifications.")
+			switch subKey {
+			case "emailAlerts":
+				notifications["email_alerts"] = value
+			case "pushNotifications":
+				notifications["push_alerts"] = value
+			case "alertFrequency":
+				notifications["alert_frequency"] = value
+			}
+		case strings.HasPrefix(key, "dashboard."):
+			subKey := strings.TrimPrefix(key, "dashboard.")
+			switch subKey {
+			case "refreshInterval":
+				dashboard["refresh_interval"] = value
+			case "defaultTimeRange":
+				dashboard["default_time_range"] = value
+			case "showSystemMetrics":
+				dashboard["show_system_metrics"] = value
+			}
+		}
+	}
+
+	// Only include nested objects if they have data
+	if len(notifications) > 0 {
+		response["notifications"] = notifications
+	}
+	if len(dashboard) > 0 {
+		response["dashboard"] = dashboard
+	}
+
+	// Return structured settings
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(settings)
+	json.NewEncoder(w).Encode(response)
 }
 
 // HandleUpdateUserPreferences handles PUT /users/preferences requests to update user settings
@@ -226,15 +273,35 @@ func (s *HttpServer) HandleUpdateUserPreferences(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// Set individual preferences
-	preferences := map[string]interface{}{
-		"theme":         preferencesRequest.Theme,
-		"notifications": preferencesRequest.Notifications,
-		"dashboard":     preferencesRequest.Dashboard,
+	// Flatten preferences into individual key-value pairs
+	flatPreferences := make(map[string]interface{})
+
+	// Add theme
+	if preferencesRequest.Theme != "" {
+		flatPreferences["theme"] = preferencesRequest.Theme
 	}
 
-	// Save each preference
-	for key, value := range preferences {
+	// Flatten notifications - handle detailed notification structure
+	flatPreferences["notifications.emailAlerts"] = preferencesRequest.Notifications.EmailAlerts
+	flatPreferences["notifications.pushNotifications"] = preferencesRequest.Notifications.PushAlerts
+	flatPreferences["notifications.alertFrequency"] = preferencesRequest.Notifications.AlertFrequency
+
+	// Flatten dashboard settings
+	if preferencesRequest.Dashboard != nil {
+		for key, value := range preferencesRequest.Dashboard {
+			switch key {
+			case "refresh_interval":
+				flatPreferences["dashboard.refreshInterval"] = value
+			case "default_time_range":
+				flatPreferences["dashboard.defaultTimeRange"] = value
+			case "show_system_metrics":
+				flatPreferences["dashboard.showSystemMetrics"] = value
+			}
+		}
+	}
+
+	// Save each flattened preference
+	for key, value := range flatPreferences {
 		if value != nil {
 			valueBytes, err := json.Marshal(value)
 			if err != nil {

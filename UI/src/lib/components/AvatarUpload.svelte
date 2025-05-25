@@ -119,8 +119,15 @@
 
 			let result;
 			if (showCropper && cropData.width > 0) {
-				// Use crop endpoint
-				result = await api.cropAvatar(selectedFile, cropData);
+				// First upload the file, then crop it
+				const uploadResult = await api.uploadAvatar(selectedFile);
+				if (uploadResult && uploadResult.success) {
+					// Now crop the uploaded avatar
+					result = await api.cropAvatar(cropData);
+				} else {
+					uploadError = uploadResult?.message || 'Upload failed';
+					return;
+				}
 			} else {
 				// Use simple upload endpoint
 				result = await api.uploadAvatar(selectedFile);
