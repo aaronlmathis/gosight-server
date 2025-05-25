@@ -3,6 +3,8 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { browser } from '$app/environment';
+	import { auth } from '$lib/stores/auth';
+	import Navigation from '$lib/components/Navigation.svelte';
 	import Navbar from '$lib/components/Navbar.svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import { darkMode, user, activeAlertsCount } from '$lib/stores';
@@ -14,10 +16,15 @@
 	// Initialize stores with server data
 	$: if (data.user) {
 		user.set(data.user);
+		// Also set user in auth store if we have user data from server
+		auth.setUser(data.user);
 	}
 
 	// Initialize theme
-	onMount(() => {
+	onMount(async () => {
+		// Initialize auth store to check for existing session
+		await auth.init();
+
 		// Initialize theme
 		const savedTheme = localStorage.getItem('color-theme');
 		const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -42,7 +49,7 @@
 		});
 
 		// Initialize WebSocket connections for real-time updates
-		if (browser && data.user) {
+		if (browser && (data.user || $auth.isAuthenticated)) {
 			// WebSocket connections are already initialized via imports
 			// Individual pages will connect to their specific WebSocket endpoints as needed
 		}
@@ -54,35 +61,41 @@
 	});
 
 	$: currentPath = $page.url.pathname;
+	$: isAuthPage = currentPath.startsWith('/auth');
 </script>
 
 <svelte:head>
 	<title>{data.title || 'GoSight'}</title>
 </svelte:head>
 
-<div class="min-h-screen bg-white dark:bg-gray-900">
-	<!-- Alert spacer for notifications -->
-	<div id="alert-spacer" class="h-0 transition-all duration-300"></div>
+{#if isAuthPage}
+	<!-- Auth pages use their own layout -->
+	<slot />
+{:else}
+	<div class="min-h-screen bg-white dark:bg-gray-900">
+		<!-- Alert spacer for notifications -->
+		<div id="alert-spacer" class="h-0 transition-all duration-300"></div>
 
-	<!-- Top Navbar -->
-	<Navbar user={data.user} />
+		<!-- Top Navbar -->
+		<Navbar />
 
-	<!-- Sidebar -->
-	<Sidebar {currentPath} />
+		<!-- Sidebar -->
+		<Sidebar {currentPath} />
 
-	<!-- Sidebar backdrop for mobile -->
-	<div
-		class="fixed inset-0 z-10 hidden bg-gray-900/50 dark:bg-gray-900/90"
-		id="sidebarBackdrop"
-	></div>
+		<!-- Sidebar backdrop for mobile -->
+		<div
+			class="fixed inset-0 z-10 hidden bg-gray-900/50 dark:bg-gray-900/90"
+			id="sidebarBackdrop"
+		></div>
 
-	<!-- Main content -->
-	<main class="relative pt-16 lg:pl-64">
-		<div class="p-4">
-			<slot />
-		</div>
-	</main>
-</div>
+		<!-- Main content -->
+		<main class="relative pt-16 lg:pl-64">
+			<div class="p-4">
+				<slot />
+			</div>
+		</main>
+	</div>
+{/if}
 
 <style>
 	:global(.sidebar-link::before) {

@@ -122,17 +122,20 @@ this.api = api;
 		type?: string;
 		status?: string;
 		hostname?: string;
+		endpointID?: string;
+		hostID?: string;
+		limit?: number;
 	}): Promise<Endpoint[]> {
 		const searchParams = appendSearchParams(new URLSearchParams(), params ?? {});
 		const query = searchParams.toString();
 		const response = await this.api.request(`/endpoints${query ? `?${query}` : ''}`);
-		// Backend returns { data: Endpoint[] } structure
-		return (response as any).data || [];
+		// Backend returns array directly, not wrapped in data object
+		return Array.isArray(response) ? response : [];
+	}	async get(id: string) {
+		// Backend doesn't have /endpoints/{id} route, use query parameter instead
+		const response = await this.getAll({ endpointID: id });
+		return { data: response[0] || null };
 	}
-
-async get(id: string) {
-return this.api.request(`/endpoints/${id}`);
-}
 
 async getByType(type: 'hosts' | 'containers', params?: any) {
 const searchParams = appendSearchParams(new URLSearchParams(), params ?? {});
@@ -370,12 +373,21 @@ private api: ApiClient;
 
 constructor(api: ApiClient) {
 this.api = api;
-}
+}	async login(credentials: { username: string; password: string }) {
+		return this.api.request('/auth/login', {
+			method: 'POST',
+			body: JSON.stringify(credentials)
+		});
+	}
 
-async login(credentials: { username: string; password: string }) {
-return this.api.request('/auth/login', {
+	async getProviders() {
+		return this.api.request('/auth/providers');
+	}
+
+	async verifyMFA(mfaData: { code: string; remember?: boolean }) {
+return this.api.request('/auth/mfa/verify', {
 method: 'POST',
-body: JSON.stringify(credentials)
+body: JSON.stringify(mfaData)
 });
 }
 
@@ -394,6 +406,14 @@ method: 'POST'
 
 async getCurrentUser() {
 return this.api.request('/auth/me');
+}	async getUserProfile() {
+		// The profile data is included in the /auth/me response, so we can extract it from there
+		const currentUser: any = await this.getCurrentUser();
+		return currentUser?.profile || {};
+	}
+
+async getUserSettings() {
+return this.getUserPreferences();
 }
 
 async updateProfile(profileData: any) {
@@ -419,6 +439,63 @@ return this.api.request('/users/preferences', {
 method: 'PUT',
 body: JSON.stringify(preferences)
 });
+}
+
+async uploadAvatar(file: File) {
+const formData = new FormData();
+formData.append('avatar', file);
+
+try {
+const response = await fetch('/api/v1/users/avatar', {
+method: 'POST',
+credentials: 'include',
+body: formData,
+// Don't set Content-Type - let the browser set it with the boundary
+});
+
+if (!response.ok) {
+const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+}
+
+return await response.json();
+} catch (error) {
+console.error('Avatar upload error:', error);
+throw error;
+}
+}
+
+async cropAvatar(cropData: { x: number; y: number; width: number; height: number }): Promise<{ success: boolean; avatar_url: string; message: string }> {
+    try {
+        const response = await fetch('/api/v1/users/avatar/crop', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify(cropData),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Avatar crop error:', error);
+        throw error;
+    }
+}
+
+async deleteAvatar() {
+return this.api.request('/users/avatar', {
+method: 'DELETE'
+});
+}
+
+async getUploadLimits() {
+return this.api.request('/upload/limits');
 }
 }
 
@@ -593,8 +670,27 @@ async getCurrentUser() {
 return this.auth.getCurrentUser();
 }
 
-async updateProfile(profileData: any) {
-return this.auth.updateProfile(profileData);
+async updateProfile(data: { full_name: string; phone: string }): Promise<{ success: boolean; message: string }> {
+    try {
+        const response = await fetch('/api/v1/users/profile', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Profile update error:', error);
+        throw error;
+    }
 }
 
 async updatePassword(passwordData: any) {
@@ -605,8 +701,28 @@ async getUserPreferences() {
 return this.auth.getUserPreferences();
 }
 
+async getUserSettings() {
+return this.auth.getUserSettings();
+}
+
 async updateUserPreferences(preferences: any) {
 return this.auth.updateUserPreferences(preferences);
+}
+
+async cropAvatar(cropData: { x: number; y: number; width: number; height: number }) {
+return this.auth.cropAvatar(cropData);
+}
+
+async uploadAvatar(file: File) {
+return this.auth.uploadAvatar(file);
+}
+
+async deleteAvatar() {
+return this.auth.deleteAvatar();
+}
+
+async getUploadLimits() {
+return this.auth.getUploadLimits();
 }
 
 // Report methods for backward compatibility

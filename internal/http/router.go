@@ -38,142 +38,92 @@ func (s *HttpServer) withAccessLog(h http.Handler) http.Handler {
 	return gosightauth.AccessLogMiddleware(h)
 }
 
-// secure wraps a handler with auth, permission check, and access logging.
-func (s *HttpServer) secure(permission string, handler http.HandlerFunc) http.Handler {
-	return s.withAuth()(
-		gosightauth.RequirePermission(permission,
-			s.withAccessLog(handler),
-			s.Sys.Stores.Users,
-		),
-	)
+// HandleSvelteKitApp serves the SvelteKit application without permission requirements
+func (s *HttpServer) HandleSvelteKitApp(w http.ResponseWriter, r *http.Request) {
+	// Serve the SvelteKit app's index.html directly from UI/build
+	buildDir := "UI/build"
+	indexPath := filepath.Join(buildDir, "index.html")
+	http.ServeFile(w, r, indexPath)
+}
+
+// HandleSvelteKitAppWithPermission serves the SvelteKit application with permission check
+func (s *HttpServer) HandleSvelteKitAppWithPermission(permission string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Serve the SvelteKit app's index.html directly from UI/build
+		buildDir := "UI/build"
+		indexPath := filepath.Join(buildDir, "index.html")
+		http.ServeFile(w, r, indexPath)
+	}
 }
 
 // setupRoutes sets up the routes for the HTTP server.
-// It includes routes for static files, authentication, alerts, logs, metric explorer, activity, endpoints, network devices, API, and index.
-// It also includes routes for websockets.
+// It includes routes for static files, authentication, API, websockets, and a catch-all SvelteKit handler.
 func (s *HttpServer) setupRoutes() {
 	s.setupStaticRoutes()
 	s.setupAuthRoutes()
-	s.setupAlertsRoutes()
-	s.setupLogRoutes()
-	s.setupMetricExplorerRoutes()
-	s.setupActivityRoutes()
-	s.setupEndpointRoutes()
-	s.setupNetworkDevicesRoutes()
 	s.setupAPIRoutes()
-	s.setupIndexRoutes()
 	s.setupWebSocketRoutes()
+	s.setupSvelteKitRoutes() // Catch-all for dashboard routes - must be last
 }
 
 // setupStaticRoutes sets up the static routes for the HTTP server.
-// It includes routes for serving static files like /js/, /css/, /images/.
+// It includes routes for serving SvelteKit build assets from _app/ directory.
 func (s *HttpServer) setupStaticRoutes() {
-	staticFS := http.FileServer(http.Dir(s.Sys.Cfg.Web.StaticDir))
+	// Serve SvelteKit build assets from UI/build/_app/
+	buildDir := "UI/build"
+	staticFS := http.FileServer(http.Dir(buildDir))
 
-	/*
-		cacheWrapper := func(h http.Handler) http.Handler {
-			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Cache-Control", "public, max-age=86400")
-				h.ServeHTTP(w, r)
-			})
-		}
-	*/
+	// Serve SvelteKit build assets like _app/immutable/ and other static files
+	s.Router.PathPrefix("/_app/").Handler(http.StripPrefix("/", staticFS))
 
-	// Serve static assets like /js/, /css/, /images/ directly from StaticDir
-	// For Production ----
-	//s.Router.PathPrefix("/js/").Handler(http.StripPrefix("/js/", staticFS))
-	//s.Router.PathPrefix("/css/").Handler(http.StripPrefix("/css/", staticFS))
+	// Serve favicon and other root-level static files from the build directory
+	s.Router.Handle("/favicon.png", http.StripPrefix("/", staticFS)).Methods("GET")
 
-	// For local dev
-	serveWithMime := func(prefix string, subdir string, contentTypeMap map[string]string) http.Handler {
-		return http.StripPrefix(prefix, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ext := filepath.Ext(r.URL.Path)
-			if ct, ok := contentTypeMap[ext]; ok {
-				w.Header().Set("Content-Type", ct)
-			}
-			fullPath := filepath.Join(s.Sys.Cfg.Web.StaticDir, subdir, filepath.Base(r.URL.Path))
-			http.ServeFile(w, r, fullPath)
-		}))
+	// Also serve any static images if they exist from the legacy web directory
+	if s.Sys.Cfg.Web.StaticDir != "" {
+		legacyStaticFS := http.FileServer(http.Dir(s.Sys.Cfg.Web.StaticDir))
+		s.Router.PathPrefix("/images/").Handler(http.StripPrefix("/images/", legacyStaticFS))
 	}
 
-	// Register /css/ and /js/
-	s.Router.PathPrefix("/css/").Handler(serveWithMime("/css/", "css", map[string]string{
-		".css": "text/css",
-	}))
-
-	s.Router.PathPrefix("/js/").Handler(serveWithMime("/js/", "js", map[string]string{
-		".js": "application/javascript",
-	}))
-
-	s.Router.PathPrefix("/images/").Handler(http.StripPrefix("/images/", staticFS))
+	// Serve uploaded files (avatars, etc.)
+	uploadsFS := http.FileServer(http.Dir("uploads"))
+	s.Router.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", uploadsFS))
 }
 
 // setupAuthRoutes sets up the authentication routes for the HTTP server.
-// It includes routes for login, logout, MFA, and the callback from the auth provider.
+// It includes only the callback routes for OAuth providers since SvelteKit handles the auth UI.
 // The routes are protected by middleware that checks for injects context and trace identifiers.
 // The routes are also logged for access control.
 func (s *HttpServer) setupAuthRoutes() {
+	withLog := s.withAccessLog
+
+	// OAuth callback routes - these need to be handled by the server, not SvelteKit
+	s.Router.Handle("/login/start", withLog(http.HandlerFunc(s.HandleLoginStart))).Methods("GET")
+	s.Router.Handle("/callback", withLog(http.HandlerFunc(s.HandleCallback))).Methods("GET", "POST")
+
+	// Note: /login, /mfa, /logout UI routes are now handled by SvelteKit
+	// The actual auth logic is handled by the API routes in setupAPIRoutes()
+}
+
+// setupSvelteKitRoutes sets up routes for the SvelteKit application.
+// This handles all frontend routes and lets SvelteKit's client-side router handle internal routing.
+// Auth routes are publicly accessible, while dashboard routes require authentication and permissions.
+func (s *HttpServer) setupSvelteKitRoutes() {
 	withAuth := s.withAuth()
 	withLog := s.withAccessLog
 
-	// Public
-	s.Router.Handle("/login", withLog(http.HandlerFunc(s.HandleLogin))).Methods("GET")
-	s.Router.Handle("/login/start", withLog(http.HandlerFunc(s.HandleLoginStart))).Methods("GET")
-	s.Router.Handle("/callback", withLog(http.HandlerFunc(s.HandleCallback))).Methods("GET", "POST")
-	s.Router.Handle("/mfa", withLog(http.HandlerFunc(s.HandleMFA))).Methods("GET", "POST")
+	// Public auth routes - no authentication required
+	// Handle all /auth/* routes publicly
+	s.Router.PathPrefix("/auth/").Handler(withLog(http.HandlerFunc(s.HandleSvelteKitApp))).Methods("GET")
 
-	s.Router.Handle("/logout", withLog(withAuth(http.HandlerFunc(s.HandleLogout)))).Methods("GET")
-}
-
-// setupIndexRoutes sets up the index routes for the HTTP server.
-// It includes routes for the index page and the dashboard page.
-// The routes are protected by middleware that checks for injects context and trace identifiers.
-// The routes are also logged for access control.
-func (s *HttpServer) setupIndexRoutes() {
-	s.Router.Handle("/", s.secure("gosight:dashboard:view", s.HandleIndexPage))
-}
-
-// setupLogRoutes sets up the log routes for the HTTP server.
-// This includes the log explorer page
-func (s *HttpServer) setupLogRoutes() {
-	s.Router.Handle("/logs", s.secure("gosight:dashboard:view", s.HandleLogsPage))
-}
-
-// setupAlertsRoutes sets up the  alerts routes for the HTTP server.
-// This includes the alerts page as well as the rule builder page.
-func (s *HttpServer) setupAlertsRoutes() {
-	s.Router.Handle("/alerts/active", s.secure("gosight:dashboard:view", s.HandleAlertsActivePage))
-	s.Router.Handle("/alerts/history", s.secure("gosight:dashboard:view", s.HandleAlertsHistoryPage))
-	s.Router.Handle("/alerts/rules", s.secure("gosight:dashboard:view", s.HandleAddAlertRulePage))
-	s.Router.Handle("/alerts", s.secure("gosight:dashboard:view", s.HandleAlertsPage))
-}
-
-// setupMetricExplorerRoutes sets up the metric explorer routes for the HTTP server.
-// It includes routes for viewing the metric explorer page and the metric detail page.
-// The routes are protected by middleware that checks for injects context and trace identifiers.
-// The routes are also logged for access control.
-func (s *HttpServer) setupMetricExplorerRoutes() {
-	s.Router.Handle("/metrics", s.secure("gosight:dashboard:view", s.HandleMetricExplorerPage))
-}
-
-// setupActivityRoutes sets up the activity routes for the HTTP server.
-// It includes routes for viewing and managing activity logs.
-// The routes are protected by middleware that checks for injects context and trace identifiers.
-// The routes are also logged for access control.
-
-func (s *HttpServer) setupActivityRoutes() {
-	s.Router.Handle("/activity", s.secure("gosight:dashboard:view", s.HandleActivityPage))
-	s.Router.Handle("/activity/{stream}", s.secure("gosight:dashboard:view", s.HandleEndpointDetail))
-}
-
-// setupEndpointRoutes sets up the endpoint routes for the HTTP server.
-// It includes routes for fetching the endpoint page and the endpoint detail page.
-// The routes are protected by middleware that checks for injects context and trace identifiers.
-// The routes are also logged for access control.
-
-func (s *HttpServer) setupEndpointRoutes() {
-	s.Router.Handle("/endpoints", s.secure("gosight:dashboard:view", s.HandleEndpointPage))
-	s.Router.Handle("/endpoints/{endpoint_id}", s.secure("gosight:dashboard:view", s.HandleEndpointDetail))
+	// Protected dashboard routes - require authentication and permissions
+	// Handle all other routes (including /) with authentication
+	s.Router.PathPrefix("/").Handler(withAuth(
+		gosightauth.RequirePermission("gosight:dashboard:view",
+			withLog(http.HandlerFunc(s.HandleSvelteKitAppWithPermission("gosight:dashboard:view"))),
+			s.Sys.Stores.Users,
+		),
+	)).Methods("GET")
 }
 
 // setupAPIRoutes sets up the API routes for the HTTP server.
@@ -187,6 +137,28 @@ func (s *HttpServer) setupAPIRoutes() {
 	secure := func(permission string, handler http.HandlerFunc) http.Handler {
 		return withAuth(gosightauth.RequirePermission(permission, handler, s.Sys.Stores.Users))
 	}
+
+	// Auth API routes for SvelteKit frontend
+	withLog := s.withAccessLog
+	api.Handle("/auth/providers", withLog(http.HandlerFunc(s.HandleAPIAuthProviders))).Methods("GET")
+	api.Handle("/auth/login", withLog(http.HandlerFunc(s.HandleAPILogin))).Methods("POST")
+	api.Handle("/auth/mfa/verify", withLog(http.HandlerFunc(s.HandleAPIMFAVerify))).Methods("POST")
+	api.Handle("/auth/logout", withLog(withAuth(http.HandlerFunc(s.HandleAPILogout)))).Methods("POST")
+	api.Handle("/auth/me", withLog(withAuth(http.HandlerFunc(s.HandleCurrentUser)))).Methods("GET")
+
+	// User profile and settings endpoints
+	api.Handle("/users/profile", withLog(withAuth(http.HandlerFunc(s.HandleUpdateUserProfile)))).Methods("PUT")
+	api.Handle("/users/password", withLog(withAuth(http.HandlerFunc(s.HandleUpdateUserPassword)))).Methods("PUT")
+	api.Handle("/users/preferences", withLog(withAuth(http.HandlerFunc(s.HandleGetUserPreferences)))).Methods("GET")
+	api.Handle("/users/preferences", withLog(withAuth(http.HandlerFunc(s.HandleUpdateUserPreferences)))).Methods("PUT")
+	api.Handle("/users/me", withLog(withAuth(http.HandlerFunc(s.HandleGetCompleteUser)))).Methods("GET")
+
+	// File upload endpoints
+	api.Handle("/users/avatar", withLog(withAuth(http.HandlerFunc(s.HandleUploadAvatar)))).Methods("POST")
+	api.Handle("/users/avatar", withLog(withAuth(http.HandlerFunc(s.HandleDeleteAvatar)))).Methods("DELETE")
+	api.Handle("/users/avatar/crop", withLog(withAuth(http.HandlerFunc(s.HandleCropAvatar)))).Methods("POST")
+	api.Handle("/upload/limits", withLog(withAuth(http.HandlerFunc(s.HandleGetUploadLimits)))).Methods("GET")
+
 	api.Handle("/network-devices", secure("gosight:dashboard:view", http.HandlerFunc(s.HandleNetworkDevicesAPI))).Methods("GET", "POST")
 	api.Handle("/network-devices/{id}", secure("gosight:dashboard:view", http.HandlerFunc(s.HandleDeleteNetworkDeviceAPI))).Methods("DELETE")
 	api.Handle("/network-devices/{id}", secure("gosight:dashboard:view", http.HandlerFunc(s.HandleUpdateNetworkDeviceAPI))).Methods("PUT")
@@ -255,10 +227,4 @@ func (s *HttpServer) setupWebSocketRoutes() {
 	s.Router.Handle("/ws/logs", withAuth(http.HandlerFunc(s.Sys.WSHub.Logs.ServeWS)))
 	s.Router.Handle("/ws/command", withAuth(http.HandlerFunc(s.Sys.WSHub.Commands.ServeWS)))
 	s.Router.Handle("/ws/process", withAuth(http.HandlerFunc(s.Sys.WSHub.Processes.ServeWS)))
-}
-
-// setupNetworkDevicesRoutes sets up the network devices routes for the HTTP server.
-// It includes routes for the network devices page and the network devices API.
-func (s *HttpServer) setupNetworkDevicesRoutes() {
-	s.Router.Handle("/network-devices", s.secure("gosight:dashboard:view", s.HandleNetworkDevicesPage))
 }

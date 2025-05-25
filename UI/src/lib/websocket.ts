@@ -14,6 +14,7 @@ export class GoSightWebSocket {
 	private maxReconnectAttempts = 5;
 	private reconnectDelay = 1000;
 	private endpoint: string;
+	private endpointId?: string;
 
 	public state: Writable<WebSocketState> = writable({ connected: false });
 	public messages: Writable<any[]> = writable([]);
@@ -23,12 +24,21 @@ export class GoSightWebSocket {
 		// Don't auto-connect, let the manager handle connection
 	}
 
-	public connect() {
+	public connect(endpointId?: string) {
+		this.endpointId = endpointId;
 		try {
 			const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-			this.ws = new WebSocket(`${protocol}//${location.host}/ws/${this.endpoint}`);
+			let wsUrl = `${protocol}//${location.host}/ws/${this.endpoint}`;
+			
+			// Add endpointID query parameter if provided (like original implementation)
+			if (endpointId) {
+				wsUrl += `?endpointID=${encodeURIComponent(endpointId)}`;
+			}
+			
+			this.ws = new WebSocket(wsUrl);
 
 			this.ws.addEventListener('open', () => {
+				console.log(`${this.endpoint} WebSocket connected!`);
 				this.reconnectAttempts = 0;
 				this.state.set({ connected: true });
 			});
@@ -44,7 +54,7 @@ export class GoSightWebSocket {
 			});
 
 			this.ws.addEventListener('message', (event) => {
-				if (event.data === 'ping') return;
+				if (!event.data || event.data === 'ping') return; // ignore dummy pings
 
 				try {
 					const data = JSON.parse(event.data);
@@ -67,7 +77,7 @@ export class GoSightWebSocket {
 
 		setTimeout(() => {
 			this.reconnectAttempts++;
-			this.connect();
+			this.connect(this.endpointId);
 		}, this.reconnectDelay * Math.pow(2, this.reconnectAttempts));
 	}
 
@@ -102,13 +112,13 @@ export const websocketManager = {
   commands: commandsWS,
   processes: processesWS,
 
-  connect() {
-    alertsWS.connect();
-    eventsWS.connect();
-    logsWS.connect();
-    metricsWS.connect();
-    commandsWS.connect();
-    processesWS.connect();
+  connect(endpointId?: string) {
+    alertsWS.connect(); // alerts don't filter by endpoint
+    eventsWS.connect(endpointId);
+    logsWS.connect(endpointId);
+    metricsWS.connect(endpointId);
+    commandsWS.connect(endpointId);
+    processesWS.connect(endpointId);
   },
   
   disconnect() {

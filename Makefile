@@ -20,6 +20,13 @@ BIN_DIR := bin
 SERVER_OUT := $(BIN_DIR)/gosight-server
 
 #---------------------------------------
+# Environment
+#---------------------------------------
+# default config path (relative to this Makefile)
+GOSIGHT_SERVER_CONFIG ?= ../configs/server.yaml
+export GOSIGHT_SERVER_CONFIG
+
+#---------------------------------------
 # Phony targets
 #---------------------------------------
 .PHONY: all server fmt test clean
@@ -28,6 +35,13 @@ SERVER_OUT := $(BIN_DIR)/gosight-server
 all: server
 
 
+#---------------------------------------
+# Run
+#---------------------------------------
+.PHONY: run
+run: server
+	@echo "Running GoSight server with GOSIGHT_SERVER_CONFIG=$(GOSIGHT_SERVER_CONFIG)"
+	sudo GOSIGHT_SERVER_CONFIG=$(GOSIGHT_SERVER_CONFIG) $(SERVER_OUT)
 
 # Build the GoSight server
 server:

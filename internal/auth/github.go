@@ -23,7 +23,7 @@ type GitHubAuth struct {
 func (g *GitHubAuth) StartLogin(w http.ResponseWriter, r *http.Request) {
 	next := r.URL.Query().Get("next")
 	if next == "" {
-		next = "/dashboard"
+		next = "/"
 	}
 
 	state := base64.URLEncoding.EncodeToString([]byte(next))
@@ -57,8 +57,11 @@ func (g *GitHubAuth) HandleCallback(w http.ResponseWriter, r *http.Request) (*us
 	defer resp.Body.Close()
 
 	var githubUser struct {
-		ID    int64  `json:"id"`
-		Email string `json:"email"`
+		ID        int64  `json:"id"`
+		Email     string `json:"email"`
+		Name      string `json:"name"`
+		AvatarURL string `json:"avatar_url"`
+		Login     string `json:"login"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&githubUser); err != nil {
 		return nil, err
@@ -119,10 +122,41 @@ func (g *GitHubAuth) HandleCallback(w http.ResponseWriter, r *http.Request) (*us
 		utils.Info("First-time SSO link: %s → %s/%s", user.Email, user.SSOProvider, user.SSOID)
 	}
 
+	// Update or create user profile with SSO data
+	profile, err := g.Store.GetUserProfile(ctx, user.ID)
+	if err != nil {
+		utils.Debug("Failed to get user profile for %s: %v", user.ID, err)
+		// Create new profile if none exists
+		profile = &usermodel.UserProfile{
+			UserID: user.ID,
+		}
+	}
+
+	// Update profile with GitHub data if not already set
+	updated := false
+	if profile.FullName == "" && githubUser.Name != "" {
+		profile.FullName = githubUser.Name
+		updated = true
+	}
+	if profile.AvatarURL == "" && githubUser.AvatarURL != "" {
+		profile.AvatarURL = githubUser.AvatarURL
+		updated = true
+	}
+
+	// Save profile if updated
+	if updated {
+		err = g.Store.CreateUserProfile(ctx, profile) // Uses UPSERT
+		if err != nil {
+			utils.Warn("Failed to update user profile for %s: %v", user.ID, err)
+		} else {
+			utils.Info("Updated profile for user %s with GitHub SSO data", user.Email)
+		}
+	}
+
 	// Always update last_login
 	user.LastLogin = time.Now()
 	if err := g.Store.SaveUser(ctx, user); err != nil {
-		utils.Warn("⚠Failed to update user login metadata: %v", err)
+		utils.Warn("Failed to update user login metadata: %v", err)
 	}
 
 	// Authorized user

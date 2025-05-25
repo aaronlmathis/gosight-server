@@ -4,6 +4,9 @@ package pgstore
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"fmt"
+	"time"
 
 	"github.com/aaronlmathis/gosight-server/internal/usermodel"
 )
@@ -169,4 +172,148 @@ func (s *PGStore) CreateRole(ctx context.Context, r *usermodel.Role) error { ret
 func (s *PGStore) CreatePermission(ctx context.Context, p *usermodel.Permission) error { return nil }
 func (s *PGStore) AttachPermissionToRole(ctx context.Context, roleID, permID string) error {
 	return nil
+}
+
+// Profile management methods
+
+func (s *PGStore) GetUserProfile(ctx context.Context, userID string) (*usermodel.UserProfile, error) {
+	row := s.db.QueryRowContext(ctx, `
+		SELECT user_id, full_name, phone, avatar_url, updated_at
+		FROM user_profiles
+		WHERE user_id = $1
+	`, userID)
+
+	profile := &usermodel.UserProfile{}
+	err := row.Scan(&profile.UserID, &profile.FullName, &profile.Phone, &profile.AvatarURL, &profile.UpdatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Return empty profile if none exists
+			return &usermodel.UserProfile{UserID: userID}, nil
+		}
+		return nil, err
+	}
+	return profile, nil
+}
+
+func (s *PGStore) CreateUserProfile(ctx context.Context, profile *usermodel.UserProfile) error {
+	query := `
+		INSERT INTO user_profiles (user_id, full_name, phone, avatar_url, updated_at)
+		VALUES ($1, $2, $3, $4, NOW())
+		ON CONFLICT (user_id) 
+		DO UPDATE SET 
+			full_name = EXCLUDED.full_name,
+			phone = EXCLUDED.phone,
+			avatar_url = EXCLUDED.avatar_url,
+			updated_at = NOW()
+	`
+
+	_, err := s.db.ExecContext(ctx, query, profile.UserID, profile.FullName, profile.Phone, profile.AvatarURL)
+	return err
+}
+
+func (s *PGStore) UpdateUserProfile(ctx context.Context, profile *usermodel.UserProfile) error {
+	profile.UpdatedAt = time.Now()
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE user_profiles
+		SET full_name = $2, phone = $3, avatar_url = $4, updated_at = $5
+		WHERE user_id = $1
+	`, profile.UserID, profile.FullName, profile.Phone, profile.AvatarURL, profile.UpdatedAt)
+	return err
+}
+
+// Settings management methods
+
+func (s *PGStore) GetUserSettings(ctx context.Context, userID string) (usermodel.UserSettings, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT key, value
+		FROM user_settings
+		WHERE user_id = $1
+	`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	settings := make(usermodel.UserSettings)
+	for rows.Next() {
+		var key string
+		var value json.RawMessage
+		if err := rows.Scan(&key, &value); err != nil {
+			return nil, err
+		}
+		settings[key] = value
+	}
+	return settings, nil
+}
+
+func (s *PGStore) GetUserSetting(ctx context.Context, userID, key string) (*usermodel.UserSetting, error) {
+	row := s.db.QueryRowContext(ctx, `
+		SELECT user_id, key, value
+		FROM user_settings
+		WHERE user_id = $1 AND key = $2
+	`, userID, key)
+
+	setting := &usermodel.UserSetting{}
+	err := row.Scan(&setting.UserID, &setting.Key, &setting.Value)
+	if err != nil {
+		return nil, err
+	}
+	return setting, nil
+}
+
+func (s *PGStore) SetUserSetting(ctx context.Context, userID, key string, value []byte) error {
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO user_settings (user_id, key, value)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (user_id, key) DO UPDATE SET
+			value = EXCLUDED.value
+	`, userID, key, value)
+	return err
+}
+
+func (s *PGStore) DeleteUserSetting(ctx context.Context, userID, key string) error {
+	_, err := s.db.ExecContext(ctx, `
+		DELETE FROM user_settings
+		WHERE user_id = $1 AND key = $2
+	`, userID, key)
+	return err
+}
+
+// Password management
+
+func (s *PGStore) UpdateUserPassword(ctx context.Context, userID, passwordHash string) error {
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE users
+		SET password_hash = $2
+		WHERE id = $1
+	`, userID, passwordHash)
+	return err
+}
+
+// Complete user operations
+
+func (s *PGStore) GetCompleteUser(ctx context.Context, userID string) (*usermodel.CompleteUser, error) {
+	// Get the base user
+	user, err := s.GetUserByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	// Get the user profile
+	profile, err := s.GetUserProfile(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user profile: %w", err)
+	}
+
+	// Get the user settings
+	settings, err := s.GetUserSettings(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user settings: %w", err)
+	}
+
+	return &usermodel.CompleteUser{
+		User:     user,
+		Profile:  profile,
+		Settings: settings,
+	}, nil
 }

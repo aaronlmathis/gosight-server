@@ -116,6 +116,21 @@ CREATE TABLE public.users (
     last_name text
 );
 
+CREATE TABLE user_profiles (
+  user_id     BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  full_name   TEXT,
+  phone       TEXT,
+  avatar_url  TEXT,          -- store external URL/S3 key, not BLOB
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- User-specific key/value or JSONB config table
+CREATE TABLE user_settings (
+  user_id   BIGINT REFERENCES users(id) ON DELETE CASCADE,
+  key       TEXT NOT NULL,
+  value     JSONB,           -- you can also use TEXT if all simple strings
+  PRIMARY KEY (user_id, key)
+);
 
 --
 -- Name: agents agents_endpoint_id_key; Type: CONSTRAINT; Schema: public; Owner: -

@@ -15,6 +15,39 @@ export interface User {
 	updatedAt?: string;
 	updated_at?: string;
 	last_login?: string;
+	profile?: UserProfile;
+}
+
+// User Profile types
+export interface UserProfile {
+	full_name?: string;
+	phone?: string;
+	avatar_url?: string;
+}
+
+export interface ProfileUpdateRequest {
+	full_name?: string;
+	phone?: string;
+}
+
+export interface PasswordChangeRequest {
+	current_password: string;
+	new_password: string;
+	confirm_password: string;
+}
+
+export interface UserPreferences {
+	theme?: string;
+	notifications?: boolean | {
+		email_alerts?: boolean;
+		push_alerts?: boolean;
+		alert_frequency?: string;
+	};
+	dashboard?: {
+		refresh_interval?: number;
+		default_time_range?: string;
+		show_system_metrics?: boolean;
+	};
 }
 
 // Layout data type
@@ -28,21 +61,35 @@ export interface LayoutData {
 // Alert types
 export interface Alert {
 	id: string;
+	rule_id: string;
+	endpoint_id?: string;
+	state: string; // "ok", "firing", "resolved", "no_data"
+	previous: string; // previous state
+	scope: string; // "global", "endpoint", "agent", "user", "cloud" etc
+	target: string; // e.g. "endpoint_id", "agent_id", "user_id"
+	first_fired: string; // when it first started firing
+	last_fired: string; // when it last evaluated as firing
+	last_ok: string; // last time condition returned OK
+	last_value: number; // most recent value
+	level: string; // from rule (info/warning/critical)
+	message: string; // expanded from template
+	labels?: Record<string, string>;
+	resolved_at?: string; // when it was resolved
+	
+	// Legacy fields for backwards compatibility
 	name?: string;
 	title?: string;
 	description?: string;
-	severity: 'low' | 'medium' | 'high';
-	status: 'active' | 'resolved' | 'acknowledged';
+	severity?: 'low' | 'medium' | 'high';
+	status?: 'active' | 'resolved' | 'acknowledged';
 	createdAt?: string;
 	created_at?: string;
 	updatedAt?: string;
 	updated_at?: string;
 	resolvedAt?: string;
-	resolved_at?: string;
 	source?: string;
-	endpoint_id?: string;
-	endpoint_name?: string;
 	endpointId?: string;
+	endpoint_name?: string;
 	conditions?: AlertCondition[];
 	notifications?: AlertNotification[];
 }
@@ -152,10 +199,29 @@ export interface AlertNotification {
 }
 
 // Endpoint types
+// Endpoint from API (raw format)
+export interface EndpointApiResponse {
+	id: string;
+	hostname: string;
+	ip?: string;
+	arch?: string;
+	last_seen?: string;
+	os: string;
+	status: string;
+	type: string;
+	uptime?: number;
+	version?: string;
+	agent_id?: string;
+	host_id?: string;
+	labels?: Record<string, string>;
+}
+
+// Endpoint for frontend use (normalized format)
 export interface Endpoint {
 	id: string;
 	name: string;
 	hostname: string;
+	ip?: string;
 	ipAddress?: string;
 	ip_address?: string;
 	port: number;
@@ -205,17 +271,19 @@ export interface MetricDataPoint {
 // Event types
 export interface Event {
 	id: string;
-	type: string;
-	source: string;
+	level: string; // info, warning, critical
+	type: string; // event type (system / alert)
+	category: string; // metric, log, system, security
 	message: string;
-	description?: string;
-	severity: 'info' | 'warning' | 'error' | 'critical';
+	source: string;
+	scope: string; // "endpoint", "system", etc.
+	target: string; // "host-123", "gosight-core", etc.
 	timestamp: string;
 	endpointId?: string;
 	endpoint_id?: string;
 	endpoint_name?: string;
 	user_name?: string;
-	metadata?: Record<string, any>;
+	meta?: Record<string, any>;
 }
 
 // Log types

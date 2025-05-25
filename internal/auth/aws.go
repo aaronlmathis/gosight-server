@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/aaronlmathis/gosight-server/internal/store/userstore"
@@ -25,7 +27,7 @@ type AWSAuth struct {
 func (a *AWSAuth) StartLogin(w http.ResponseWriter, r *http.Request) {
 	next := r.URL.Query().Get("next")
 	if next == "" {
-		next = "/dashboard"
+		next = "/"
 	}
 
 	state := base64.URLEncoding.EncodeToString([]byte(next))
@@ -44,16 +46,39 @@ func (a *AWSAuth) HandleCallback(w http.ResponseWriter, r *http.Request) (*userm
 	}
 
 	client := a.OAuthConfig.Client(ctx, token)
-	// AWS Cognito's userinfo endpoint
-	resp, err := client.Get("https://cognito-idp." + a.OAuthConfig.Endpoint.AuthURL[8:]) // Extract region from AuthURL
+
+	// Build the correct userinfo endpoint from the config
+	// Extract the UserPoolID and Region from the OAuth config
+	userInfoURL := ""
+	if authURL := a.OAuthConfig.Endpoint.AuthURL; authURL != "" {
+		// Parse the auth URL to extract the domain
+		// Format: https://{userPoolDomain}.auth.{region}.amazoncognito.com/oauth2/authorize
+		start := strings.Index(authURL, "://") + 3
+		end := strings.Index(authURL[start:], "/")
+		if end > 0 {
+			domain := authURL[start : start+end]
+			userInfoURL = "https://" + domain + "/oauth2/userInfo"
+		}
+	}
+
+	if userInfoURL == "" {
+		return nil, errors.New("unable to construct AWS Cognito userinfo endpoint")
+	}
+
+	resp, err := client.Get(userInfoURL)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	var userInfo struct {
-		Sub   string `json:"sub"`   // AWS Cognito User ID
-		Email string `json:"email"` // User's email
+		Sub           string `json:"sub"`         // AWS Cognito User ID
+		Email         string `json:"email"`       // User's email
+		Name          string `json:"name"`        // Full name
+		GivenName     string `json:"given_name"`  // First name
+		FamilyName    string `json:"family_name"` // Last name
+		PreferredName string `json:"preferred_username"`
+		Picture       string `json:"picture"` // Profile picture URL
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
 		return nil, err
@@ -76,6 +101,42 @@ func (a *AWSAuth) HandleCallback(w http.ResponseWriter, r *http.Request) (*userm
 		user.SSOID = userInfo.Sub
 		user.SSOProvider = "aws"
 		utils.Info("First-time SSO link: %s → %s/%s", user.Email, user.SSOProvider, user.SSOID)
+	}
+
+	// Update or create user profile with SSO data
+	profile, err := a.Store.GetUserProfile(ctx, user.ID)
+	if err != nil {
+		utils.Debug("Failed to get user profile for %s: %v", user.ID, err)
+		// Create new profile if none exists
+		profile = &usermodel.UserProfile{
+			UserID: user.ID,
+		}
+	}
+
+	// Update profile with AWS data if not already set
+	updated := false
+	if profile.FullName == "" {
+		if userInfo.Name != "" {
+			profile.FullName = userInfo.Name
+			updated = true
+		} else if userInfo.GivenName != "" || userInfo.FamilyName != "" {
+			profile.FullName = strings.TrimSpace(userInfo.GivenName + " " + userInfo.FamilyName)
+			updated = true
+		}
+	}
+	if profile.AvatarURL == "" && userInfo.Picture != "" {
+		profile.AvatarURL = userInfo.Picture
+		updated = true
+	}
+
+	// Save profile if updated
+	if updated {
+		err = a.Store.CreateUserProfile(ctx, profile) // Uses UPSERT
+		if err != nil {
+			utils.Warn("Failed to update user profile for %s: %v", user.ID, err)
+		} else {
+			utils.Info("Updated profile for user %s with AWS SSO data", user.Email)
+		}
 	}
 
 	// Always update last_login

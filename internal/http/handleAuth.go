@@ -55,7 +55,8 @@ func (s *HttpServer) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	handler, ok := s.Sys.Auth[provider]
 
 	if !ok {
-		http.Error(w, "invalid provider", http.StatusBadRequest)
+		// For SvelteKit frontend, redirect to login with error parameter
+		http.Redirect(w, r, "/auth/login?error=invalid_provider", http.StatusSeeOther)
 		return
 	}
 
@@ -74,19 +75,21 @@ func (s *HttpServer) HandleCallback(w http.ResponseWriter, r *http.Request) {
 				"provider":   provider,
 				"ip":         utils.GetClientIP(r),
 				"user_agent": r.UserAgent(),
-				"reason":     "SSO callback error",
-				"timestamp":  time.Now().Format(time.RFC3339),
+
+				"reason":    "SSO callback error",
+				"timestamp": time.Now().Format(time.RFC3339),
 			},
 		})
 		SetFlash(w, "Invalid username or password")
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 		return
 	}
 
 	user, err = s.Sys.Stores.Users.GetUserWithPermissions(r.Context(), user.ID)
 	if err != nil {
 		utils.Error("Failed to load roles for user %s: %v", user.Email, err)
-		http.Error(w, "failed to load user roles", http.StatusInternalServerError)
+		// For SvelteKit frontend, redirect to login with error parameter
+		http.Redirect(w, r, "/auth/login?error=user_load_failed", http.StatusSeeOther)
 		return
 	}
 
@@ -126,7 +129,7 @@ func (s *HttpServer) HandleCallback(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 
-		http.Redirect(w, r, "/mfa", http.StatusSeeOther)
+		http.Redirect(w, r, "/auth/mfa", http.StatusSeeOther)
 		return
 	}
 
@@ -199,7 +202,7 @@ func (s *HttpServer) HandleMFA(w http.ResponseWriter, r *http.Request) {
 		userID, err := gosightauth.LoadPendingMFA(r)
 		if err != nil || userID == "" {
 			utils.Debug("No pending MFA for %s", userID)
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 			return
 		}
 		utils.Debug("Code Check for %s", userID)
@@ -308,7 +311,7 @@ func (s *HttpServer) HandleLogout(w http.ResponseWriter, r *http.Request) {
 			"user_agent": r.UserAgent(),
 		},
 	})
-	http.Redirect(w, r, "/login", http.StatusSeeOther)
+	http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 }
 
 func (s *HttpServer) createFinalSessionAndRedirect(w http.ResponseWriter, r *http.Request, user *usermodel.User) {
@@ -340,22 +343,16 @@ func (s *HttpServer) createFinalSessionAndRedirect(w http.ResponseWriter, r *htt
 			next = string(decoded)
 		}
 	}
-	if c, err := r.Cookie("pending_next"); err == nil {
+	if c, err := r.Cookie("pending_next"); err == nil && c.Value != "" {
 		next = c.Value
 	}
-	// Validate that the next URL is local
+
+	// Validate that the next URL is safe and local
 	next = strings.ReplaceAll(next, "\\", "/") // Normalize backslashes
-	allowedPaths := map[string]bool{
-		"/":          true,
-		"/dashboard": true,
-		"/profile":   true,
-		"/alerts":    true,
-		"/logs":      true,
-		"/events":    true,
-		"/metrics":   true,
-	}
-	if _, ok := allowedPaths[next]; !ok {
+	if !strings.HasPrefix(next, "/") || strings.HasPrefix(next, "//") ||
+		strings.HasPrefix(next, "/\\") || strings.Contains(next, "..") {
 		next = "/"
 	}
+
 	http.Redirect(w, r, next, http.StatusSeeOther)
 }

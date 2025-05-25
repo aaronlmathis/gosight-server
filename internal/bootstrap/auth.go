@@ -67,7 +67,21 @@ func buildAuthProviders(cfg *config.Config, store userstore.UserStore) (map[stri
 				OAuthConfig: cfg.Auth.Google.ToOAuthConfig(), // helper to build *oauth2.Config
 				Store:       store,
 			}
-
+		case "github":
+			providers["github"] = &gosightauth.GitHubAuth{
+				OAuthConfig: cfg.Auth.GitHub.ToOAuthConfig(), // helper to build *oauth2.Config
+				Store:       store,
+			}
+		case "azure":
+			providers["azure"] = &gosightauth.AzureAuth{
+				OAuthConfig: cfg.Auth.Azure.ToOAuthConfig(), // helper to build *oauth2.Config
+				Store:       store,
+			}
+		case "aws":
+			providers["aws"] = &gosightauth.AWSAuth{
+				OAuthConfig: cfg.Auth.AWS.ToOAuthConfig(), // helper to build *oauth2.Config
+				Store:       store,
+			}
 		default:
 			return nil, fmt.Errorf("unsupported auth provider: %s", name)
 		}
