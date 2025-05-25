@@ -35,6 +35,7 @@ import (
 	"time"
 
 	"github.com/aaronlmathis/gosight-shared/model"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 // QueryInstant fetches the latest data points for a given metric with optional label filters.
@@ -350,9 +351,20 @@ func (v *VictoriaStore) QueryMultiRange(metrics []string, start, end time.Time, 
 }
 
 // FetchDimensionsForMetric queries VictoriaMetrics for a given metric and extracts dimension keys.
-func (v *VictoriaStore) FetchDimensionsForMetric(metric string) ([]string, error) {
-	queryURL := fmt.Sprintf("%s/api/v1/query?query=%s", v.url, url.QueryEscape(metric))
-
+func (v *VictoriaStore) FetchDimensionsForMetric(namespace, subnamespace, metricName string) ([]string, error) {
+	// after – assuming you've added namespace & subnamespace parameters to your function:
+	promql := fmt.Sprintf(
+		`%s{namespace="%s",subnamespace="%s"}`,
+		metricName,
+		namespace,
+		subnamespace,
+	)
+	queryURL := fmt.Sprintf(
+		"%s/api/v1/query?query=%s",
+		v.url,
+		url.QueryEscape(promql),
+	)
+	utils.Debug("FetchDimensionsForMetric URL: %s", queryURL)
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Get(queryURL)
 	if err != nil {
@@ -402,7 +414,7 @@ func (v *VictoriaStore) FetchDimensionsForMetric(metric string) ([]string, error
 	}
 
 	if len(dimSet) == 0 {
-		return nil, fmt.Errorf("no dimensions found for metric %s", metric)
+		return nil, fmt.Errorf("no dimensions found for metric %s", metricName)
 	}
 
 	var dims []string

@@ -38,6 +38,6 @@ func (a *APIMetricStore) QueryMultiRange(metrics []string, start, end time.Time,
 	return a.Store.QueryMultiRange(metrics, start, end, step, filters)
 }
 
-func (a *APIMetricStore) FetchDimensionsForMetric(metric string) ([]string, error) {
-	return a.Store.FetchDimensionsForMetric(metric)
+func (a *APIMetricStore) FetchDimensionsForMetric(namespace, subnamespace, metric string) ([]string, error) {
+	return a.Store.FetchDimensionsForMetric(namespace, subnamespace, metric)
 }

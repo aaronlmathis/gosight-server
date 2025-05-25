@@ -22,6 +22,7 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 package cache
 
 import (
+	"strings"
 	"sync"
 	"time"
 
@@ -189,7 +190,8 @@ func (c *tagCache) GetTagsForEndpoint(endpointID string) map[string]StringSet {
 	return clone
 }
 
-// GetTagsForEndpoint retrieves a flattened copy of the tags for a specific endpoint if Env = dev, testing.... then return env: dev, env: testing
+// GetFlattenedTagsForEndpoint retrieves a flattened copy of the tags for a specific endpoint
+// Keys are normalized for VictoriaMetrics: lowercase and spaces replaced with underscores
 func (c *tagCache) GetFlattenedTagsForEndpoint(endpointID string) map[string]string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -199,7 +201,9 @@ func (c *tagCache) GetFlattenedTagsForEndpoint(endpointID string) map[string]str
 
 	for k, set := range source {
 		for val := range set {
-			flat[k] = val // take first value found
+			// Normalize key for VictoriaMetrics: lowercase and replace spaces with underscores
+			normalizedKey := strings.ToLower(strings.ReplaceAll(k, " ", "_"))
+			flat[normalizedKey] = val // take first value found
 			break
 		}
 	}

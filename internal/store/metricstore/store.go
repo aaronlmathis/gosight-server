@@ -41,6 +41,6 @@ type MetricStore interface {
 	QueryRange(metric string, start, end time.Time, step string, filters map[string]string) ([]model.Point, error)
 	QueryMultiInstant(metricNames []string, filters map[string]string) ([]model.MetricRow, error)
 	QueryMultiRange(metrics []string, start, end time.Time, step string, filters map[string]string) ([]model.MetricRow, error)
-	FetchDimensionsForMetric(metric string) ([]string, error)
+	FetchDimensionsForMetric(namespace, subnamespace, metricName string) ([]string, error)
 	ListLabelValues(label string, contains string) ([]string, error)
 }
