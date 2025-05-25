@@ -5,6 +5,7 @@
 	import { formatDate } from '$lib/utils';
 	import { User, Settings, Save, Eye, EyeOff, AlertCircle } from 'lucide-svelte';
 	import type { User as UserType } from '$lib/types';
+	import AvatarUpload from '$lib/components/AvatarUpload.svelte';
 
 	let currentUser: UserType | null = null;
 	let activeTab = 'profile';
@@ -13,8 +14,14 @@
 	let message = '';
 	let error = '';
 
-	// Profile form data
+	// Profile form data - only include fields we can actually edit
 	let profileData = {
+		full_name: '',
+		phone: ''
+	};
+
+	// Read-only user data (from users table)
+	let userData = {
 		first_name: '',
 		last_name: '',
 		email: '',
@@ -32,8 +39,8 @@
 	let showNewPassword = false;
 	let showConfirmPassword = false;
 
-	// Preferences
-	let preferences = {
+	// Default settings object
+	const defaultSettings = {
 		theme: 'light',
 		notifications: {
 			email_alerts: true,
@@ -47,10 +54,19 @@
 		}
 	};
 
+	// Preferences
+	let preferences = { ...defaultSettings };
+
 	onMount(async () => {
 		if ($auth.user) {
 			currentUser = $auth.user;
+			// Separate editable profile data from read-only user data
 			profileData = {
+				full_name: $auth.user.profile?.full_name || '',
+				phone: $auth.user.profile?.phone || ''
+			};
+
+			userData = {
 				first_name: $auth.user.first_name || '',
 				last_name: $auth.user.last_name || '',
 				email: $auth.user.email || '',
@@ -59,16 +75,102 @@
 		}
 
 		await loadUserPreferences();
+		await loadUserData();
 	});
 
 	async function loadUserPreferences() {
 		try {
 			const response = await api.getUserPreferences();
-			if (response && typeof response === 'object' && 'data' in response && response.data) {
-				preferences = { ...preferences, ...response.data };
+			if (response && typeof response === 'object') {
+				// Update preferences with individual settings from user_settings table
+				if (response.theme) {
+					try {
+						preferences.theme = JSON.parse(response.theme);
+					} catch (e) {
+						console.warn('Failed to parse theme setting:', e);
+						preferences.theme = defaultSettings.theme;
+					}
+				}
+				if (response.notifications) {
+					try {
+						const notificationSettings = JSON.parse(response.notifications);
+						preferences.notifications = {
+							...defaultSettings.notifications,
+							...notificationSettings
+						};
+					} catch (e) {
+						console.warn('Failed to parse notification settings:', e);
+						preferences.notifications = { ...defaultSettings.notifications };
+					}
+				}
+				if (response.dashboard) {
+					try {
+						const dashboardSettings = JSON.parse(response.dashboard);
+						preferences.dashboard = {
+							...defaultSettings.dashboard,
+							...dashboardSettings
+						};
+					} catch (e) {
+						console.warn('Failed to parse dashboard settings:', e);
+						preferences.dashboard = { ...defaultSettings.dashboard };
+					}
+				}
 			}
 		} catch (err) {
 			console.error('Failed to load user preferences:', err);
+			// Reset to defaults on error
+			preferences = { ...defaultSettings };
+		}
+	}
+
+	async function loadUserData() {
+		loading = true;
+		error = '';
+
+		try {
+			// Get current user
+			currentUser = await api.getCurrentUser();
+
+			if (currentUser) {
+				// Populate read-only user data
+				userData = {
+					first_name: currentUser.first_name || '',
+					last_name: currentUser.last_name || '',
+					email: currentUser.email || '',
+					username: currentUser.username || ''
+				};
+
+				// Try to get profile data, but don't fail if it doesn't exist
+				try {
+					const profile = await api.getUserProfile();
+					profileData = {
+						full_name: profile.full_name || '',
+						phone: profile.phone || ''
+					};
+				} catch (profileError) {
+					console.log('No profile found, using defaults');
+					profileData = {
+						full_name: '',
+						phone: ''
+					};
+				}
+
+				// Try to get settings
+				try {
+					const settings = await api.getUserSettings();
+					// Use defaultSettings as fallback
+					const settingsData = { ...defaultSettings, ...settings };
+					console.log('Loaded settings:', settingsData);
+				} catch (settingsError) {
+					console.log('No settings found, using defaults');
+					// settingsData is not used elsewhere, so we can remove this line
+				}
+			}
+		} catch (err) {
+			error = 'Failed to load user data';
+			console.error('Error loading user data:', err);
+		} finally {
+			loading = false;
 		}
 	}
 
@@ -77,14 +179,25 @@
 			saving = true;
 			error = '';
 			message = '';
-			const response = await api.updateProfile(profileData);
+
+			// Send only the editable profile data to the profile endpoint
+			const profileUpdateData = {
+				full_name: profileData.full_name,
+				phone: profileData.phone
+			};
+
+			const response = await api.updateProfile(profileUpdateData);
 			if (response && typeof response === 'object' && 'success' in response && response.success) {
 				message = 'Profile updated successfully';
-				// Update auth store - ensure we have all required fields
+				// Update auth store with new profile data
 				if ($auth.user && $auth.user.id) {
 					auth.setUser({
 						...$auth.user,
-						...profileData,
+						profile: {
+							...($auth.user.profile || {}),
+							full_name: profileData.full_name,
+							phone: profileData.phone
+						},
 						id: $auth.user.id // Ensure id is preserved
 					});
 				}
@@ -173,6 +286,28 @@
 			saving = false;
 		}
 	}
+
+	function handleAvatarUploaded(event: CustomEvent<{ avatar_url: string }>) {
+		// Update the current user's avatar in the auth store
+		if ($auth.user) {
+			const updatedUser = { ...$auth.user, avatar: event.detail.avatar_url };
+			auth.setUser(updatedUser);
+			currentUser = updatedUser;
+		}
+		message = 'Profile picture updated successfully';
+		error = '';
+	}
+
+	function handleAvatarDeleted() {
+		// Remove avatar from the current user in the auth store
+		if ($auth.user) {
+			const updatedUser = { ...$auth.user, avatar: '' };
+			auth.setUser(updatedUser);
+			currentUser = updatedUser;
+		}
+		message = 'Profile picture removed successfully';
+		error = '';
+	}
 </script>
 
 <svelte:head>
@@ -249,6 +384,27 @@
 								</p>
 
 								<form class="mt-6 space-y-6" on:submit|preventDefault={updateProfile}>
+									<!-- Profile Picture Section -->
+									<div class="flex items-center space-x-6">
+										<div>
+											<AvatarUpload
+												currentAvatar={currentUser?.avatar || ''}
+												size="lg"
+												on:uploaded={handleAvatarUploaded}
+												on:deleted={handleAvatarDeleted}
+											/>
+										</div>
+										<div>
+											<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">
+												Profile Picture
+											</h4>
+											<p class="text-sm text-gray-500 dark:text-gray-400">
+												Click on your picture to update or remove it.
+											</p>
+										</div>
+									</div>
+
+									<!-- Read-only user information -->
 									<div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
 										<div>
 											<label
@@ -261,9 +417,13 @@
 												type="text"
 												name="first_name"
 												id="first_name"
-												bind:value={profileData.first_name}
-												class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+												value={userData.first_name}
+												readonly
+												class="mt-1 block w-full cursor-not-allowed rounded-md border-gray-300 bg-gray-50 shadow-sm sm:text-sm dark:border-gray-600 dark:bg-gray-600 dark:text-gray-300"
 											/>
+											<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+												Managed by administrator
+											</p>
 										</div>
 
 										<div>
@@ -277,9 +437,13 @@
 												type="text"
 												name="last_name"
 												id="last_name"
-												bind:value={profileData.last_name}
-												class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+												value={userData.last_name}
+												readonly
+												class="mt-1 block w-full cursor-not-allowed rounded-md border-gray-300 bg-gray-50 shadow-sm sm:text-sm dark:border-gray-600 dark:bg-gray-600 dark:text-gray-300"
 											/>
+											<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+												Managed by administrator
+											</p>
 										</div>
 									</div>
 
@@ -294,9 +458,13 @@
 											type="text"
 											name="username"
 											id="username"
-											bind:value={profileData.username}
-											class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+											value={userData.username}
+											readonly
+											class="mt-1 block w-full cursor-not-allowed rounded-md border-gray-300 bg-gray-50 shadow-sm sm:text-sm dark:border-gray-600 dark:bg-gray-600 dark:text-gray-300"
 										/>
+										<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+											Managed by administrator
+										</p>
 									</div>
 
 									<div>
@@ -310,8 +478,57 @@
 											type="email"
 											name="email"
 											id="email"
-											bind:value={profileData.email}
+											value={userData.email}
+											readonly
+											class="mt-1 block w-full cursor-not-allowed rounded-md border-gray-300 bg-gray-50 shadow-sm sm:text-sm dark:border-gray-600 dark:bg-gray-600 dark:text-gray-300"
+										/>
+										<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+											Managed by administrator
+										</p>
+									</div>
+
+									<!-- Divider -->
+									<div class="border-t border-gray-200 pt-6 dark:border-gray-700">
+										<h4 class="text-md mb-4 font-medium text-gray-900 dark:text-white">
+											Profile Information
+										</h4>
+										<p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+											Update your personal profile information below.
+										</p>
+									</div>
+
+									<!-- Editable profile fields -->
+									<div>
+										<label
+											for="full_name"
+											class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+										>
+											Full Name
+										</label>
+										<input
+											type="text"
+											name="full_name"
+											id="full_name"
+											bind:value={profileData.full_name}
 											class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+											placeholder="Enter your full name"
+										/>
+									</div>
+
+									<div>
+										<label
+											for="phone"
+											class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+										>
+											Phone Number
+										</label>
+										<input
+											type="tel"
+											name="phone"
+											id="phone"
+											bind:value={profileData.phone}
+											class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+											placeholder="Enter your phone number"
 										/>
 									</div>
 
@@ -328,7 +545,7 @@
 											{:else}
 												<Save class="mr-2 h-4 w-4" />
 											{/if}
-											Save Changes
+											Save Profile
 										</button>
 									</div>
 								</form>

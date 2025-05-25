@@ -432,6 +432,49 @@ method: 'PUT',
 body: JSON.stringify(preferences)
 });
 }
+
+async uploadAvatar(file: File) {
+const formData = new FormData();
+formData.append('avatar', file);
+return this.api.request('/users/avatar', {
+method: 'POST',
+body: formData,
+isFormData: true
+});
+}
+
+async cropAvatar(cropData: { x: number; y: number; width: number; height: number }): Promise<{ success: boolean; avatar_url: string; message: string }> {
+    try {
+        const response = await fetch('/api/v1/users/avatar/crop', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify(cropData),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Avatar crop error:', error);
+        throw error;
+    }
+}
+
+async deleteAvatar() {
+return this.api.request('/users/avatar', {
+method: 'DELETE'
+});
+}
+
+async getUploadLimits() {
+return this.api.request('/upload/limits');
+}
 }
 
 export class ApiClient {
@@ -605,8 +648,27 @@ async getCurrentUser() {
 return this.auth.getCurrentUser();
 }
 
-async updateProfile(profileData: any) {
-return this.auth.updateProfile(profileData);
+async updateProfile(data: { full_name: string; phone: string }): Promise<{ success: boolean; message: string }> {
+    try {
+        const response = await fetch('/api/v1/user/profile', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Profile update error:', error);
+        throw error;
+    }
 }
 
 async updatePassword(passwordData: any) {
@@ -619,6 +681,22 @@ return this.auth.getUserPreferences();
 
 async updateUserPreferences(preferences: any) {
 return this.auth.updateUserPreferences(preferences);
+}
+
+async cropAvatar(cropData: { x: number; y: number; width: number; height: number }) {
+return this.auth.cropAvatar(cropData);
+}
+
+async uploadAvatar(file: File) {
+return this.auth.uploadAvatar(file);
+}
+
+async deleteAvatar() {
+return this.auth.deleteAvatar();
+}
+
+async getUploadLimits() {
+return this.auth.getUploadLimits();
 }
 
 // Report methods for backward compatibility

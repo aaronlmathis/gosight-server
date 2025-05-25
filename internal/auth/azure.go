@@ -50,11 +50,21 @@ func (a *AzureAuth) HandleCallback(w http.ResponseWriter, r *http.Request) (*use
 	defer resp.Body.Close()
 
 	var userInfo struct {
-		ID    string `json:"id"`
-		Email string `json:"userPrincipalName"` // Azure AD uses userPrincipalName for email
+		ID                string `json:"id"`
+		Email             string `json:"userPrincipalName"` // Azure AD uses userPrincipalName for email
+		Mail              string `json:"mail"`              // Sometimes mail is used instead
+		DisplayName       string `json:"displayName"`
+		GivenName         string `json:"givenName"`
+		Surname           string `json:"surname"`
+		UserPrincipalName string `json:"userPrincipalName"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
 		return nil, err
+	}
+
+	// Use mail field if userPrincipalName is empty
+	if userInfo.Email == "" && userInfo.Mail != "" {
+		userInfo.Email = userInfo.Mail
 	}
 
 	user, err := a.Store.GetUserByEmail(ctx, userInfo.Email)
@@ -74,6 +84,33 @@ func (a *AzureAuth) HandleCallback(w http.ResponseWriter, r *http.Request) (*use
 		user.SSOID = userInfo.ID
 		user.SSOProvider = "azure"
 		utils.Info("First-time SSO link: %s → %s/%s", user.Email, user.SSOProvider, user.SSOID)
+	}
+
+	// Update or create user profile with SSO data
+	profile, err := a.Store.GetUserProfile(ctx, user.ID)
+	if err != nil {
+		utils.Debug("Failed to get user profile for %s: %v", user.ID, err)
+		// Create new profile if none exists
+		profile = &usermodel.UserProfile{
+			UserID: user.ID,
+		}
+	}
+
+	// Update profile with Azure data if not already set
+	updated := false
+	if profile.FullName == "" && userInfo.DisplayName != "" {
+		profile.FullName = userInfo.DisplayName
+		updated = true
+	}
+
+	// Save profile if updated
+	if updated {
+		err = a.Store.CreateUserProfile(ctx, profile) // Uses UPSERT
+		if err != nil {
+			utils.Warn("Failed to update user profile for %s: %v", user.ID, err)
+		} else {
+			utils.Info("Updated profile for user %s with Azure SSO data", user.Email)
+		}
 	}
 
 	// Always update last_login

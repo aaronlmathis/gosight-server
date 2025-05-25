@@ -84,6 +84,10 @@ func (s *HttpServer) setupStaticRoutes() {
 		legacyStaticFS := http.FileServer(http.Dir(s.Sys.Cfg.Web.StaticDir))
 		s.Router.PathPrefix("/images/").Handler(http.StripPrefix("/images/", legacyStaticFS))
 	}
+
+	// Serve uploaded files (avatars, etc.)
+	uploadsFS := http.FileServer(http.Dir("uploads"))
+	s.Router.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", uploadsFS))
 }
 
 // setupAuthRoutes sets up the authentication routes for the HTTP server.
@@ -141,7 +145,19 @@ func (s *HttpServer) setupAPIRoutes() {
 	api.Handle("/auth/mfa/verify", withLog(http.HandlerFunc(s.HandleAPIMFAVerify))).Methods("POST")
 	api.Handle("/auth/logout", withLog(withAuth(http.HandlerFunc(s.HandleAPILogout)))).Methods("POST")
 	api.Handle("/auth/me", withLog(withAuth(http.HandlerFunc(s.HandleCurrentUser)))).Methods("GET")
-	// Add any other auth endpoints that the frontend expects here
+
+	// User profile and settings endpoints
+	api.Handle("/users/profile", withLog(withAuth(http.HandlerFunc(s.HandleUpdateUserProfile)))).Methods("PUT")
+	api.Handle("/users/password", withLog(withAuth(http.HandlerFunc(s.HandleUpdateUserPassword)))).Methods("PUT")
+	api.Handle("/users/preferences", withLog(withAuth(http.HandlerFunc(s.HandleGetUserPreferences)))).Methods("GET")
+	api.Handle("/users/preferences", withLog(withAuth(http.HandlerFunc(s.HandleUpdateUserPreferences)))).Methods("PUT")
+	api.Handle("/users/me", withLog(withAuth(http.HandlerFunc(s.HandleGetCompleteUser)))).Methods("GET")
+
+	// File upload endpoints
+	api.Handle("/users/avatar", withLog(withAuth(http.HandlerFunc(s.HandleUploadAvatar)))).Methods("POST")
+	api.Handle("/users/avatar", withLog(withAuth(http.HandlerFunc(s.HandleDeleteAvatar)))).Methods("DELETE")
+	api.Handle("/users/avatar/crop", withLog(withAuth(http.HandlerFunc(s.HandleCropAvatar)))).Methods("POST")
+	api.Handle("/upload/limits", withLog(withAuth(http.HandlerFunc(s.HandleGetUploadLimits)))).Methods("GET")
 
 	api.Handle("/network-devices", secure("gosight:dashboard:view", http.HandlerFunc(s.HandleNetworkDevicesAPI))).Methods("GET", "POST")
 	api.Handle("/network-devices/{id}", secure("gosight:dashboard:view", http.HandlerFunc(s.HandleDeleteNetworkDeviceAPI))).Methods("DELETE")

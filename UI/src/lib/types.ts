@@ -15,6 +15,39 @@ export interface User {
 	updatedAt?: string;
 	updated_at?: string;
 	last_login?: string;
+	profile?: UserProfile;
+}
+
+// User Profile types
+export interface UserProfile {
+	full_name?: string;
+	phone?: string;
+	avatar_url?: string;
+}
+
+export interface ProfileUpdateRequest {
+	full_name?: string;
+	phone?: string;
+}
+
+export interface PasswordChangeRequest {
+	current_password: string;
+	new_password: string;
+	confirm_password: string;
+}
+
+export interface UserPreferences {
+	theme?: string;
+	notifications?: boolean | {
+		email_alerts?: boolean;
+		push_alerts?: boolean;
+		alert_frequency?: string;
+	};
+	dashboard?: {
+		refresh_interval?: number;
+		default_time_range?: string;
+		show_system_metrics?: boolean;
+	};
 }
 
 // Layout data type
