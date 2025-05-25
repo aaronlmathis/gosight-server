@@ -144,6 +144,37 @@ type Config struct {
 		Azure      AzureConfig  `yaml:"azure"`
 		GitHub     GitHubConfig `yaml:"github"`
 	} `yaml:"auth"`
+
+	OpenTelemetry OpenTelemetryConfig `yaml:"opentelemetry"`
+}
+
+// OpenTelemetryConfig defines the configuration for OpenTelemetry
+// It includes settings for the OTLP receiver, exporter, and other related options.
+type OpenTelemetryConfig struct {
+	Enabled           bool                           `yaml:"enabled"`
+	ReceiverProtocols OpenTelemetryReceiverProtocols `yaml:"receiver_protocols"`
+	ExporterProtocols OpenTelemetryExporterProtocols `yaml:"exporter_protocols"`
+	MaxMessageSizeMB  int                            `yaml:"max_message_size_mb"`
+}
+
+// OpenTelemetryReceiverProtocols defines the protocols for receiving OpenTelemetry data.
+// It includes configurations for gRPC and HTTP protocols.
+type OpenTelemetryReceiverProtocols struct {
+	GRPC OTLPProtocolConfig `yaml:"grpc"`
+	HTTP OTLPProtocolConfig `yaml:"http"`
+}
+
+// OpenTelemetryExporterProtocols defines the protocols for exporting OpenTelemetry data.
+// It includes configurations for gRPC and HTTP protocols.
+type OpenTelemetryExporterProtocols struct {
+	GRPC OTLPProtocolConfig `yaml:"grpc"`
+	HTTP OTLPProtocolConfig `yaml:"http"`
+}
+
+// OTLPProtocolConfig defines the configuration for an OTLP protocol.
+type OTLPProtocolConfig struct {
+	Enabled  bool   `yaml:"enabled"`
+	Endpoint string `yaml:"endpoint"`
 }
 
 // SyslogCollectionConfig defines the configuration for syslog collection

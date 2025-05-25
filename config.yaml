@@ -21,6 +21,17 @@ tls:
   https_cert_file: "../certs/server-cert.pem"
   https_key_file: "../certs/server-key.pem"
 
+opentelemetry:
+  enabled: true
+  receiver_protocols:
+    grpc:
+      enabled: true
+      endpoint: "0.0.0.0:4317"
+    http:
+      enabled: true
+      endpoint: "0.0.0.0:4318"
+  max_message_size_mb: 10
+
 debug:
   enable_reflection: true
 
