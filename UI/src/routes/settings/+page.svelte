@@ -156,7 +156,6 @@
 						full_name: currentUser.profile.full_name || '',
 						phone: currentUser.profile.phone || ''
 					};
-					console.log('Updated profile data from current user:', profileData);
 				}
 
 				// Try to get settings
@@ -165,9 +164,6 @@
 					if (settings && typeof settings === 'object') {
 						// Merge settings with defaults
 						preferences = { ...defaultSettings, ...settings };
-						console.log('Loaded settings:', preferences);
-					} else {
-						console.log('No settings found, using defaults');
 					}
 				} catch (settingsError) {
 					console.log('Error loading settings, using defaults:', settingsError);
