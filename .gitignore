@@ -48,3 +48,5 @@ logstore/
 generatedocs.sh
 format.sh
 bin/
+uploads/
+UI/ignore/
