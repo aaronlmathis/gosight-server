@@ -81,7 +81,7 @@ func (o *OTelReceiver) setupRoutes() {
 	// Register OTLP routes
 	o.Router.Handle("/v1/metrics", http.HandlerFunc(o.handleMetricIngest)).Methods("POST")
 	o.Router.Handle("/v1/logs", http.HandlerFunc(o.handleLogIngest)).Methods("POST")
-	o.Router.Handle("/v1/trace", http.HandlerFunc(o.handleTraceIngest)).Methods("POST")
+	o.Router.Handle("/v1/traces", http.HandlerFunc(o.handleTraceIngest)).Methods("POST")
 }
 
 // handleMetricIngest processes incoming OTLP metrics requests.
@@ -100,7 +100,11 @@ func (o *OTelReceiver) handleTraceIngest(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "Unsupported method or content type", http.StatusMethodNotAllowed)
 		return
 	}
-	body, _ := io.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to read request body: %v", err), http.StatusInternalServerError)
+		return
+	}
 	defer r.Body.Close()
 
 	var req tracepb.ExportTraceServiceRequest
@@ -113,7 +117,7 @@ func (o *OTelReceiver) handleTraceIngest(w http.ResponseWriter, r *http.Request)
 	// Save trace to store here, for now log it
 	utils.Debug("Received %d spans in trace request", len(spans))
 	for _, span := range spans {
-		utils.Debug("Span: %s - %s", span.Name, span.TraceID)
+		utils.Debug("Span: %s - %s - %v", span.Name, span.TraceID, span)
 	}
 	// Respond with success
 	w.WriteHeader(http.StatusAccepted)
