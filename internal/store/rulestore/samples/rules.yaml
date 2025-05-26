@@ -1,6 +1,6 @@
 - id: "cpu_high_prod"
   name: "High CPU Usage - Production"
-  enabled: true
+  enabled: false
   type: metric
   match:
     endpoint_ids: []

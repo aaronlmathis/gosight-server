@@ -31,9 +31,6 @@
 	};
 	export let metrics: Metric[];
 	export let processes: any[];
-	export let alerts: any[] = [];
-	export let logs: any[] = [];
-	export let events: any[] = [];
 	export let runCommand: (command: string) => void;
 
 	// Modal state for alert rule creation
@@ -51,6 +48,12 @@
 		threshold: 0,
 		duration: 300
 	};
+
+	// Recent data state
+	let recentAlerts: any[] = [];
+	let recentEvents: any[] = [];
+	let loadingAlerts = false;
+	let loadingEvents = false;
 
 	// Element bindings
 	let mainCpuTableBody!: HTMLTableSectionElement;
@@ -131,6 +134,80 @@
 		alert('Add Tag functionality coming soon!');
 	}
 
+	// Utility function to format operating system information
+	function formatOperatingSystem() {
+		if (!hostInfo.summary) {
+			return endpoint.os || 'N/A';
+		}
+
+		const platform = hostInfo.summary.platform || '';
+		const platformVersion = hostInfo.summary.platform_version || '';
+		const os = hostInfo.summary.os || '';
+
+		// Format as "Platform platform_version (os)" or "redhat 9.6 (linux)"
+		if (platform && platformVersion && os) {
+			return `${platform} ${platformVersion} (${os})`;
+		} else if (platform && platformVersion) {
+			return `${platform} ${platformVersion}`;
+		} else if (platform && os) {
+			return `${platform} (${os})`;
+		} else if (platform) {
+			return platform;
+		} else if (os) {
+			return os;
+		}
+
+		// Fallback to endpoint.os if hostInfo.summary doesn't have the data
+		return endpoint.os || 'N/A';
+	}
+
+	// Fetch recent alerts for this endpoint
+	async function fetchRecentAlerts() {
+		if (!endpoint?.id) return;
+
+		try {
+			loadingAlerts = true;
+			const response = await api.alerts.getAll({
+				endpoint_id: endpoint.id,
+				limit: 10,
+				sort: 'last_fired',
+				order: 'desc'
+			});
+			recentAlerts = Array.isArray(response) ? response : [];
+		} catch (error) {
+			console.error('Failed to fetch recent alerts:', error);
+			recentAlerts = [];
+		} finally {
+			loadingAlerts = false;
+		}
+	}
+
+	// Fetch recent events for this endpoint
+	async function fetchRecentEvents() {
+		if (!endpoint?.id) return;
+
+		try {
+			loadingEvents = true;
+			const response = await api.events.getAll({
+				endpoint_id: endpoint.id,
+				limit: 10,
+				sort: 'timestamp'
+			});
+			recentEvents = Array.isArray(response) ? response : [];
+		} catch (error) {
+			console.error('Failed to fetch recent events:', error);
+			recentEvents = [];
+		} finally {
+			loadingEvents = false;
+		}
+	}
+
+	// Load recent data when endpoint changes
+	$: if (endpoint?.id) {
+		fetchRecentAlerts();
+		fetchRecentEvents();
+	}
+
 	// Extract current metric values for display
 	function updateMetricValues(metrics: Metric[]) {
 		if (!metrics || metrics.length === 0) return;
@@ -138,7 +215,7 @@
 		// Find the latest metrics for each type
 		const latestMetrics = metrics.reduce(
 			(acc, metric) => {
-				const key = metric.name;
+				const key = `${metric.namespace}.${metric.subnamespace}.${metric.name}`;
 				if (!acc[key] || new Date(metric.timestamp) > new Date(acc[key].timestamp)) {
 					acc[key] = metric;
 				}
@@ -147,10 +224,27 @@
 			{} as Record<string, Metric>
 		);
 
-		// Update percentage values
-		cpuPercent = latestMetrics.cpu_usage?.value || latestMetrics.cpu_percent?.value || 0;
-		memoryPercent = latestMetrics.memory_usage?.value || latestMetrics.memory_percent?.value || 0;
-		swapPercent = latestMetrics.swap_usage?.value || latestMetrics.swap_percent?.value || 0;
+		// Update percentage values with proper metric names
+		cpuPercent =
+			latestMetrics['System.CPU.usage_percent']?.value ||
+			latestMetrics['system.cpu.usage_percent']?.value ||
+			latestMetrics['System.System.cpu_usage']?.value ||
+			latestMetrics['cpu_usage']?.value ||
+			0;
+
+		memoryPercent =
+			latestMetrics['System.Memory.used_percent']?.value ||
+			latestMetrics['system.memory.used_percent']?.value ||
+			latestMetrics['System.System.memory_usage']?.value ||
+			latestMetrics['memory_usage']?.value ||
+			0;
+
+		swapPercent =
+			latestMetrics['System.Memory.swap_used_percent']?.value ||
+			latestMetrics['system.memory.swap_used_percent']?.value ||
+			latestMetrics['System.System.swap_usage']?.value ||
+			latestMetrics['swap_usage']?.value ||
+			0;
 	}
 
 	// Reactive update: when new metrics arrive, update values
@@ -263,7 +357,7 @@
 									Operating System
 								</dt>
 								<dd class="truncate text-sm font-medium text-gray-900 dark:text-white">
-									{endpoint.os || 'N/A'}
+									{formatOperatingSystem()}
 								</dd>
 							</div>
 						</div>
@@ -322,58 +416,97 @@
 							</div>
 						</div>
 					</div>
-
-					<!-- Additional host info from summary -->
-					{#if hostInfo.summary && Object.keys(hostInfo.summary).length > 0}
-						<div class="mt-6 border-t border-gray-200 pt-4 dark:border-gray-600">
-							<h4 class="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">
-								Additional Information
-							</h4>
-							<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-								{#each Object.entries(hostInfo.summary) as [key, value]}
-									<div
-										class="flex items-center space-x-3 rounded bg-gray-50 p-2 dark:bg-gray-700/30"
-									>
-										<div class="h-2 w-2 flex-shrink-0 rounded-full bg-gray-400"></div>
-										<div class="min-w-0 flex-1">
-											<dt
-												class="text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
-											>
-												{key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
-											</dt>
-											<dd class="truncate text-sm font-medium text-gray-900 dark:text-white">
-												{value || 'N/A'}
-											</dd>
-										</div>
-									</div>
-								{/each}
-							</div>
-						</div>
-					{/if}
 				</div>
 			</div>
-
 			<!-- Quick Stats Summary -->
 			<div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
-				<h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-white">Current Status</h3>
-				<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-					<div class="text-center">
-						<p class="text-2xl font-bold text-blue-600 dark:text-blue-400">
-							{cpuPercent.toFixed(1)}%
-						</p>
-						<p class="text-sm text-gray-500 dark:text-gray-400">CPU Usage</p>
+				<div class="mb-6 flex items-center space-x-2">
+					<Activity size={20} class="text-indigo-500" />
+					<h3 class="text-lg font-medium text-gray-900 dark:text-white">Current Status</h3>
+				</div>
+				<div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+					<!-- CPU Usage Card -->
+					<div
+						class="rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 p-4 dark:from-blue-900/20 dark:to-blue-800/20"
+					>
+						<div class="flex items-center justify-between">
+							<div>
+								<p
+									class="text-xs font-medium tracking-wide text-blue-700 uppercase dark:text-blue-300"
+								>
+									CPU Usage
+								</p>
+								<p class="text-2xl font-bold text-blue-900 dark:text-blue-100">
+									{cpuPercent.toFixed(1)}%
+								</p>
+							</div>
+							<div class="flex-shrink-0">
+								<Cpu size={24} class="text-blue-600 dark:text-blue-400" />
+							</div>
+						</div>
+						<!-- Progress bar -->
+						<div class="mt-3 h-2 w-full rounded-full bg-blue-200 dark:bg-blue-800">
+							<div
+								class="h-2 rounded-full bg-blue-600 transition-all duration-300 dark:bg-blue-400"
+								style="width: {Math.min(cpuPercent, 100)}%"
+							></div>
+						</div>
 					</div>
-					<div class="text-center">
-						<p class="text-2xl font-bold text-green-600 dark:text-green-400">
-							{memoryPercent.toFixed(1)}%
-						</p>
-						<p class="text-sm text-gray-500 dark:text-gray-400">Memory Usage</p>
+
+					<!-- Memory Usage Card -->
+					<div
+						class="rounded-lg bg-gradient-to-br from-green-50 to-green-100 p-4 dark:from-green-900/20 dark:to-green-800/20"
+					>
+						<div class="flex items-center justify-between">
+							<div>
+								<p
+									class="text-xs font-medium tracking-wide text-green-700 uppercase dark:text-green-300"
+								>
+									Memory Usage
+								</p>
+								<p class="text-2xl font-bold text-green-900 dark:text-green-100">
+									{memoryPercent.toFixed(1)}%
+								</p>
+							</div>
+							<div class="flex-shrink-0">
+								<Settings size={24} class="text-green-600 dark:text-green-400" />
+							</div>
+						</div>
+						<!-- Progress bar -->
+						<div class="mt-3 h-2 w-full rounded-full bg-green-200 dark:bg-green-800">
+							<div
+								class="h-2 rounded-full bg-green-600 transition-all duration-300 dark:bg-green-400"
+								style="width: {Math.min(memoryPercent, 100)}%"
+							></div>
+						</div>
 					</div>
-					<div class="text-center">
-						<p class="text-2xl font-bold text-yellow-500 dark:text-yellow-400">
-							{swapPercent.toFixed(1)}%
-						</p>
-						<p class="text-sm text-gray-500 dark:text-gray-400">Swap Usage</p>
+
+					<!-- Swap Usage Card -->
+					<div
+						class="rounded-lg bg-gradient-to-br from-yellow-50 to-yellow-100 p-4 dark:from-yellow-900/20 dark:to-yellow-800/20"
+					>
+						<div class="flex items-center justify-between">
+							<div>
+								<p
+									class="text-xs font-medium tracking-wide text-yellow-700 uppercase dark:text-yellow-300"
+								>
+									Swap Usage
+								</p>
+								<p class="text-2xl font-bold text-yellow-900 dark:text-yellow-100">
+									{swapPercent.toFixed(1)}%
+								</p>
+							</div>
+							<div class="flex-shrink-0">
+								<Layers size={24} class="text-yellow-600 dark:text-yellow-400" />
+							</div>
+						</div>
+						<!-- Progress bar -->
+						<div class="mt-3 h-2 w-full rounded-full bg-yellow-200 dark:bg-yellow-800">
+							<div
+								class="h-2 rounded-full bg-yellow-600 transition-all duration-300 dark:bg-yellow-400"
+								style="width: {Math.min(swapPercent, 100)}%"
+							></div>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -434,34 +567,55 @@
 			<div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
 				<h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-white">Recent Alerts</h3>
 				<div class="space-y-3">
-					{#each Array.isArray(alerts) ? alerts.slice(0, 5) : [] as alert}
-						<div
-							class="flex items-center space-x-3 rounded-lg p-2 {alert.level === 'critical'
-								? 'bg-red-50 dark:bg-red-900/20'
-								: alert.level === 'warning'
-									? 'bg-yellow-50 dark:bg-yellow-900/20'
-									: 'bg-blue-50 dark:bg-blue-900/20'}"
-						>
-							<AlertTriangle
-								size={16}
-								class={alert.level === 'critical'
-									? 'text-red-500'
-									: alert.level === 'warning'
-										? 'text-yellow-500'
-										: 'text-blue-500'}
-							/>
-							<div class="min-w-0 flex-1">
-								<p class="truncate text-xs font-medium text-gray-900 dark:text-white">
-									{alert.message || alert.title || alert.name}
-								</p>
-								<p class="text-xs text-gray-500 dark:text-gray-400">
-									{formatDate(alert.last_fired || alert.created_at || new Date())}
-								</p>
-							</div>
+					{#if loadingAlerts}
+						<div class="flex items-center justify-center py-4">
+							<RefreshCw size={16} class="animate-spin text-gray-500" />
+							<span class="ml-2 text-sm text-gray-500 dark:text-gray-400">Loading alerts...</span>
 						</div>
+					{:else if recentAlerts.length > 0}
+						{#each recentAlerts.slice(0, 5) as alert}
+							<div
+								class="flex items-center space-x-3 rounded-lg p-2 {alert.level === 'critical'
+									? 'bg-red-50 dark:bg-red-900/20'
+									: alert.level === 'warning'
+										? 'bg-yellow-50 dark:bg-yellow-900/20'
+										: 'bg-blue-50 dark:bg-blue-900/20'}"
+							>
+								<AlertTriangle
+									size={16}
+									class={alert.level === 'critical'
+										? 'text-red-500'
+										: alert.level === 'warning'
+											? 'text-yellow-500'
+											: 'text-blue-500'}
+								/>
+								<div class="min-w-0 flex-1">
+									<p class="truncate text-xs font-medium text-gray-900 dark:text-white">
+										{alert.message || alert.title || alert.rule_id || 'Alert'}
+									</p>
+									<p class="text-xs text-gray-500 dark:text-gray-400">
+										{formatDate(
+											alert.last_fired || alert.first_fired || alert.timestamp || new Date()
+										)}
+									</p>
+								</div>
+								<div class="flex-shrink-0">
+									<span
+										class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
+										{alert.state === 'firing'
+											? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
+											: alert.state === 'resolved'
+												? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+												: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'}"
+									>
+										{alert.state || 'unknown'}
+									</span>
+								</div>
+							</div>
+						{/each}
 					{:else}
 						<p class="text-sm text-gray-500 dark:text-gray-400">No recent alerts</p>
-					{/each}
+					{/if}
 				</div>
 			</div>
 
@@ -469,64 +623,66 @@
 			<div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
 				<h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-white">Recent Events</h3>
 				<div class="space-y-3">
-					{#each Array.isArray(events) ? events.slice(0, 5) : [] as event}
-						<div
-							class="flex items-center space-x-3 rounded-lg p-2 {event.type === 'endpoint_down'
-								? 'bg-red-50 dark:bg-red-900/20'
-								: event.type === 'endpoint_up'
-									? 'bg-green-50 dark:bg-green-900/20'
-									: event.type === 'alert_triggered'
-										? 'bg-orange-50 dark:bg-orange-900/20'
-										: 'bg-blue-50 dark:bg-blue-900/20'}"
-						>
-							<Zap
-								size={16}
-								class={event.type === 'endpoint_down'
-									? 'text-red-500'
-									: event.type === 'endpoint_up'
-										? 'text-green-500'
-										: event.type === 'alert_triggered'
-											? 'text-orange-500'
-											: 'text-blue-500'}
-							/>
-							<div class="min-w-0 flex-1">
-								<p class="truncate text-xs font-medium text-gray-900 dark:text-white">
-									{event.message || event.title || event.type}
-								</p>
-								<p class="text-xs text-gray-500 dark:text-gray-400">
-									{formatDate(event.timestamp || event.created_at || new Date())}
-								</p>
-							</div>
+					{#if loadingEvents}
+						<div class="flex items-center justify-center py-4">
+							<RefreshCw size={16} class="animate-spin text-gray-500" />
+							<span class="ml-2 text-sm text-gray-500 dark:text-gray-400">Loading events...</span>
 						</div>
+					{:else if recentEvents.length > 0}
+						{#each recentEvents.slice(0, 5) as event}
+							<div
+								class="flex items-center space-x-3 rounded-lg p-2 {event.level === 'error' ||
+								event.category === 'alert'
+									? 'bg-red-50 dark:bg-red-900/20'
+									: event.level === 'warning'
+										? 'bg-yellow-50 dark:bg-yellow-900/20'
+										: event.level === 'info'
+											? 'bg-blue-50 dark:bg-blue-900/20'
+											: 'bg-gray-50 dark:bg-gray-900/20'}"
+							>
+								<Zap
+									size={16}
+									class={event.level === 'error' || event.category === 'alert'
+										? 'text-red-500'
+										: event.level === 'warning'
+											? 'text-yellow-500'
+											: event.level === 'info'
+												? 'text-blue-500'
+												: 'text-gray-500'}
+								/>
+								<div class="min-w-0 flex-1">
+									<p class="truncate text-xs font-medium text-gray-900 dark:text-white">
+										{event.message || event.title || event.category || 'Event'}
+									</p>
+									<p class="text-xs text-gray-500 dark:text-gray-400">
+										{formatDate(event.timestamp || event.created_at || new Date())}
+									</p>
+									{#if event.source}
+										<p class="text-xs text-gray-400 dark:text-gray-500">
+											Source: {event.source}
+										</p>
+									{/if}
+								</div>
+								<div class="flex-shrink-0">
+									<span
+										class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
+										{event.level === 'error'
+											? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
+											: event.level === 'warning'
+												? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
+												: event.level === 'info'
+													? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
+													: 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'}"
+									>
+										{event.level || event.category || 'event'}
+									</span>
+								</div>
+							</div>
+						{/each}
 					{:else}
 						<p class="text-sm text-gray-500 dark:text-gray-400">No recent events</p>
-					{/each}
+					{/if}
 				</div>
-			</div>
-		</div>
-	</div>
-
-	<!-- Live Logs Section -->
-	<div class="mb-6 grid grid-cols-1 gap-4">
-		<div
-			class="flex h-96 flex-col rounded-lg border border-gray-200 bg-white p-4 shadow-md sm:p-6 dark:border-gray-700 dark:bg-gray-900"
-		>
-			<div class="mb-3 flex items-center justify-between">
-				<h3 class="text-base font-semibold text-gray-800 dark:text-white">Live Logs</h3>
-				<span class="text-xs text-gray-500 dark:text-gray-400">Last 10 entries</span>
-			</div>
-			<div
-				class="h-full space-y-2 overflow-y-auto rounded-md border border-gray-200 bg-gray-50 p-3 font-mono text-sm break-words whitespace-pre-wrap text-gray-800 shadow-inner dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
-			>
-				{#each Array.isArray(logs) ? logs.slice(0, 10) : [] as log}
-					<div class="text-xs">
-						<span class="text-gray-500 dark:text-gray-400">[{formatDate(log.timestamp)}]</span>
-						<span class="font-medium {getBadgeClass(log.level)}">{log.level}</span>
-						<span class="ml-2">{log.message}</span>
-					</div>
-				{:else}
-					<div class="text-gray-500 dark:text-gray-400">No logs available</div>
-				{/each}
 			</div>
 		</div>
 	</div>

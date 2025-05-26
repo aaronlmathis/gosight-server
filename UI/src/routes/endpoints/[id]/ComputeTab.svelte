@@ -9,7 +9,13 @@
 	export let perCoreData: Record<string, { usage?: number; clock?: number }>;
 	export let processes: any[] = [];
 
-	// Chart data
+	// Chart instances
+	let cpuChart: ApexCharts;
+	let cpuLoadChart: ApexCharts;
+	let memoryChart: ApexCharts;
+	let swapChart: ApexCharts;
+
+	// Chart data - keep accumulated points up to limit
 	let cpuUsageData: Array<[number, number]> = [];
 	let cpuLoadData = {
 		load1: [] as Array<[number, number]>,
@@ -19,13 +25,102 @@
 	let memoryUsageData: Array<[number, number]> = [];
 	let swapUsageData: Array<[number, number]> = [];
 
+	// Process history for tooltips
+	let processHistory: Array<{ timestamp: number; processes: any[] }> = [];
+	let latestCpuPercent = 0;
+	let latestMemUsedPercent = 0;
+	let lastProcessedTimestamp = 0; // Track last processed metric timestamp
+
+	const MAX_DATA_POINTS = 50; // Keep last 50 points per chart
+
 	// Reactive chart options
 	$: isDark = typeof window !== 'undefined' && document.documentElement.classList.contains('dark');
 	$: textColor = isDark ? '#d1d5db' : '#374151';
 	$: gridColor = isDark ? '#374151' : '#e5e7eb';
 	$: theme = isDark ? 'dark' : 'light';
 
-	// CPU Usage Chart Options
+	// Helper function to find closest process snapshot
+	function findClosestSnapshot(ts: number) {
+		let closest = null;
+		let minDiff = Infinity;
+		for (const snap of processHistory) {
+			const diff = Math.abs(snap.timestamp - ts);
+			if (diff < minDiff) {
+				closest = snap;
+				minDiff = diff;
+			}
+		}
+		return closest;
+	}
+
+	// Helper function to truncate command names
+	function truncateCommand(cmd: string, max: number = 30): string {
+		if (!cmd) return '(?)';
+		return cmd.length > max ? cmd.slice(0, max - 1) + '…' : cmd;
+	}
+
+	// Helper function to get current usage
+	function getCurrentUsage(type: 'cpu' | 'memory'): number {
+		if (type === 'cpu') return latestCpuPercent;
+		if (type === 'memory') return latestMemUsedPercent;
+		return 0;
+	}
+
+	// Generate process tooltip for charts
+	function generateProcessTooltip(isMem: boolean) {
+		return function ({ series, seriesIndex, dataPointIndex, w }: any) {
+			const point = w.config.series[seriesIndex].data[dataPointIndex];
+			if (!point || !point.x) return '';
+
+			const hoverTime = point.x;
+			const snapshot = findClosestSnapshot(hoverTime);
+			if (!snapshot || !snapshot.processes) return 'No process data';
+
+			const labelKey = isMem ? 'memory_percent' : 'cpu_percent';
+			const processes = snapshot.processes;
+
+			const rows = processes
+				.sort((a: any, b: any) => (parseFloat(b[labelKey]) || 0) - (parseFloat(a[labelKey]) || 0))
+				.slice(0, 5)
+				.map((p: any) => {
+					const full = p.cmdline || p.exe || '(?)';
+					const short = truncateCommand(full, 30);
+					const value = (parseFloat(p[labelKey]) || 0).toFixed(1);
+					const color = isMem ? '#10b981' : '#3b82f6';
+
+					return `
+						<tr style="border-bottom: 1px solid #e5e7eb;">
+							<td style="padding:4px 6px; font-size:11px; color:#6b7280;">${p.pid || '?'}</td>
+							<td title="${full}" style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:4px 6px; font-size:11px;">
+								${short}
+							</td>
+							<td style="text-align:right; padding:4px 6px; font-weight:500; font-size:11px; color:${color};">${value}%</td>
+						</tr>`;
+				})
+				.join('');
+
+			return `
+				<div style="background:rgba(255,255,255,0.95); border:1px solid #e5e7eb; border-radius:8px; padding:8px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">
+					<div style="font-weight:600; font-size:12px; margin-bottom:6px; display:flex; justify-content:space-between;">
+						<span>Top Processes (${isMem ? 'Memory' : 'CPU'})</span>
+						<span>Total: ${getCurrentUsage(isMem ? 'memory' : 'cpu').toFixed(1)}%</span>
+					</div>
+					<table style="width:100%; border-collapse:collapse;">
+						<thead>
+							<tr style="text-align:left; font-size:11px; color:#9ca3af;">
+								<th style="padding:4px 6px;">PID</th>
+								<th style="padding:4px 6px;">Command</th>
+								<th style="padding:4px 6px; text-align:right;">Usage</th>
+							</tr>
+						</thead>
+						<tbody>
+							${rows}
+						</tbody>
+					</table>
+				</div>`;
+		};
+	}
+	// Chart options without series data for binding
 	$: cpuUsageChartOptions = {
 		chart: {
 			type: 'area',
@@ -33,9 +128,14 @@
 			zoom: { type: 'x', enabled: true, autoScaleYaxis: true },
 			toolbar: { show: false },
 			animations: { enabled: true },
-			background: 'transparent'
+			background: 'transparent',
+			events: {
+				mounted: (chartContext: any, config: any) => {
+					cpuChart = chartContext;
+				}
+			}
 		},
-		series: [{ name: 'CPU Usage %', data: cpuUsageData }],
+		series: [], // Empty series - will be populated via updateSeries
 		stroke: { curve: 'smooth', width: 2 },
 		fill: {
 			type: 'gradient',
@@ -59,7 +159,8 @@
 		colors: ['#3b82f6'],
 		tooltip: {
 			x: { format: 'HH:mm:ss' },
-			y: { formatter: (val: number) => `${val.toFixed(1)}%` }
+			y: { formatter: (val: number) => `${val.toFixed(1)}%` },
+			custom: generateProcessTooltip(false)
 		},
 		grid: { borderColor: gridColor },
 		theme: { mode: theme }
@@ -72,13 +173,14 @@
 			height: 250,
 			toolbar: { show: false },
 			animations: { enabled: true },
-			background: 'transparent'
+			background: 'transparent',
+			events: {
+				mounted: (chartContext: any, config: any) => {
+					cpuLoadChart = chartContext;
+				}
+			}
 		},
-		series: [
-			{ name: '1m', data: cpuLoadData.load1 },
-			{ name: '5m', data: cpuLoadData.load5 },
-			{ name: '15m', data: cpuLoadData.load15 }
-		],
+		series: [], // Empty series - will be populated via updateSeries
 		stroke: { curve: 'smooth', width: 3 },
 		fill: {
 			type: 'gradient',
@@ -135,9 +237,14 @@
 			zoom: { type: 'x', enabled: true, autoScaleYaxis: true },
 			toolbar: { show: false },
 			animations: { enabled: true },
-			background: 'transparent'
+			background: 'transparent',
+			events: {
+				mounted: (chartContext: any, config: any) => {
+					memoryChart = chartContext;
+				}
+			}
 		},
-		series: [{ name: 'Memory Usage %', data: memoryUsageData }],
+		series: [], // Empty series - will be populated via updateSeries
 		stroke: { curve: 'smooth', width: 2 },
 		fill: {
 			type: 'gradient',
@@ -161,7 +268,8 @@
 		colors: ['#10b981'],
 		tooltip: {
 			x: { format: 'HH:mm:ss' },
-			y: { formatter: (val: number) => `${val.toFixed(1)}%` }
+			y: { formatter: (val: number) => `${val.toFixed(1)}%` },
+			custom: generateProcessTooltip(true)
 		},
 		grid: { borderColor: gridColor },
 		theme: { mode: theme }
@@ -175,9 +283,14 @@
 			zoom: { type: 'x', enabled: true, autoScaleYaxis: true },
 			toolbar: { show: false },
 			animations: { enabled: true },
-			background: 'transparent'
+			background: 'transparent',
+			events: {
+				mounted: (chartContext: any, config: any) => {
+					swapChart = chartContext;
+				}
+			}
 		},
-		series: [{ name: 'Swap Usage %', data: swapUsageData }],
+		series: [], // Empty series - will be populated via updateSeries
 		stroke: { curve: 'smooth', width: 2 },
 		fill: {
 			type: 'gradient',
@@ -208,35 +321,185 @@
 	};
 
 	// Process metrics data when they change
-	function processMetrics(metrics: Metric[]) {
-		// Extract CPU usage data
-		const cpuMetrics = metrics.filter((m) => m.name === 'cpu_usage' || m.name === 'cpu_percent');
-		cpuUsageData = cpuMetrics.map((m) => [new Date(m.timestamp).getTime(), m.value]);
+	function processMetrics(allMetrics: Metric[]) {
+		console.log('ComputeTab: Processing metrics:', allMetrics.length, 'total metrics');
 
-		// Extract load average data
-		const load1Metrics = metrics.filter((m) => m.name === 'load1');
-		const load5Metrics = metrics.filter((m) => m.name === 'load5');
-		const load15Metrics = metrics.filter((m) => m.name === 'load15');
+		// Filter to only process new metrics (timestamps greater than last processed)
+		const newMetrics = allMetrics.filter((m) => {
+			const metricTime = new Date(m.timestamp).getTime();
+			return metricTime > lastProcessedTimestamp;
+		});
 
-		cpuLoadData = {
-			load1: load1Metrics.map((m) => [new Date(m.timestamp).getTime(), m.value]),
-			load5: load5Metrics.map((m) => [new Date(m.timestamp).getTime(), m.value]),
-			load15: load15Metrics.map((m) => [new Date(m.timestamp).getTime(), m.value])
-		};
+		if (newMetrics.length === 0) {
+			console.log('ComputeTab: No new metrics to process');
+			return;
+		}
 
-		// Extract memory usage data
-		const memoryMetrics = metrics.filter(
-			(m) => m.name === 'memory_usage' || m.name === 'memory_percent'
+		console.log('ComputeTab: Processing', newMetrics.length, 'new metrics');
+		console.log(
+			'ComputeTab: Sample new metric structures:',
+			newMetrics.slice(0, 3).map((m) => ({
+				namespace: m.namespace,
+				subnamespace: m.subnamespace,
+				name: m.name,
+				dimensions: m.dimensions,
+				timestamp: m.timestamp
+			}))
 		);
-		memoryUsageData = memoryMetrics.map((m) => [new Date(m.timestamp).getTime(), m.value]);
 
-		// Extract swap usage data
-		const swapMetrics = metrics.filter((m) => m.name === 'swap_usage' || m.name === 'swap_percent');
-		swapUsageData = swapMetrics.map((m) => [new Date(m.timestamp).getTime(), m.value]);
+		const now = Date.now();
+
+		// Extract CPU usage data (System namespace with scope=total)
+		const cpuMetrics = newMetrics.filter(
+			(m) =>
+				m.namespace === 'System' &&
+				!m.subnamespace &&
+				m.name === 'usage_percent' &&
+				m.dimensions?.scope === 'total'
+		);
+		console.log('ComputeTab: Found', cpuMetrics.length, 'new CPU metrics');
+
+		// Add new CPU data points to existing array
+		if (cpuMetrics.length > 0) {
+			const newCpuData: Array<[number, number]> = cpuMetrics.map((m) => [
+				new Date(m.timestamp).getTime(),
+				m.value
+			]);
+			cpuUsageData = [...cpuUsageData, ...newCpuData].slice(-MAX_DATA_POINTS);
+
+			// Update latest CPU percent for tooltips
+			latestCpuPercent = cpuMetrics[cpuMetrics.length - 1].value;
+		}
+
+		// Extract load average data (System.load_avg_1, load_avg_5, load_avg_15)
+		const load1Metrics = newMetrics.filter(
+			(m) => m.namespace === 'System' && !m.subnamespace && m.name === 'load_avg_1'
+		);
+		const load5Metrics = newMetrics.filter(
+			(m) => m.namespace === 'System' && !m.subnamespace && m.name === 'load_avg_5'
+		);
+		const load15Metrics = newMetrics.filter(
+			(m) => m.namespace === 'System' && !m.subnamespace && m.name === 'load_avg_15'
+		);
+		console.log(
+			'ComputeTab: Found new load metrics:',
+			load1Metrics.length,
+			load5Metrics.length,
+			load15Metrics.length
+		);
+
+		// Add new load data points
+		if (load1Metrics.length > 0 || load5Metrics.length > 0 || load15Metrics.length > 0) {
+			const newLoad1Data: Array<[number, number]> = load1Metrics.map((m) => [
+				new Date(m.timestamp).getTime(),
+				m.value
+			]);
+			const newLoad5Data: Array<[number, number]> = load5Metrics.map((m) => [
+				new Date(m.timestamp).getTime(),
+				m.value
+			]);
+			const newLoad15Data: Array<[number, number]> = load15Metrics.map((m) => [
+				new Date(m.timestamp).getTime(),
+				m.value
+			]);
+
+			cpuLoadData = {
+				load1: [...cpuLoadData.load1, ...newLoad1Data].slice(-MAX_DATA_POINTS),
+				load5: [...cpuLoadData.load5, ...newLoad5Data].slice(-MAX_DATA_POINTS),
+				load15: [...cpuLoadData.load15, ...newLoad15Data].slice(-MAX_DATA_POINTS)
+			};
+		}
+
+		// Extract memory usage data (System.used_percent with type=memory)
+		const memoryMetrics = newMetrics.filter(
+			(m) =>
+				m.namespace === 'System' &&
+				!m.subnamespace &&
+				m.name === 'used_percent' &&
+				m.dimensions?.type === 'memory'
+		);
+		console.log('ComputeTab: Found', memoryMetrics.length, 'new memory metrics');
+
+		// Add new memory data points
+		if (memoryMetrics.length > 0) {
+			const newMemoryData: Array<[number, number]> = memoryMetrics.map((m) => [
+				new Date(m.timestamp).getTime(),
+				m.value
+			]);
+			memoryUsageData = [...memoryUsageData, ...newMemoryData].slice(-MAX_DATA_POINTS);
+
+			// Update latest memory percent for tooltips
+			latestMemUsedPercent = memoryMetrics[memoryMetrics.length - 1].value;
+		}
+
+		// Extract swap usage data (System.swap_used_percent or System.used_percent with type=swap)
+		const swapMetrics = newMetrics.filter(
+			(m) =>
+				m.namespace === 'System' &&
+				!m.subnamespace &&
+				(m.name === 'swap_used_percent' ||
+					(m.name === 'used_percent' && m.dimensions?.type === 'swap'))
+		);
+		console.log('ComputeTab: Found', swapMetrics.length, 'new swap metrics');
+
+		// Add new swap data points
+		if (swapMetrics.length > 0) {
+			const newSwapData: Array<[number, number]> = swapMetrics.map((m) => [
+				new Date(m.timestamp).getTime(),
+				m.value
+			]);
+			swapUsageData = [...swapUsageData, ...newSwapData].slice(-MAX_DATA_POINTS);
+		}
+
+		// Add process snapshot for tooltips
+		if (processes && processes.length > 0) {
+			processHistory = [...processHistory, { timestamp: now, processes }].slice(-50);
+		}
+
+		// Update last processed timestamp to the newest metric timestamp
+		if (newMetrics.length > 0) {
+			const timestamps = newMetrics.map((m) => new Date(m.timestamp).getTime());
+			lastProcessedTimestamp = Math.max(...timestamps);
+		}
+
+		console.log('ComputeTab: Updated chart data lengths:', {
+			cpu: cpuUsageData.length,
+			memory: memoryUsageData.length,
+			swap: swapUsageData.length,
+			load1: cpuLoadData.load1.length,
+			load5: cpuLoadData.load5.length,
+			load15: cpuLoadData.load15.length,
+			lastProcessedTimestamp: new Date(lastProcessedTimestamp).toISOString()
+		});
+	}
+
+	// Reactive statements to update chart series when data changes
+	$: if (cpuChart && cpuUsageData.length > 0) {
+		cpuChart.updateSeries([{ name: 'CPU Usage %', data: cpuUsageData }]);
+	}
+
+	$: if (
+		cpuLoadChart &&
+		(cpuLoadData.load1.length > 0 || cpuLoadData.load5.length > 0 || cpuLoadData.load15.length > 0)
+	) {
+		cpuLoadChart.updateSeries([
+			{ name: '1m', data: cpuLoadData.load1 },
+			{ name: '5m', data: cpuLoadData.load5 },
+			{ name: '15m', data: cpuLoadData.load15 }
+		]);
+	}
+
+	$: if (memoryChart && memoryUsageData.length > 0) {
+		memoryChart.updateSeries([{ name: 'Memory Usage %', data: memoryUsageData }]);
+	}
+
+	$: if (swapChart && swapUsageData.length > 0) {
+		swapChart.updateSeries([{ name: 'Swap Usage %', data: swapUsageData }]);
 	}
 
 	// Reactive metrics processing
 	$: if (metrics.length > 0) {
+		console.log('ComputeTab: Reactive statement triggered with', metrics.length, 'metrics');
 		processMetrics(metrics);
 	}
 </script>

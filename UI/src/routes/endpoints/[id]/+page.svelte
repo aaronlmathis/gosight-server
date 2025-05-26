@@ -170,7 +170,7 @@
 
 		// Subscribe to metrics updates
 		unsubscribeMetrics = websocketManager.subscribeToMetrics((metricsPayload) => {
-			//console.log('Received metric update:', metricsPayload);
+			console.log('Parent: Received metric update:', metricsPayload);
 			if (metricsPayload && metricsPayload.endpoint_id === endpointId) {
 				// The payload contains an array of metrics in the 'metrics' property
 				if (Array.isArray(metricsPayload.metrics)) {
@@ -182,6 +182,12 @@
 						timestamp: metricsPayload.timestamp
 					}));
 					metrics = [...newMetrics, ...existingMetrics.slice(0, 99)];
+					console.log('Parent: Updated metrics array, total length:', metrics.length);
+					console.log(
+						'Parent: Metric names in array:',
+						metrics.slice(0, 10).map((m) => m.name)
+					);
+
 					updateCharts(metricsPayload);
 				}
 			}
@@ -474,9 +480,6 @@
 					{hostInfo}
 					{metrics}
 					{processes}
-					{alerts}
-					{logs}
-					{events}
 					{runCommand}
 				/>
 			{:else if activeTab === 'compute'}
