@@ -153,10 +153,12 @@ func (v *VictoriaStore) QueryRange(metric string, start, end time.Time, step str
 	return points, nil
 }
 
+// GetAllKnownMetricNames retrieves all known metric names from the cache.
 func (v *VictoriaStore) GetAllKnownMetricNames() []string {
 	return v.cache.GetAllMetricNames()
 }
 
+// QueryMultiInstant fetches the latest data points for multiple metrics with optional label filters.
 func (v *VictoriaStore) QueryMultiInstant(metricNames []string, filters map[string]string) ([]model.MetricRow, error) {
 	//utils.Debug("Executing VictoriaStore.QueryMultiInstant")
 	if len(metricNames) == 0 {
@@ -251,6 +253,7 @@ func (v *VictoriaStore) QueryMultiInstant(metricNames []string, filters map[stri
 	return rows, nil
 }
 
+// QueryMultiRange fetches time series data for multiple metrics over a time range with optional label filters.
 func (v *VictoriaStore) QueryMultiRange(metrics []string, start, end time.Time, step string, filters map[string]string) ([]model.MetricRow, error) {
 	if len(metrics) == 0 {
 		return nil, nil
@@ -352,7 +355,6 @@ func (v *VictoriaStore) QueryMultiRange(metrics []string, start, end time.Time, 
 
 // FetchDimensionsForMetric queries VictoriaMetrics for a given metric and extracts dimension keys.
 func (v *VictoriaStore) FetchDimensionsForMetric(namespace, subnamespace, metricName string) ([]string, error) {
-	// after – assuming you've added namespace & subnamespace parameters to your function:
 	promql := fmt.Sprintf(
 		`%s{namespace="%s",subnamespace="%s"}`,
 		metricName,
