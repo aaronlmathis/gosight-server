@@ -35,6 +35,7 @@ import (
 	"time"
 
 	"github.com/aaronlmathis/gosight-shared/model"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 // QueryInstant fetches the latest data points for a given metric with optional label filters.
@@ -152,10 +153,12 @@ func (v *VictoriaStore) QueryRange(metric string, start, end time.Time, step str
 	return points, nil
 }
 
+// GetAllKnownMetricNames retrieves all known metric names from the cache.
 func (v *VictoriaStore) GetAllKnownMetricNames() []string {
 	return v.cache.GetAllMetricNames()
 }
 
+// QueryMultiInstant fetches the latest data points for multiple metrics with optional label filters.
 func (v *VictoriaStore) QueryMultiInstant(metricNames []string, filters map[string]string) ([]model.MetricRow, error) {
 	//utils.Debug("Executing VictoriaStore.QueryMultiInstant")
 	if len(metricNames) == 0 {
@@ -250,6 +253,7 @@ func (v *VictoriaStore) QueryMultiInstant(metricNames []string, filters map[stri
 	return rows, nil
 }
 
+// QueryMultiRange fetches time series data for multiple metrics over a time range with optional label filters.
 func (v *VictoriaStore) QueryMultiRange(metrics []string, start, end time.Time, step string, filters map[string]string) ([]model.MetricRow, error) {
 	if len(metrics) == 0 {
 		return nil, nil
@@ -350,9 +354,19 @@ func (v *VictoriaStore) QueryMultiRange(metrics []string, start, end time.Time, 
 }
 
 // FetchDimensionsForMetric queries VictoriaMetrics for a given metric and extracts dimension keys.
-func (v *VictoriaStore) FetchDimensionsForMetric(metric string) ([]string, error) {
-	queryURL := fmt.Sprintf("%s/api/v1/query?query=%s", v.url, url.QueryEscape(metric))
-
+func (v *VictoriaStore) FetchDimensionsForMetric(namespace, subnamespace, metricName string) ([]string, error) {
+	promql := fmt.Sprintf(
+		`%s{namespace="%s",subnamespace="%s"}`,
+		metricName,
+		namespace,
+		subnamespace,
+	)
+	queryURL := fmt.Sprintf(
+		"%s/api/v1/query?query=%s",
+		v.url,
+		url.QueryEscape(promql),
+	)
+	utils.Debug("FetchDimensionsForMetric URL: %s", queryURL)
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Get(queryURL)
 	if err != nil {
@@ -402,7 +416,7 @@ func (v *VictoriaStore) FetchDimensionsForMetric(metric string) ([]string, error
 	}
 
 	if len(dimSet) == 0 {
-		return nil, fmt.Errorf("no dimensions found for metric %s", metric)
+		return nil, fmt.Errorf("no dimensions found for metric %s", metricName)
 	}
 
 	var dims []string

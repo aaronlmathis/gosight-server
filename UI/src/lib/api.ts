@@ -1,7 +1,7 @@
 /**
  * API client for GoSight backend
  */
-import type { AlertRule, AlertRulesResponse, EndpointsResponse, Endpoint } from './types';
+import type { AlertRule, AlertRulesResponse, EndpointsResponse, Endpoint, LogResponse } from './types';
 
 export interface ApiError {
 message: string;
@@ -223,7 +223,7 @@ export class LogsApi {
 		container_id?: string;
 		platform?: string;
 		[key: string]: any; // for dynamic tag_* and field_* and meta_* parameters
-	} = {}) {
+	} = {}): Promise<LogResponse> {
 		const searchParams = new URLSearchParams();
 		
 		// Handle array parameters (levels, categories)
@@ -255,7 +255,7 @@ export class LogsApi {
 		return this.api.request(`/logs${query ? `?${query}` : ''}`);
 	}
 
-	async getRecent(limit = 50) {
+	async getRecent(limit = 50): Promise<LogResponse> {
 		return this.api.request(`/logs/latest?limit=${limit}`);
 	}
 }
@@ -633,7 +633,7 @@ async getMetrics(params?: any) {
 return this.metrics.getAll(params);
 }
 
-async getLogs(params?: any) {
+async getLogs(params?: any): Promise<LogResponse> {
 return this.logs.getAll(params);
 }
 

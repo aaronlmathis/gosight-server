@@ -23,4 +23,18 @@ declare global {
 	}
 }
 
+declare module 'svelte-apexcharts' {
+	import { SvelteComponentTyped } from 'svelte';
+
+	export interface ApexChartProps {
+		options?: any;
+		series?: any;
+		type?: string;
+		width?: string | number;
+		height?: string | number;
+	}
+
+	export default class ApexChart extends SvelteComponentTyped<ApexChartProps> {}
+}
+
 export {};
