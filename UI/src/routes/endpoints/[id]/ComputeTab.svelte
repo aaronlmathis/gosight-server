@@ -530,42 +530,46 @@
 		<!-- CPU Info Card -->
 		<div class="rounded-lg bg-white p-4 shadow-md dark:bg-gray-800">
 			<h3 class="mb-4 text-sm font-semibold text-gray-900 dark:text-white">CPU Information</h3>
-			<div class="space-y-3">
-				<div class="flex justify-between text-xs">
+			<div class="divide-y divide-gray-200 dark:divide-gray-700">
+				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
 					<span class="text-gray-500 dark:text-gray-400">Model:</span>
-					<span class="font-medium text-gray-900 dark:text-white">{cpuInfo.model}</span>
+					<span class="text-left font-medium text-gray-900 dark:text-white">{cpuInfo.model}</span>
 				</div>
-				<div class="flex justify-between text-xs">
+				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
 					<span class="text-gray-500 dark:text-gray-400">Vendor:</span>
-					<span class="font-medium text-gray-900 dark:text-white">{cpuInfo.vendor}</span>
+					<span class="text-left font-medium text-gray-900 dark:text-white">{cpuInfo.vendor}</span>
 				</div>
-				<div class="flex justify-between text-xs">
+				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
 					<span class="text-gray-500 dark:text-gray-400">Cores:</span>
-					<span class="font-medium text-gray-900 dark:text-white">{cpuInfo.cores}</span>
+					<span class="text-left font-medium text-gray-900 dark:text-white">{cpuInfo.cores}</span>
 				</div>
-				<div class="flex justify-between text-xs">
+				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
 					<span class="text-gray-500 dark:text-gray-400">Threads:</span>
-					<span class="font-medium text-gray-900 dark:text-white">{cpuInfo.threads}</span>
+					<span class="text-left font-medium text-gray-900 dark:text-white">{cpuInfo.threads}</span>
 				</div>
-				<div class="flex justify-between text-xs">
+				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
 					<span class="text-gray-500 dark:text-gray-400">Base Clock:</span>
-					<span class="font-medium text-gray-900 dark:text-white">{cpuInfo.baseClock}</span>
+					<span class="text-left font-medium text-gray-900 dark:text-white"
+						>{cpuInfo.baseClock}</span
+					>
 				</div>
-				<div class="flex justify-between text-xs">
+				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
 					<span class="text-gray-500 dark:text-gray-400">Cache:</span>
-					<span class="font-medium text-gray-900 dark:text-white">{cpuInfo.cache}</span>
+					<span class="text-left font-medium text-gray-900 dark:text-white">{cpuInfo.cache}</span>
 				</div>
-				<div class="flex justify-between text-xs">
+				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
 					<span class="text-gray-500 dark:text-gray-400">Family:</span>
-					<span class="font-medium text-gray-900 dark:text-white">{cpuInfo.family}</span>
+					<span class="text-left font-medium text-gray-900 dark:text-white">{cpuInfo.family}</span>
 				</div>
-				<div class="flex justify-between text-xs">
+				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
 					<span class="text-gray-500 dark:text-gray-400">Stepping:</span>
-					<span class="font-medium text-gray-900 dark:text-white">{cpuInfo.stepping}</span>
+					<span class="text-left font-medium text-gray-900 dark:text-white">{cpuInfo.stepping}</span
+					>
 				</div>
-				<div class="flex justify-between text-xs">
+				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
 					<span class="text-gray-500 dark:text-gray-400">Physical CPUs:</span>
-					<span class="font-medium text-gray-900 dark:text-white">{cpuInfo.physical}</span>
+					<span class="text-left font-medium text-gray-900 dark:text-white">{cpuInfo.physical}</span
+					>
 				</div>
 			</div>
 		</div>
@@ -573,42 +577,60 @@
 		<!-- CPU Time Counters Card -->
 		<div class="rounded-lg bg-white p-4 shadow-md dark:bg-gray-800">
 			<h3 class="mb-4 text-sm font-semibold text-gray-900 dark:text-white">CPU Time Counters</h3>
-			<div class="space-y-3">
-				<div class="flex justify-between text-xs">
+			<div class="divide-y divide-gray-200 dark:divide-gray-700">
+				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
 					<span class="text-gray-500 dark:text-gray-400">User:</span>
-					<span class="font-medium text-gray-900 dark:text-white">{cpuTimeCounters.user}</span>
+					<span class="text-left font-medium text-gray-900 dark:text-white"
+						>{cpuTimeCounters.user}</span
+					>
 				</div>
-				<div class="flex justify-between text-xs">
+				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
 					<span class="text-gray-500 dark:text-gray-400">System:</span>
-					<span class="font-medium text-gray-900 dark:text-white">{cpuTimeCounters.system}</span>
+					<span class="text-left font-medium text-gray-900 dark:text-white"
+						>{cpuTimeCounters.system}</span
+					>
 				</div>
-				<div class="flex justify-between text-xs">
+				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
 					<span class="text-gray-500 dark:text-gray-400">Idle:</span>
-					<span class="font-medium text-gray-900 dark:text-white">{cpuTimeCounters.idle}</span>
+					<span class="text-left font-medium text-gray-900 dark:text-white"
+						>{cpuTimeCounters.idle}</span
+					>
 				</div>
-				<div class="flex justify-between text-xs">
+				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
 					<span class="text-gray-500 dark:text-gray-400">Nice:</span>
-					<span class="font-medium text-gray-900 dark:text-white">{cpuTimeCounters.nice}</span>
+					<span class="text-left font-medium text-gray-900 dark:text-white"
+						>{cpuTimeCounters.nice}</span
+					>
 				</div>
-				<div class="flex justify-between text-xs">
+				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
 					<span class="text-gray-500 dark:text-gray-400">IOWait:</span>
-					<span class="font-medium text-gray-900 dark:text-white">{cpuTimeCounters.iowait}</span>
+					<span class="text-left font-medium text-gray-900 dark:text-white"
+						>{cpuTimeCounters.iowait}</span
+					>
 				</div>
-				<div class="flex justify-between text-xs">
+				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
 					<span class="text-gray-500 dark:text-gray-400">IRQ:</span>
-					<span class="font-medium text-gray-900 dark:text-white">{cpuTimeCounters.irq}</span>
+					<span class="text-left font-medium text-gray-900 dark:text-white"
+						>{cpuTimeCounters.irq}</span
+					>
 				</div>
-				<div class="flex justify-between text-xs">
+				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
 					<span class="text-gray-500 dark:text-gray-400">SoftIRQ:</span>
-					<span class="font-medium text-gray-900 dark:text-white">{cpuTimeCounters.softirq}</span>
+					<span class="text-left font-medium text-gray-900 dark:text-white"
+						>{cpuTimeCounters.softirq}</span
+					>
 				</div>
-				<div class="flex justify-between text-xs">
+				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
 					<span class="text-gray-500 dark:text-gray-400">Steal:</span>
-					<span class="font-medium text-gray-900 dark:text-white">{cpuTimeCounters.steal}</span>
+					<span class="text-left font-medium text-gray-900 dark:text-white"
+						>{cpuTimeCounters.steal}</span
+					>
 				</div>
-				<div class="flex justify-between text-xs">
+				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
 					<span class="text-gray-500 dark:text-gray-400">Guest:</span>
-					<span class="font-medium text-gray-900 dark:text-white">{cpuTimeCounters.guest}</span>
+					<span class="text-left font-medium text-gray-900 dark:text-white"
+						>{cpuTimeCounters.guest}</span
+					>
 				</div>
 			</div>
 		</div>
