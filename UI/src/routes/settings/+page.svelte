@@ -308,7 +308,13 @@
 	function handleAvatarUploaded(event: CustomEvent<{ avatar_url: string }>) {
 		// Update the current user's avatar in the auth store
 		if ($auth.user) {
-			const updatedUser = { ...$auth.user, avatar: event.detail.avatar_url };
+			const updatedUser = {
+				...$auth.user,
+				profile: {
+					...($auth.user.profile || {}),
+					avatar_url: event.detail.avatar_url
+				}
+			};
 			auth.setUser(updatedUser);
 			currentUser = updatedUser;
 		}
@@ -319,7 +325,13 @@
 	function handleAvatarDeleted() {
 		// Remove avatar from the current user in the auth store
 		if ($auth.user) {
-			const updatedUser = { ...$auth.user, avatar: '' };
+			const updatedUser = {
+				...$auth.user,
+				profile: {
+					...($auth.user.profile || {}),
+					avatar_url: ''
+				}
+			};
 			auth.setUser(updatedUser);
 			currentUser = updatedUser;
 		}
@@ -406,7 +418,7 @@
 									<div class="flex items-center space-x-6">
 										<div>
 											<AvatarUpload
-												currentAvatar={currentUser?.avatar || ''}
+												currentAvatar={currentUser?.profile?.avatar_url || ''}
 												size="lg"
 												on:uploaded={handleAvatarUploaded}
 												on:deleted={handleAvatarDeleted}

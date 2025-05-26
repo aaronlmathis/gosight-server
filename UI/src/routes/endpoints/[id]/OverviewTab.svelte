@@ -306,7 +306,7 @@
 				<div class="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
 					<!-- Hostname Card -->
 					<div
-						class="rounded-lg border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-4 dark:border-blue-700/50 dark:from-blue-900/20 dark:to-blue-800/20"
+						class="rounded-lg border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-4 dark:border-blue-600 dark:from-blue-900/40 dark:to-blue-800/40"
 					>
 						<div class="flex items-center space-x-3">
 							<div class="flex-shrink-0">
@@ -327,7 +327,7 @@
 
 					<!-- IP Address Card -->
 					<div
-						class="rounded-lg border border-green-200 bg-gradient-to-br from-green-50 to-green-100 p-4 dark:border-green-700/50 dark:from-green-900/20 dark:to-green-800/20"
+						class="rounded-lg border border-green-200 bg-gradient-to-br from-green-50 to-green-100 p-4 dark:border-green-600 dark:from-green-900/40 dark:to-green-800/40"
 					>
 						<div class="flex items-center space-x-3">
 							<div class="flex-shrink-0">
@@ -350,7 +350,7 @@
 				<!-- Secondary System Info -->
 				<div class="space-y-4">
 					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-						<div class="flex items-center space-x-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
+						<div class="flex items-center space-x-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
 							<Cpu size={16} class="flex-shrink-0 text-purple-500" />
 							<div class="min-w-0 flex-1">
 								<dt class="text-sm font-medium text-gray-600 dark:text-gray-300">
@@ -362,7 +362,7 @@
 							</div>
 						</div>
 
-						<div class="flex items-center space-x-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
+						<div class="flex items-center space-x-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
 							<Settings size={16} class="flex-shrink-0 text-orange-500" />
 							<div class="min-w-0 flex-1">
 								<dt class="text-sm font-medium text-gray-600 dark:text-gray-300">Agent Version</dt>
@@ -372,7 +372,7 @@
 							</div>
 						</div>
 
-						<div class="flex items-center space-x-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
+						<div class="flex items-center space-x-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
 							<Clock size={16} class="flex-shrink-0 text-indigo-500" />
 							<div class="min-w-0 flex-1">
 								<dt class="text-sm font-medium text-gray-600 dark:text-gray-300">Last Seen</dt>
@@ -382,7 +382,7 @@
 							</div>
 						</div>
 
-						<div class="flex items-center space-x-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
+						<div class="flex items-center space-x-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
 							<Activity size={16} class="flex-shrink-0 text-cyan-500" />
 							<div class="min-w-0 flex-1">
 								<dt class="text-sm font-medium text-gray-600 dark:text-gray-300">Uptime</dt>
@@ -392,7 +392,7 @@
 							</div>
 						</div>
 
-						<div class="flex items-center space-x-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
+						<div class="flex items-center space-x-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
 							<Layers size={16} class="flex-shrink-0 text-pink-500" />
 							<div class="min-w-0 flex-1">
 								<dt class="text-sm font-medium text-gray-600 dark:text-gray-300">
@@ -404,7 +404,7 @@
 							</div>
 						</div>
 
-						<div class="flex items-center space-x-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
+						<div class="flex items-center space-x-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
 							<Users size={16} class="flex-shrink-0 text-emerald-500" />
 							<div class="min-w-0 flex-1">
 								<dt class="text-sm font-medium text-gray-600 dark:text-gray-300">
@@ -419,7 +419,9 @@
 				</div>
 			</div>
 			<!-- Quick Stats Summary -->
-			<div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+			<div
+				class="rounded-lg border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+			>
 				<div class="mb-6 flex items-center space-x-2">
 					<Activity size={20} class="text-indigo-500" />
 					<h3 class="text-lg font-medium text-gray-900 dark:text-white">Current Status</h3>
@@ -427,7 +429,7 @@
 				<div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
 					<!-- CPU Usage Card -->
 					<div
-						class="rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 p-4 dark:from-blue-900/20 dark:to-blue-800/20"
+						class="rounded-lg border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-4 dark:border-blue-700/50 dark:from-blue-900/20 dark:to-blue-800/20"
 					>
 						<div class="flex items-center justify-between">
 							<div>
@@ -455,7 +457,7 @@
 
 					<!-- Memory Usage Card -->
 					<div
-						class="rounded-lg bg-gradient-to-br from-green-50 to-green-100 p-4 dark:from-green-900/20 dark:to-green-800/20"
+						class="rounded-lg border border-green-200 bg-gradient-to-br from-green-50 to-green-100 p-4 dark:border-green-700/50 dark:from-green-900/20 dark:to-green-800/20"
 					>
 						<div class="flex items-center justify-between">
 							<div>
@@ -483,7 +485,7 @@
 
 					<!-- Swap Usage Card -->
 					<div
-						class="rounded-lg bg-gradient-to-br from-yellow-50 to-yellow-100 p-4 dark:from-yellow-900/20 dark:to-yellow-800/20"
+						class="rounded-lg border border-yellow-200 bg-gradient-to-br from-yellow-50 to-yellow-100 p-4 dark:border-yellow-700/50 dark:from-yellow-900/20 dark:to-yellow-800/20"
 					>
 						<div class="flex items-center justify-between">
 							<div>
@@ -515,7 +517,9 @@
 		<!-- Sidebar -->
 		<div class="space-y-6">
 			<!-- Quick Actions -->
-			<div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+			<div
+				class="rounded-lg border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+			>
 				<h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-white">Quick Actions</h3>
 				<div class="space-y-2">
 					<button
@@ -564,7 +568,9 @@
 			</div>
 
 			<!-- Recent Alerts -->
-			<div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+			<div
+				class="rounded-lg border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+			>
 				<h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-white">Recent Alerts</h3>
 				<div class="space-y-3">
 					{#if loadingAlerts}
@@ -576,10 +582,10 @@
 						{#each recentAlerts.slice(0, 5) as alert}
 							<div
 								class="flex items-center space-x-3 rounded-lg p-2 {alert.level === 'critical'
-									? 'bg-red-50 dark:bg-red-900/20'
+									? 'border border-red-200 bg-red-50 dark:border-red-700 dark:bg-red-900/50 dark:backdrop-blur-sm'
 									: alert.level === 'warning'
-										? 'bg-yellow-50 dark:bg-yellow-900/20'
-										: 'bg-blue-50 dark:bg-blue-900/20'}"
+										? 'border border-yellow-200 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/50 dark:backdrop-blur-sm'
+										: 'border border-blue-200 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/50 dark:backdrop-blur-sm'}"
 							>
 								<AlertTriangle
 									size={16}
@@ -603,10 +609,10 @@
 									<span
 										class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
 										{alert.state === 'firing'
-											? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
+											? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200'
 											: alert.state === 'resolved'
-												? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
-												: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'}"
+												? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200'
+												: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200'}"
 									>
 										{alert.state || 'unknown'}
 									</span>
@@ -620,7 +626,9 @@
 			</div>
 
 			<!-- Recent Events -->
-			<div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+			<div
+				class="rounded-lg border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+			>
 				<h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-white">Recent Events</h3>
 				<div class="space-y-3">
 					{#if loadingEvents}
@@ -633,12 +641,12 @@
 							<div
 								class="flex items-center space-x-3 rounded-lg p-2 {event.level === 'error' ||
 								event.category === 'alert'
-									? 'bg-red-50 dark:bg-red-900/20'
+									? 'border border-red-200 bg-red-50 dark:border-red-700 dark:bg-red-900/50 dark:backdrop-blur-sm'
 									: event.level === 'warning'
-										? 'bg-yellow-50 dark:bg-yellow-900/20'
+										? 'border border-yellow-200 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/50 dark:backdrop-blur-sm'
 										: event.level === 'info'
-											? 'bg-blue-50 dark:bg-blue-900/20'
-											: 'bg-gray-50 dark:bg-gray-900/20'}"
+											? 'border border-blue-200 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/50 dark:backdrop-blur-sm'
+											: 'border border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700/50 dark:backdrop-blur-sm'}"
 							>
 								<Zap
 									size={16}
@@ -667,12 +675,12 @@
 									<span
 										class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
 										{event.level === 'error'
-											? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
+											? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200'
 											: event.level === 'warning'
-												? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
+												? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200'
 												: event.level === 'info'
-													? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
-													: 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'}"
+													? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200'
+													: 'bg-gray-100 text-gray-800 dark:bg-gray-700/40 dark:text-gray-200'}"
 									>
 										{event.level || event.category || 'event'}
 									</span>
@@ -690,7 +698,7 @@
 	<!-- Top Processes -->
 	<div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
 		<div
-			class="rounded-lg border border-gray-100 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-900"
+			class="rounded-lg border border-gray-100 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-800"
 		>
 			<h3 class="text-md mb-2 font-semibold text-gray-800 dark:text-white">
 				Top 5 Running Processes by CPU
@@ -718,7 +726,7 @@
 		</div>
 
 		<div
-			class="rounded-lg border border-gray-100 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-900"
+			class="rounded-lg border border-gray-100 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-800"
 		>
 			<h3 class="text-md mb-2 font-semibold text-gray-800 dark:text-white">
 				Top 5 Running Processes by Memory
