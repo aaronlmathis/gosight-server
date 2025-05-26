@@ -446,8 +446,8 @@
 	{:else if endpoint}
 		<!-- Tabs navigation -->
 		<div class="border-b border-gray-200 dark:border-gray-700">
-			<nav class="-mb-px flex space-x-8 px-4 sm:px-6 lg:px-8" role="tablist">
-				{#each [{ id: 'overview', label: 'Overview' }, { id: 'compute', label: 'Compute' }, { id: 'network', label: 'Network' }, { id: 'disk', label: 'Disk' }, { id: 'activity', label: 'Activity' }, { id: 'logs', label: 'Logs' }, { id: 'console', label: 'Console' }] as tab}
+			<nav class="-mb-px flex space-x-8 px-4 sm:px-6 lg:px-8" id="dashboardTabs" role="tablist">
+				{#each [{ id: 'overview', label: 'Overview', icon: Activity }, { id: 'compute', label: 'Compute', icon: Cpu }, { id: 'disk', label: 'Disk', icon: HardDrive }, { id: 'network', label: 'Network', icon: Wifi }, { id: 'activity', label: 'Activity', icon: Monitor }, { id: 'logs', label: 'Logs', icon: ScrollText }, { id: 'console', label: 'Console', icon: Terminal }] as tab}
 					<button
 						class="border-b-2 px-1 py-4 text-sm font-medium {activeTab === tab.id
 							? 'border-blue-500 text-blue-600 dark:text-blue-400'
@@ -456,7 +456,10 @@
 						role="tab"
 						aria-selected={activeTab === tab.id}
 					>
-						{tab.label}
+						<div class="flex items-center">
+							<svelte:component this={tab.icon} size={16} class="mr-2" />
+							{tab.label}
+						</div>
 					</button>
 				{/each}
 			</nav>
@@ -473,6 +476,7 @@
 					{processes}
 					{alerts}
 					{logs}
+					{events}
 					{runCommand}
 				/>
 			{:else if activeTab === 'compute'}

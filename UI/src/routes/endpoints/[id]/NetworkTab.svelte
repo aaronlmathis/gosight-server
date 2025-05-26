@@ -1,8 +1,74 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import { chart } from 'svelte-apexcharts';
+
 	export let metrics: any[];
-	let trafficChartEl!: HTMLElement;
-	let networkCharts: any = {};
+
+	// Chart data
+	let networkData = {
+		upload: [] as Array<[number, number]>,
+		download: [] as Array<[number, number]>
+	};
+
+	// Reactive chart options
+	$: isDark = typeof window !== 'undefined' && document.documentElement.classList.contains('dark');
+	$: textColor = isDark ? '#d1d5db' : '#374151';
+	$: gridColor = isDark ? '#374151' : '#e5e7eb';
+	$: theme = isDark ? 'dark' : 'light';
+
+	$: trafficChartOptions = {
+		chart: {
+			type: 'area',
+			height: 320,
+			toolbar: { show: false },
+			animations: { enabled: true },
+			background: 'transparent'
+		},
+		series: [
+			{ name: 'Upload', data: networkData.upload },
+			{ name: 'Download', data: networkData.download }
+		],
+		stroke: { curve: 'smooth', width: 2 },
+		fill: {
+			type: 'gradient',
+			gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0, stops: [0, 90, 100] }
+		},
+		xaxis: {
+			type: 'datetime',
+			labels: {
+				format: 'HH:mm:ss',
+				style: { colors: textColor }
+			}
+		},
+		yaxis: {
+			labels: {
+				formatter: (val: number) => formatBytes(val),
+				style: { colors: textColor }
+			},
+			title: {
+				text: 'Bytes/sec',
+				style: { color: textColor }
+			}
+		},
+		colors: ['#3b82f6', '#10b981'],
+		tooltip: {
+			x: { format: 'HH:mm:ss' },
+			y: { formatter: (val: number) => `${formatBytes(val)}/s` }
+		},
+		legend: {
+			labels: { colors: textColor }
+		},
+		grid: { borderColor: gridColor },
+		theme: { mode: theme }
+	};
+
+	function formatBytes(bytes: number): string {
+		if (bytes === 0) return '0 B';
+		const k = 1024;
+		const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+		const i = Math.floor(Math.log(bytes) / Math.log(k));
+		return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+	}
 
 	function isNetworkUpload(m: any): boolean {
 		const name = m.name.toLowerCase();
@@ -14,6 +80,7 @@
 			(ns.includes('network') && (name.includes('upload') || name.includes('tx')))
 		);
 	}
+
 	function isNetworkDownload(m: any): boolean {
 		const name = m.name.toLowerCase();
 		const ns = (m.namespace || '').toLowerCase();
@@ -25,10 +92,20 @@
 		);
 	}
 
-	onMount(async () => {
-		await tick();
-		initNetworkCharts();
-	});
+	function processNetworkMetrics(metrics: any[]) {
+		const uploadMetrics = metrics.filter(isNetworkUpload);
+		const downloadMetrics = metrics.filter(isNetworkDownload);
+
+		networkData = {
+			upload: uploadMetrics.map((m) => [new Date(m.timestamp).getTime(), m.value || 0]),
+			download: downloadMetrics.map((m) => [new Date(m.timestamp).getTime(), m.value || 0])
+		};
+	}
+
+	// Reactive metrics processing
+	$: if (metrics.length > 0) {
+		processNetworkMetrics(metrics);
+	}
 
 	function initNetworkCharts() {
 		if (typeof window === 'undefined' || !window.ApexCharts) return;

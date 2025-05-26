@@ -1,8 +1,26 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import type { Endpoint, Metric } from '$lib/types';
+	import type { Endpoint, Metric, AlertRuleFormData } from '$lib/types';
 	import { formatDate, formatDuration, getBadgeClass } from '$lib/utils';
-	import { AlertTriangle } from 'lucide-svelte';
+	import { api } from '$lib/api';
+	import {
+		AlertTriangle,
+		Settings,
+		Play,
+		Tag,
+		Plus,
+		Zap,
+		RefreshCw,
+		RotateCcw,
+		Activity,
+		Server,
+		Globe,
+		Monitor,
+		Clock,
+		Users,
+		Layers,
+		Cpu
+	} from 'lucide-svelte';
 
 	export let endpoint: Endpoint;
 	export let hostInfo: {
@@ -15,207 +33,129 @@
 	export let processes: any[];
 	export let alerts: any[] = [];
 	export let logs: any[] = [];
+	export let events: any[] = [];
 	export let runCommand: (command: string) => void;
 
+	// Modal state for alert rule creation
+	let showCreateModal = false;
+
+	// Form data for quick alert rule creation
+	let formData: AlertRuleFormData = {
+		name: '',
+		description: '',
+		severity: 'warning',
+		enabled: true,
+		endpoint_id: '',
+		metric_name: '',
+		operator: 'gt',
+		threshold: 0,
+		duration: 300
+	};
+
 	// Element bindings
-	let metricsChartEl!: HTMLElement;
-	let miniCpuChartEl!: HTMLElement;
-	let miniMemoryChartEl!: HTMLElement;
-	let miniSwapChartEl!: HTMLElement;
 	let mainCpuTableBody!: HTMLTableSectionElement;
 	let mainMemTableBody!: HTMLTableSectionElement;
-	let cpuPercentLabel!: HTMLElement;
-	let memPercentLabel!: HTMLElement;
-	let swapPercentLabel!: HTMLElement;
 
-	// Chart instances and data
-	let overviewCharts: any = {};
-	let chartData = { cpu: [] as any[], memory: [] as any[], swap: [] as any[] };
+	// Current metrics values
+	let cpuPercent = 0;
+	let memoryPercent = 0;
+	let swapPercent = 0;
 
-	function getTopProcessesTooltip(type: 'cpu' | 'memory', limit = 5) {
-		const key = type === 'cpu' ? 'cpu_percent' : 'memory_percent';
-		if (!processes || processes.length === 0) return '';
+	// Modal and alert rule functions
+	function openCreateModal() {
+		formData = {
+			name: '',
+			description: '',
+			severity: 'warning',
+			enabled: true,
+			endpoint_id: endpoint.id,
+			metric_name: '',
+			operator: 'gt',
+			threshold: 0,
+			duration: 300
+		};
+		showCreateModal = true;
+	}
 
-		const validProcesses = processes.filter(
-			(p) => p && typeof parseFloat(p?.[key] || 0) === 'number'
+	function closeCreateModal() {
+		showCreateModal = false;
+	}
+
+	async function saveRule() {
+		try {
+			const alertRuleData = {
+				name: formData.name,
+				description: formData.description,
+				message: `Alert for ${formData.metric_name || 'metric'}`,
+				level: formData.severity,
+				enabled: formData.enabled,
+				type: 'metric',
+				match: {
+					endpoint_ids: [formData.endpoint_id],
+					labels: {}
+				},
+				scope: {
+					namespace: 'system',
+					subnamespace: '',
+					metric: formData.metric_name
+				},
+				expression: {
+					datatype: 'value',
+					operator: formData.operator,
+					value: formData.threshold
+				},
+				actions: [],
+				options: {
+					cooldown: '30s',
+					eval_interval: '10s',
+					repeat_interval: '1m',
+					notify_on_resolve: true
+				}
+			};
+
+			await api.alerts.createRule(alertRuleData);
+			closeCreateModal();
+			// Show success message or refresh alerts if needed
+		} catch (err) {
+			console.error('Failed to create alert rule:', err);
+			alert('Failed to create alert rule: ' + (err as Error).message);
+		}
+	}
+
+	// Placeholder functions for future features
+	function runPlaybook() {
+		alert('Run Playbook functionality coming soon!');
+	}
+
+	function addTag() {
+		alert('Add Tag functionality coming soon!');
+	}
+
+	// Extract current metric values for display
+	function updateMetricValues(metrics: Metric[]) {
+		if (!metrics || metrics.length === 0) return;
+
+		// Find the latest metrics for each type
+		const latestMetrics = metrics.reduce(
+			(acc, metric) => {
+				const key = metric.name;
+				if (!acc[key] || new Date(metric.timestamp) > new Date(acc[key].timestamp)) {
+					acc[key] = metric;
+				}
+				return acc;
+			},
+			{} as Record<string, Metric>
 		);
-		const top = [...validProcesses]
-			.sort((a, b) => parseFloat(b?.[key] || 0) - parseFloat(a?.[key] || 0))
-			.slice(0, limit);
-		const rows = top
-			.map(
-				(p) =>
-					`<tr><td>${p.pid || 'N/A'}</td><td>${p.user || 'N/A'}</td><td>${parseFloat(p?.[key] || 0).toFixed(1)}%</td><td>${p.command || 'N/A'}</td></tr>`
-			)
-			.join('');
-		return `<table class="text-xs w-full"><thead><tr><th>PID</th><th>User</th><th>%</th><th>Cmd</th></tr></thead><tbody>${rows}</tbody></table>`;
+
+		// Update percentage values
+		cpuPercent = latestMetrics.cpu_usage?.value || latestMetrics.cpu_percent?.value || 0;
+		memoryPercent = latestMetrics.memory_usage?.value || latestMetrics.memory_percent?.value || 0;
+		swapPercent = latestMetrics.swap_usage?.value || latestMetrics.swap_percent?.value || 0;
 	}
 
-	export function initCharts() {
-		if (typeof window === 'undefined' || !window.ApexCharts) return;
-		if (!metricsChartEl || !miniCpuChartEl || !miniMemoryChartEl || !miniSwapChartEl) {
-			console.log('Chart containers not ready yet');
-			return;
-		}
-
-		// Initialize chart data storage
-		if (!(window as any).chartData) {
-			(window as any).chartData = {
-				cpu: [],
-				memory: [],
-				swap: [],
-				cpu_mini: [],
-				memory_mini: [],
-				swap_mini: []
-			};
-		}
-
-		console.log('Initializing overview charts...');
-
-		// Main performance chart
-		if (!overviewCharts.main) {
-			const mainOptions = {
-				chart: {
-					type: 'line',
-					height: 350,
-					animations: { enabled: false },
-					toolbar: { show: false },
-					zoom: { enabled: false }
-				},
-				series: [
-					{ name: 'CPU Usage %', data: chartData.cpu || [] },
-					{ name: 'Memory Usage %', data: chartData.memory || [] }
-				],
-				xaxis: {
-					type: 'datetime',
-					labels: { format: 'HH:mm:ss' }
-				},
-				yaxis: {
-					min: 0,
-					max: 100,
-					labels: { formatter: (val: number) => `${val.toFixed(1)}%` }
-				},
-				stroke: { curve: 'smooth', width: 2 },
-				colors: ['#3B82F6', '#10B981'],
-				grid: { strokeDashArray: 4 },
-				legend: { position: 'top' },
-				tooltip: {
-					x: { format: 'HH:mm:ss' },
-					y: { formatter: (val: number) => `${val.toFixed(2)}%` }
-				}
-			};
-			overviewCharts.main = new window.ApexCharts(metricsChartEl, mainOptions);
-			overviewCharts.main.render();
-		}
-
-		// Mini charts
-		if (!overviewCharts.cpu) {
-			const cpuOptions = {
-				chart: {
-					type: 'area',
-					height: 60,
-					sparkline: { enabled: true },
-					animations: { enabled: false }
-				},
-				series: [{ data: chartData.cpu || [] }],
-				stroke: { curve: 'smooth', width: 2 },
-				fill: { opacity: 0.3, gradient: { enabled: true } },
-				colors: ['#3B82F6'],
-				tooltip: {
-					fixed: { enabled: false },
-					x: { show: false },
-					y: {
-						formatter: () => getTopProcessesTooltip('cpu'),
-						title: { formatter: () => 'Top CPU Processes' }
-					},
-					marker: { show: false }
-				}
-			};
-			overviewCharts.cpu = new window.ApexCharts(miniCpuChartEl, cpuOptions);
-			overviewCharts.cpu.render();
-		}
-
-		if (!overviewCharts.memory) {
-			const memOptions = {
-				chart: {
-					type: 'area',
-					height: 60,
-					sparkline: { enabled: true },
-					animations: { enabled: false }
-				},
-				series: [{ data: chartData.memory || [] }],
-				stroke: { curve: 'smooth', width: 2 },
-				fill: { opacity: 0.3, gradient: { enabled: true } },
-				colors: ['#10B981'],
-				tooltip: {
-					fixed: { enabled: false },
-					x: { show: false },
-					y: {
-						formatter: () => getTopProcessesTooltip('memory'),
-						title: { formatter: () => 'Top Memory Processes' }
-					},
-					marker: { show: false }
-				}
-			};
-			overviewCharts.memory = new window.ApexCharts(miniMemoryChartEl, memOptions);
-			overviewCharts.memory.render();
-		}
-
-		if (!overviewCharts.swap) {
-			const swapOptions = {
-				chart: {
-					type: 'area',
-					height: 60,
-					sparkline: { enabled: true },
-					animations: { enabled: false }
-				},
-				series: [{ data: chartData.swap || [] }],
-				stroke: { curve: 'smooth', width: 2 },
-				fill: { opacity: 0.3, gradient: { enabled: true } },
-				colors: ['#F59E0B'],
-				tooltip: {
-					fixed: { enabled: false },
-					x: { show: false },
-					y: { formatter: (val: number) => `${val.toFixed(1)}%` },
-					marker: { show: false }
-				}
-			};
-			overviewCharts.swap = new window.ApexCharts(miniSwapChartEl, swapOptions);
-			overviewCharts.swap.render();
-		}
-	}
-
-	// Reactive update: when new metrics arrive, push into charts
-	$: if (metrics.length && overviewCharts.main) {
-		const latest = metrics[metrics.length - 1];
-		const ts = new Date(latest.timestamp).getTime();
-
-		// Parse metrics to extract percentages - metrics don't have direct cpu_percent properties
-		// Instead we need to look for specific metric names in the flat metrics array
-		let cpuPercent = 0;
-		let memoryPercent = 0;
-		let swapPercent = 0;
-
-		// Since this reactive statement expects a single latest metric but we need to parse
-		// multiple metrics, we should handle this differently. For now, let's skip the chart updates
-		// and focus on fixing the undefined errors
-		console.log('Metric structure:', latest);
-
-		// Skip chart updates for now to prevent errors
-		// chartData.cpu.push([ts, latest.cpu_percent]);
-		// chartData.memory.push([ts, latest.memory_percent]);
-		// chartData.swap.push([ts, latest.swap_percent]);
-		// overviewCharts.main.updateSeries([
-		// 	{ name: 'CPU Usage %', data: chartData.cpu },
-		// 	{ name: 'Memory Usage %', data: chartData.memory }
-		// ]);
-		// overviewCharts.cpu.updateSeries([{ data: chartData.cpu.map(([t, v]) => [t, v]) }]);
-		// overviewCharts.memory.updateSeries([{ data: chartData.memory.map(([t, v]) => [t, v]) }]);
-		// overviewCharts.swap.updateSeries([{ data: chartData.swap.map(([t, v]) => [t, v]) }]);
-		// // Update percent labels
-		// cpuPercentLabel.textContent = `${latest.cpu_percent.toFixed(1)}%`;
-		// memPercentLabel.textContent = `${latest.memory_percent.toFixed(1)}%`;
-		// swapPercentLabel.textContent = `${latest.swap_percent.toFixed(1)}%`;
+	// Reactive update: when new metrics arrive, update values
+	$: if (metrics.length > 0) {
+		updateMetricValues(metrics);
 	}
 
 	// Reactive update: when processes change, update process tables
@@ -250,7 +190,7 @@
 
 	onMount(async () => {
 		await tick();
-		initCharts();
+		// Chart initialization removed - overview tab now focuses on system info and processes
 	});
 </script>
 
@@ -260,73 +200,182 @@
 		<!-- Info Cards -->
 		<div class="space-y-6 lg:col-span-2">
 			<!-- Basic Info -->
-			<div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
-				<h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-white">System Information</h3>
-				<dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-					<div>
-						<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Hostname</dt>
-						<dd class="text-sm text-gray-900 dark:text-white">
-							{endpoint.hostname || 'N/A'}
-						</dd>
-					</div>
-					<div>
-						<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">IP Address</dt>
-						<dd class="text-sm text-gray-900 dark:text-white">{endpoint.ip}</dd>
-					</div>
-					<div>
-						<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Operating System</dt>
-						<dd class="text-sm text-gray-900 dark:text-white">{endpoint.os || 'N/A'}</dd>
-					</div>
-					<div>
-						<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Agent Version</dt>
-						<dd class="text-sm text-gray-900 dark:text-white">
-							{endpoint.agent_version || 'N/A'}
-						</dd>
-					</div>
-					<div>
-						<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Last Seen</dt>
-						<dd class="text-sm text-gray-900 dark:text-white">
-							{endpoint.last_seen ? formatDate(endpoint.last_seen) : 'N/A'}
-						</dd>
-					</div>
-					<div>
-						<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Uptime</dt>
-						<dd class="text-sm text-gray-900 dark:text-white">
-							{hostInfo.uptime || (endpoint.uptime ? formatDuration(endpoint.uptime) : 'N/A')}
-						</dd>
-					</div>
-					<div>
-						<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Running Processes</dt>
-						<dd class="text-sm text-gray-900 dark:text-white">
-							{hostInfo.procs || 'N/A'}
-						</dd>
-					</div>
-					<div>
-						<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Users Logged In</dt>
-						<dd class="text-sm text-gray-900 dark:text-white">
-							{hostInfo.users_loggedin || 'N/A'}
-						</dd>
-					</div>
-					<!-- Additional host info from summary -->
-					{#if hostInfo.summary && Object.keys(hostInfo.summary).length > 0}
-						{#each Object.entries(hostInfo.summary) as [key, value]}
-							<div>
-								<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
-									{key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
+			<div
+				class="rounded-lg border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+			>
+				<div class="mb-6 flex items-center space-x-2">
+					<Server size={20} class="text-blue-500" />
+					<h3 class="text-lg font-semibold text-gray-900 dark:text-white">System Information</h3>
+				</div>
+
+				<!-- Primary System Info Grid -->
+				<div class="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+					<!-- Hostname Card -->
+					<div
+						class="rounded-lg border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-4 dark:border-blue-700/50 dark:from-blue-900/20 dark:to-blue-800/20"
+					>
+						<div class="flex items-center space-x-3">
+							<div class="flex-shrink-0">
+								<Monitor size={18} class="text-blue-600 dark:text-blue-400" />
+							</div>
+							<div class="min-w-0 flex-1">
+								<dt
+									class="text-xs font-medium tracking-wide text-blue-700 uppercase dark:text-blue-300"
+								>
+									Hostname
 								</dt>
-								<dd class="text-sm text-gray-900 dark:text-white">
-									{value || 'N/A'}
+								<dd class="truncate text-lg font-semibold text-blue-900 dark:text-blue-100">
+									{endpoint.hostname || 'N/A'}
 								</dd>
 							</div>
-						{/each}
+						</div>
+					</div>
+
+					<!-- IP Address Card -->
+					<div
+						class="rounded-lg border border-green-200 bg-gradient-to-br from-green-50 to-green-100 p-4 dark:border-green-700/50 dark:from-green-900/20 dark:to-green-800/20"
+					>
+						<div class="flex items-center space-x-3">
+							<div class="flex-shrink-0">
+								<Globe size={18} class="text-green-600 dark:text-green-400" />
+							</div>
+							<div class="min-w-0 flex-1">
+								<dt
+									class="text-xs font-medium tracking-wide text-green-700 uppercase dark:text-green-300"
+								>
+									IP Address
+								</dt>
+								<dd class="truncate text-lg font-semibold text-green-900 dark:text-green-100">
+									{endpoint.ip}
+								</dd>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Secondary System Info -->
+				<div class="space-y-4">
+					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+						<div class="flex items-center space-x-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
+							<Cpu size={16} class="flex-shrink-0 text-purple-500" />
+							<div class="min-w-0 flex-1">
+								<dt class="text-sm font-medium text-gray-600 dark:text-gray-300">
+									Operating System
+								</dt>
+								<dd class="truncate text-sm font-medium text-gray-900 dark:text-white">
+									{endpoint.os || 'N/A'}
+								</dd>
+							</div>
+						</div>
+
+						<div class="flex items-center space-x-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
+							<Settings size={16} class="flex-shrink-0 text-orange-500" />
+							<div class="min-w-0 flex-1">
+								<dt class="text-sm font-medium text-gray-600 dark:text-gray-300">Agent Version</dt>
+								<dd class="truncate text-sm font-medium text-gray-900 dark:text-white">
+									{endpoint.agent_version || 'N/A'}
+								</dd>
+							</div>
+						</div>
+
+						<div class="flex items-center space-x-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
+							<Clock size={16} class="flex-shrink-0 text-indigo-500" />
+							<div class="min-w-0 flex-1">
+								<dt class="text-sm font-medium text-gray-600 dark:text-gray-300">Last Seen</dt>
+								<dd class="truncate text-sm font-medium text-gray-900 dark:text-white">
+									{endpoint.last_seen ? formatDate(endpoint.last_seen) : 'N/A'}
+								</dd>
+							</div>
+						</div>
+
+						<div class="flex items-center space-x-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
+							<Activity size={16} class="flex-shrink-0 text-cyan-500" />
+							<div class="min-w-0 flex-1">
+								<dt class="text-sm font-medium text-gray-600 dark:text-gray-300">Uptime</dt>
+								<dd class="truncate text-sm font-medium text-gray-900 dark:text-white">
+									{hostInfo.uptime || (endpoint.uptime ? formatDuration(endpoint.uptime) : 'N/A')}
+								</dd>
+							</div>
+						</div>
+
+						<div class="flex items-center space-x-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
+							<Layers size={16} class="flex-shrink-0 text-pink-500" />
+							<div class="min-w-0 flex-1">
+								<dt class="text-sm font-medium text-gray-600 dark:text-gray-300">
+									Running Processes
+								</dt>
+								<dd class="truncate text-sm font-medium text-gray-900 dark:text-white">
+									{hostInfo.procs || 'N/A'}
+								</dd>
+							</div>
+						</div>
+
+						<div class="flex items-center space-x-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
+							<Users size={16} class="flex-shrink-0 text-emerald-500" />
+							<div class="min-w-0 flex-1">
+								<dt class="text-sm font-medium text-gray-600 dark:text-gray-300">
+									Users Logged In
+								</dt>
+								<dd class="truncate text-sm font-medium text-gray-900 dark:text-white">
+									{hostInfo.users_loggedin || 'N/A'}
+								</dd>
+							</div>
+						</div>
+					</div>
+
+					<!-- Additional host info from summary -->
+					{#if hostInfo.summary && Object.keys(hostInfo.summary).length > 0}
+						<div class="mt-6 border-t border-gray-200 pt-4 dark:border-gray-600">
+							<h4 class="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+								Additional Information
+							</h4>
+							<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+								{#each Object.entries(hostInfo.summary) as [key, value]}
+									<div
+										class="flex items-center space-x-3 rounded bg-gray-50 p-2 dark:bg-gray-700/30"
+									>
+										<div class="h-2 w-2 flex-shrink-0 rounded-full bg-gray-400"></div>
+										<div class="min-w-0 flex-1">
+											<dt
+												class="text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
+											>
+												{key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
+											</dt>
+											<dd class="truncate text-sm font-medium text-gray-900 dark:text-white">
+												{value || 'N/A'}
+											</dd>
+										</div>
+									</div>
+								{/each}
+							</div>
+						</div>
 					{/if}
-				</dl>
+				</div>
 			</div>
 
-			<!-- Metrics Chart -->
+			<!-- Quick Stats Summary -->
 			<div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
-				<h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-white">Performance Metrics</h3>
-				<div id="metrics-chart" bind:this={metricsChartEl}></div>
+				<h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-white">Current Status</h3>
+				<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+					<div class="text-center">
+						<p class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+							{cpuPercent.toFixed(1)}%
+						</p>
+						<p class="text-sm text-gray-500 dark:text-gray-400">CPU Usage</p>
+					</div>
+					<div class="text-center">
+						<p class="text-2xl font-bold text-green-600 dark:text-green-400">
+							{memoryPercent.toFixed(1)}%
+						</p>
+						<p class="text-sm text-gray-500 dark:text-gray-400">Memory Usage</p>
+					</div>
+					<div class="text-center">
+						<p class="text-2xl font-bold text-yellow-500 dark:text-yellow-400">
+							{swapPercent.toFixed(1)}%
+						</p>
+						<p class="text-sm text-gray-500 dark:text-gray-400">Swap Usage</p>
+					</div>
+				</div>
 			</div>
 		</div>
 
@@ -337,22 +386,46 @@
 				<h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-white">Quick Actions</h3>
 				<div class="space-y-2">
 					<button
-						class="w-full rounded px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+						class="flex w-full items-center space-x-3 rounded px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
 						on:click={() => runCommand('restart')}
 					>
-						Restart Service
+						<RotateCcw size={16} class="text-blue-500" />
+						<span>Restart Service</span>
 					</button>
 					<button
-						class="w-full rounded px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+						class="flex w-full items-center space-x-3 rounded px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
 						on:click={() => runCommand('status')}
 					>
-						Check Status
+						<Activity size={16} class="text-green-500" />
+						<span>Check Status</span>
 					</button>
 					<button
-						class="w-full rounded px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+						class="flex w-full items-center space-x-3 rounded px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
 						on:click={() => runCommand('update')}
 					>
-						Update Agent
+						<RefreshCw size={16} class="text-purple-500" />
+						<span>Update Agent</span>
+					</button>
+					<button
+						class="flex w-full items-center space-x-3 rounded px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+						on:click={openCreateModal}
+					>
+						<Plus size={16} class="text-orange-500" />
+						<span>Create Alert Rule</span>
+					</button>
+					<button
+						class="flex w-full items-center space-x-3 rounded px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+						on:click={runPlaybook}
+					>
+						<Play size={16} class="text-indigo-500" />
+						<span>Run Playbook</span>
+					</button>
+					<button
+						class="flex w-full items-center space-x-3 rounded px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+						on:click={addTag}
+					>
+						<Tag size={16} class="text-cyan-500" />
+						<span>Add Tag</span>
 					</button>
 				</div>
 			</div>
@@ -391,62 +464,44 @@
 					{/each}
 				</div>
 			</div>
-		</div>
-	</div>
 
-	<!-- Metrics Row: CPU, Memory, Swap -->
-	<div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-		<div
-			class="flex h-full flex-col justify-between rounded-lg border border-gray-100 bg-white p-4 shadow-sm hover:shadow-md sm:p-6 dark:border-gray-700 dark:bg-gray-800"
-		>
-			<div class="flex items-center justify-between">
-				<p class="text-sm text-gray-500 dark:text-gray-400">CPU Usage</p>
-				<p
-					class="text-2xl font-bold text-indigo-600 dark:text-blue-400"
-					bind:this={cpuPercentLabel}
-				>
-					--%
-				</p>
-			</div>
-			<p class="mb-1 text-xs text-gray-400 dark:text-gray-500">percent</p>
-			<div class="mt-2">
-				<div bind:this={miniCpuChartEl} class="h-20 w-full"></div>
-			</div>
-		</div>
-
-		<div
-			class="flex h-full flex-col justify-between rounded-lg border border-gray-100 bg-white p-4 shadow-sm hover:shadow-md sm:p-6 dark:border-gray-700 dark:bg-gray-800"
-		>
-			<div class="flex items-center justify-between">
-				<p class="text-sm text-gray-500 dark:text-gray-400">Memory Used</p>
-				<p
-					class="text-2xl font-bold text-green-600 dark:text-green-400"
-					bind:this={memPercentLabel}
-				>
-					--%
-				</p>
-			</div>
-			<p class="mb-1 text-xs text-gray-400 dark:text-gray-500">percent</p>
-			<div class="mt-2">
-				<div bind:this={miniMemoryChartEl} class="h-20 w-full"></div>
-			</div>
-		</div>
-
-		<div
-			class="flex h-full flex-col justify-between rounded-lg border border-gray-100 bg-white p-4 shadow-sm hover:shadow-md sm:p-6 dark:border-gray-700 dark:bg-gray-800"
-		>
-			<div class="flex items-center justify-between">
-				<p class="text-sm text-gray-500 dark:text-gray-400">Swap Used</p>
-				<p
-					class="text-2xl font-bold text-yellow-500 dark:text-yellow-400"
-					bind:this={swapPercentLabel}
-				>
-					--%
-				</p>
-			</div>
-			<p class="mb-1 text-xs text-gray-400 dark:text-gray-500">percent</p>
-			<div class="mt-2">
-				<div bind:this={miniSwapChartEl} class="h-20 w-full"></div>
+			<!-- Recent Events -->
+			<div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+				<h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-white">Recent Events</h3>
+				<div class="space-y-3">
+					{#each Array.isArray(events) ? events.slice(0, 5) : [] as event}
+						<div
+							class="flex items-center space-x-3 rounded-lg p-2 {event.type === 'endpoint_down'
+								? 'bg-red-50 dark:bg-red-900/20'
+								: event.type === 'endpoint_up'
+									? 'bg-green-50 dark:bg-green-900/20'
+									: event.type === 'alert_triggered'
+										? 'bg-orange-50 dark:bg-orange-900/20'
+										: 'bg-blue-50 dark:bg-blue-900/20'}"
+						>
+							<Zap
+								size={16}
+								class={event.type === 'endpoint_down'
+									? 'text-red-500'
+									: event.type === 'endpoint_up'
+										? 'text-green-500'
+										: event.type === 'alert_triggered'
+											? 'text-orange-500'
+											: 'text-blue-500'}
+							/>
+							<div class="min-w-0 flex-1">
+								<p class="truncate text-xs font-medium text-gray-900 dark:text-white">
+									{event.message || event.title || event.type}
+								</p>
+								<p class="text-xs text-gray-500 dark:text-gray-400">
+									{formatDate(event.timestamp || event.created_at || new Date())}
+								</p>
+							</div>
+						</div>
+					{:else}
+						<p class="text-sm text-gray-500 dark:text-gray-400">No recent events</p>
+					{/each}
+				</div>
 			</div>
 		</div>
 	</div>
@@ -535,3 +590,169 @@
 		</div>
 	</div>
 </div>
+
+<!-- Create Alert Rule Modal -->
+{#if showCreateModal}
+	<div class="fixed inset-0 z-50 overflow-y-auto">
+		<div class="flex min-h-screen items-center justify-center p-4">
+			<button
+				class="bg-opacity-50 fixed inset-0 cursor-pointer bg-black transition-opacity"
+				on:click={closeCreateModal}
+				on:keydown={(e) => e.key === 'Escape' && closeCreateModal()}
+				aria-label="Close modal"
+			></button>
+
+			<div class="relative w-full max-w-lg rounded-lg bg-white shadow-xl dark:bg-gray-800">
+				<div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+					<h3 class="text-lg font-medium text-gray-900 dark:text-white">Create Alert Rule</h3>
+				</div>
+
+				<form on:submit|preventDefault={saveRule} class="space-y-4 px-6 py-4">
+					<div>
+						<label
+							for="rule-name"
+							class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+						>
+							Name
+						</label>
+						<input
+							id="rule-name"
+							type="text"
+							bind:value={formData.name}
+							required
+							class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-400"
+							placeholder="Enter rule name"
+						/>
+					</div>
+
+					<div>
+						<label
+							for="rule-description"
+							class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+						>
+							Description
+						</label>
+						<textarea
+							id="rule-description"
+							bind:value={formData.description}
+							rows="2"
+							class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-400"
+							placeholder="Enter rule description"
+						></textarea>
+					</div>
+
+					<div>
+						<label
+							for="rule-metric"
+							class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+						>
+							Metric
+						</label>
+						<select
+							id="rule-metric"
+							bind:value={formData.metric_name}
+							required
+							class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-400"
+						>
+							<option value="">Select metric</option>
+							<option value="cpu_usage">CPU Usage</option>
+							<option value="memory_usage">Memory Usage</option>
+							<option value="disk_usage">Disk Usage</option>
+							<option value="network_usage">Network Usage</option>
+						</select>
+					</div>
+
+					<div class="grid grid-cols-2 gap-4">
+						<div>
+							<label
+								for="rule-operator"
+								class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+							>
+								Operator
+							</label>
+							<select
+								id="rule-operator"
+								bind:value={formData.operator}
+								class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-400"
+							>
+								<option value="gt">Greater than</option>
+								<option value="gte">Greater than or equal</option>
+								<option value="lt">Less than</option>
+								<option value="lte">Less than or equal</option>
+								<option value="eq">Equal</option>
+								<option value="ne">Not equal</option>
+							</select>
+						</div>
+
+						<div>
+							<label
+								for="rule-threshold"
+								class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+							>
+								Threshold
+							</label>
+							<input
+								id="rule-threshold"
+								type="number"
+								bind:value={formData.threshold}
+								required
+								step="0.1"
+								class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-400"
+								placeholder="0"
+							/>
+						</div>
+					</div>
+
+					<div>
+						<label
+							for="rule-severity"
+							class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+						>
+							Severity
+						</label>
+						<select
+							id="rule-severity"
+							bind:value={formData.severity}
+							class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-400"
+						>
+							<option value="info">Info</option>
+							<option value="warning">Warning</option>
+							<option value="critical">Critical</option>
+						</select>
+					</div>
+
+					<div class="flex items-center">
+						<input
+							id="rule-enabled"
+							type="checkbox"
+							bind:checked={formData.enabled}
+							class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+						/>
+						<label
+							for="rule-enabled"
+							class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+						>
+							Enable rule
+						</label>
+					</div>
+
+					<div class="flex justify-end space-x-3 pt-4">
+						<button
+							type="button"
+							on:click={closeCreateModal}
+							class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+						>
+							Cancel
+						</button>
+						<button
+							type="submit"
+							class="rounded-lg border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
+						>
+							Create Rule
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+{/if}
