@@ -360,9 +360,9 @@
 	{#if message}
 		<div class="mx-4 mt-4 sm:mx-6 lg:mx-8">
 			<div
-				class="rounded-md border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/20"
+				class="rounded-md border border-green-200 bg-green-50 p-4 dark:border-green-500 dark:bg-green-800/80"
 			>
-				<p class="text-green-800 dark:text-green-200">{message}</p>
+				<p class="text-green-800 dark:text-green-50">{message}</p>
 			</div>
 		</div>
 	{/if}
@@ -370,11 +370,11 @@
 	{#if error}
 		<div class="mx-4 mt-4 sm:mx-6 lg:mx-8">
 			<div
-				class="rounded-md border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20"
+				class="rounded-md border border-red-200 bg-red-50 p-4 dark:border-red-500 dark:bg-red-800/80"
 			>
 				<div class="flex">
-					<AlertCircle class="mr-2 h-5 w-5 text-red-400" />
-					<p class="text-red-800 dark:text-red-200">{error}</p>
+					<AlertCircle class="mr-2 h-5 w-5 text-red-400 dark:text-red-200" />
+					<p class="text-red-800 dark:text-red-50">{error}</p>
 				</div>
 			</div>
 		</div>
