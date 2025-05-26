@@ -144,7 +144,7 @@
 		xaxis: {
 			type: 'datetime',
 			labels: {
-				format: 'HH:mm:ss',
+				format: 'hh:mm:ss A',
 				style: { colors: textColor }
 			}
 		},
@@ -152,17 +152,17 @@
 			labels: {
 				formatter: (val: number) => `${val.toFixed(1)}%`,
 				style: { colors: textColor }
-			},
-			min: 0,
-			max: 100
+			}
 		},
 		colors: ['#3b82f6'],
 		tooltip: {
-			x: { format: 'HH:mm:ss' },
+			x: { format: 'hh:mm:ss A' },
 			y: { formatter: (val: number) => `${val.toFixed(1)}%` },
-			custom: generateProcessTooltip(false)
+			custom: generateProcessTooltip(false),
+			cssClass: 'custom-process-tooltip'
 		},
 		grid: { borderColor: gridColor },
+		dataLabels: { enabled: false },
 		theme: { mode: theme }
 	};
 
@@ -189,7 +189,7 @@
 		xaxis: {
 			type: 'datetime',
 			labels: {
-				format: 'HH:mm:ss',
+				format: 'hh:mm:ss',
 				style: { colors: textColor }
 			}
 		},
@@ -208,8 +208,10 @@
 		},
 		colors: ['#3b82f6', '#10b981', '#f59e0b'],
 		tooltip: {
-			x: { format: 'HH:mm:ss' },
-			y: { formatter: (val: number) => val.toFixed(2) }
+			x: { format: 'hh:mm:ss' },
+			y: { formatter: (val: number) => val.toFixed(2) },
+			custom: generateProcessTooltip(false),
+			cssClass: 'custom-process-tooltip'
 		},
 		annotations: {
 			yaxis: [
@@ -226,6 +228,7 @@
 			]
 		},
 		grid: { borderColor: gridColor },
+		dataLabels: { enabled: false },
 		theme: { mode: theme }
 	};
 
@@ -253,7 +256,7 @@
 		xaxis: {
 			type: 'datetime',
 			labels: {
-				format: 'HH:mm:ss',
+				format: 'hh:mm:ss',
 				style: { colors: textColor }
 			}
 		},
@@ -261,17 +264,17 @@
 			labels: {
 				formatter: (val: number) => `${val.toFixed(1)}%`,
 				style: { colors: textColor }
-			},
-			min: 0,
-			max: 100
+			}
 		},
 		colors: ['#10b981'],
 		tooltip: {
-			x: { format: 'HH:mm:ss' },
+			x: { format: 'hh:mm:ss' },
 			y: { formatter: (val: number) => `${val.toFixed(1)}%` },
-			custom: generateProcessTooltip(true)
+			custom: generateProcessTooltip(true),
+			cssClass: 'custom-process-tooltip'
 		},
 		grid: { borderColor: gridColor },
+		dataLabels: { enabled: false },
 		theme: { mode: theme }
 	};
 
@@ -299,7 +302,7 @@
 		xaxis: {
 			type: 'datetime',
 			labels: {
-				format: 'HH:mm:ss',
+				format: 'hh:mm:ss',
 				style: { colors: textColor }
 			}
 		},
@@ -307,23 +310,20 @@
 			labels: {
 				formatter: (val: number) => `${val.toFixed(1)}%`,
 				style: { colors: textColor }
-			},
-			min: 0,
-			max: 100
+			}
 		},
 		colors: ['#ef4444'],
 		tooltip: {
-			x: { format: 'HH:mm:ss' },
+			x: { format: 'hh:mm:ss' },
 			y: { formatter: (val: number) => `${val.toFixed(1)}%` }
 		},
 		grid: { borderColor: gridColor },
+		dataLabels: { enabled: false },
 		theme: { mode: theme }
 	};
 
 	// Process metrics data when they change
 	function processMetrics(allMetrics: Metric[]) {
-		console.log('ComputeTab: Processing metrics:', allMetrics.length, 'total metrics');
-
 		// Filter to only process new metrics (timestamps greater than last processed)
 		const newMetrics = allMetrics.filter((m) => {
 			const metricTime = new Date(m.timestamp).getTime();
@@ -335,57 +335,38 @@
 			return;
 		}
 
-		console.log('ComputeTab: Processing', newMetrics.length, 'new metrics');
-		console.log(
-			'ComputeTab: Sample new metric structures:',
-			newMetrics.slice(0, 3).map((m) => ({
-				namespace: m.namespace,
-				subnamespace: m.subnamespace,
-				name: m.name,
-				dimensions: m.dimensions,
-				timestamp: m.timestamp
-			}))
-		);
-
 		const now = Date.now();
 
-		// Extract CPU usage data (System namespace with scope=total)
-		const cpuMetrics = newMetrics.filter(
+		const totalCpuMetrics = newMetrics.filter(
 			(m) =>
 				m.namespace === 'System' &&
-				!m.subnamespace &&
+				m.subnamespace === 'CPU' &&
 				m.name === 'usage_percent' &&
 				m.dimensions?.scope === 'total'
 		);
-		console.log('ComputeTab: Found', cpuMetrics.length, 'new CPU metrics');
+		console.log('ComputeTab: Found', totalCpuMetrics.length, 'new CPU metrics');
 
 		// Add new CPU data points to existing array
-		if (cpuMetrics.length > 0) {
-			const newCpuData: Array<[number, number]> = cpuMetrics.map((m) => [
+		if (totalCpuMetrics.length > 0) {
+			const newCpuData: Array<[number, number]> = totalCpuMetrics.map((m) => [
 				new Date(m.timestamp).getTime(),
 				m.value
 			]);
 			cpuUsageData = [...cpuUsageData, ...newCpuData].slice(-MAX_DATA_POINTS);
 
 			// Update latest CPU percent for tooltips
-			latestCpuPercent = cpuMetrics[cpuMetrics.length - 1].value;
+			latestCpuPercent = totalCpuMetrics[totalCpuMetrics.length - 1].value;
 		}
 
 		// Extract load average data (System.load_avg_1, load_avg_5, load_avg_15)
 		const load1Metrics = newMetrics.filter(
-			(m) => m.namespace === 'System' && !m.subnamespace && m.name === 'load_avg_1'
+			(m) => m.namespace === 'System' && m.subnamespace === 'CPU' && m.name === 'load_avg_1'
 		);
 		const load5Metrics = newMetrics.filter(
-			(m) => m.namespace === 'System' && !m.subnamespace && m.name === 'load_avg_5'
+			(m) => m.namespace === 'System' && m.subnamespace === 'CPU' && m.name === 'load_avg_5'
 		);
 		const load15Metrics = newMetrics.filter(
-			(m) => m.namespace === 'System' && !m.subnamespace && m.name === 'load_avg_15'
-		);
-		console.log(
-			'ComputeTab: Found new load metrics:',
-			load1Metrics.length,
-			load5Metrics.length,
-			load15Metrics.length
+			(m) => m.namespace === 'System' && m.subnamespace === 'CPU' && m.name === 'load_avg_15'
 		);
 
 		// Add new load data points
@@ -412,13 +393,8 @@
 
 		// Extract memory usage data (System.used_percent with type=memory)
 		const memoryMetrics = newMetrics.filter(
-			(m) =>
-				m.namespace === 'System' &&
-				!m.subnamespace &&
-				m.name === 'used_percent' &&
-				m.dimensions?.type === 'memory'
+			(m) => m.namespace === 'System' && m.subnamespace == 'Memory' && m.name === 'used_percent'
 		);
-		console.log('ComputeTab: Found', memoryMetrics.length, 'new memory metrics');
 
 		// Add new memory data points
 		if (memoryMetrics.length > 0) {
@@ -432,23 +408,37 @@
 			latestMemUsedPercent = memoryMetrics[memoryMetrics.length - 1].value;
 		}
 
-		// Extract swap usage data (System.swap_used_percent or System.used_percent with type=swap)
-		const swapMetrics = newMetrics.filter(
-			(m) =>
-				m.namespace === 'System' &&
-				!m.subnamespace &&
-				(m.name === 'swap_used_percent' ||
-					(m.name === 'used_percent' && m.dimensions?.type === 'swap'))
-		);
-		console.log('ComputeTab: Found', swapMetrics.length, 'new swap metrics');
+		// Collect swap metrics by timestamp
+		const swapTotalByTime: Record<number, number> = {};
+		const swapFreeByTime: Record<number, number> = {};
 
-		// Add new swap data points
-		if (swapMetrics.length > 0) {
-			const newSwapData: Array<[number, number]> = swapMetrics.map((m) => [
-				new Date(m.timestamp).getTime(),
-				m.value
-			]);
+		newMetrics.forEach((m) => {
+			if (
+				m.namespace === 'System' &&
+				m.subnamespace === 'Memory' &&
+				(m.name === 'swap_total' || m.name === 'swap_free')
+			) {
+				const ts = new Date(m.timestamp).getTime();
+				if (m.name === 'swap_total') swapTotalByTime[ts] = m.value;
+				if (m.name === 'swap_free') swapFreeByTime[ts] = m.value;
+			}
+		});
+
+		// Calculate swap used percent for timestamps where both exist
+		const newSwapData: Array<[number, number]> = [];
+		for (const tsStr of Object.keys(swapTotalByTime)) {
+			const ts = Number(tsStr);
+			const total = swapTotalByTime[ts];
+			const free = swapFreeByTime[ts];
+			if (typeof total === 'number' && typeof free === 'number' && total > 0) {
+				const usedPercent = (100 * (total - free)) / total;
+				newSwapData.push([ts, usedPercent]);
+			}
+		}
+
+		if (newSwapData.length > 0) {
 			swapUsageData = [...swapUsageData, ...newSwapData].slice(-MAX_DATA_POINTS);
+			console.log('Swap Usage % points:', newSwapData);
 		}
 
 		// Add process snapshot for tooltips
@@ -461,16 +451,6 @@
 			const timestamps = newMetrics.map((m) => new Date(m.timestamp).getTime());
 			lastProcessedTimestamp = Math.max(...timestamps);
 		}
-
-		console.log('ComputeTab: Updated chart data lengths:', {
-			cpu: cpuUsageData.length,
-			memory: memoryUsageData.length,
-			swap: swapUsageData.length,
-			load1: cpuLoadData.load1.length,
-			load5: cpuLoadData.load5.length,
-			load15: cpuLoadData.load15.length,
-			lastProcessedTimestamp: new Date(lastProcessedTimestamp).toISOString()
-		});
 	}
 
 	// Reactive statements to update chart series when data changes
@@ -499,7 +479,7 @@
 
 	// Reactive metrics processing
 	$: if (metrics.length > 0) {
-		console.log('ComputeTab: Reactive statement triggered with', metrics.length, 'metrics');
+		console.log('[ComputeTab] Metrics sample:', metrics.slice(0, 2));
 		processMetrics(metrics);
 	}
 </script>
