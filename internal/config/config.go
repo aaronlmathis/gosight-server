@@ -74,7 +74,6 @@ type Config struct {
 		EnableReflection bool `yaml:"enable_reflection"`
 	} `yaml:"debug"`
 
-	// TODO - split up storage engine configs.
 	MetricStore struct {
 		Engine        string `yaml:"engine"`
 		URL           string `yaml:"url"`
@@ -149,32 +148,17 @@ type Config struct {
 }
 
 // OpenTelemetryConfig defines the configuration for OpenTelemetry
-// It includes settings for the OTLP receiver, exporter, and other related options.
+// It includes settings for the OTLP receiver
 type OpenTelemetryConfig struct {
-	Enabled           bool                           `yaml:"enabled"`
-	ReceiverProtocols OpenTelemetryReceiverProtocols `yaml:"receiver_protocols"`
-	ExporterProtocols OpenTelemetryExporterProtocols `yaml:"exporter_protocols"`
-	MaxMessageSizeMB  int                            `yaml:"max_message_size_mb"`
-}
-
-// OpenTelemetryReceiverProtocols defines the protocols for receiving OpenTelemetry data.
-// It includes configurations for gRPC and HTTP protocols.
-type OpenTelemetryReceiverProtocols struct {
-	GRPC OTLPProtocolConfig `yaml:"grpc"`
-	HTTP OTLPProtocolConfig `yaml:"http"`
-}
-
-// OpenTelemetryExporterProtocols defines the protocols for exporting OpenTelemetry data.
-// It includes configurations for gRPC and HTTP protocols.
-type OpenTelemetryExporterProtocols struct {
-	GRPC OTLPProtocolConfig `yaml:"grpc"`
-	HTTP OTLPProtocolConfig `yaml:"http"`
+	Enabled bool               `yaml:"enabled"`
+	HTTP    OTLPProtocolConfig `yaml:"http"`
+	GRPC    OTLPProtocolConfig `yaml:"grpc"`
 }
 
 // OTLPProtocolConfig defines the configuration for an OTLP protocol.
 type OTLPProtocolConfig struct {
-	Enabled  bool   `yaml:"enabled"`
-	Endpoint string `yaml:"endpoint"`
+	Enabled bool   `yaml:"enabled"`
+	Addr    string `yaml:"addr"`
 }
 
 // SyslogCollectionConfig defines the configuration for syslog collection

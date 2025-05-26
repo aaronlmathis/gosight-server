@@ -23,14 +23,12 @@ tls:
 
 opentelemetry:
   enabled: true
-  receiver_protocols:
-    grpc:
-      enabled: true
-      endpoint: "0.0.0.0:4317"
-    http:
-      enabled: true
-      endpoint: "0.0.0.0:4318"
-  max_message_size_mb: 10
+  http:
+    enabled: true
+    addr: "0.0.0.0:4317"
+  grpc:
+    enabled: false
+    addr: "0.0.0.0:4317"
 
 debug:
   enable_reflection: true
