@@ -21,6 +21,15 @@ tls:
   https_cert_file: "../certs/server-cert.pem"
   https_key_file: "../certs/server-key.pem"
 
+opentelemetry:
+  enabled: true
+  http:
+    enabled: true
+    addr: "0.0.0.0:4317"
+  grpc:
+    enabled: false
+    addr: "0.0.0.0:4317"
+
 debug:
   enable_reflection: true
 

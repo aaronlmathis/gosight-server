@@ -52,7 +52,7 @@ func NewEmitter(store eventstore.EventStore, hub *websocket.EventsHub) *Emitter 
 // Emit emits an event with the specified attributes.
 func (e *Emitter) Emit(ctx context.Context, event model.EventEntry) {
 	if event.ID == "" {
-		event.ID = model.GenerateID()
+		event.ID = utils.NewUUID()
 	}
 	if event.Timestamp.IsZero() {
 		event.Timestamp = time.Now().UTC()

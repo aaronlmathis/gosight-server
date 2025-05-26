@@ -74,7 +74,6 @@ type Config struct {
 		EnableReflection bool `yaml:"enable_reflection"`
 	} `yaml:"debug"`
 
-	// TODO - split up storage engine configs.
 	MetricStore struct {
 		Engine        string `yaml:"engine"`
 		URL           string `yaml:"url"`
@@ -144,6 +143,22 @@ type Config struct {
 		Azure      AzureConfig  `yaml:"azure"`
 		GitHub     GitHubConfig `yaml:"github"`
 	} `yaml:"auth"`
+
+	OpenTelemetry OpenTelemetryConfig `yaml:"opentelemetry"`
+}
+
+// OpenTelemetryConfig defines the configuration for OpenTelemetry
+// It includes settings for the OTLP receiver
+type OpenTelemetryConfig struct {
+	Enabled bool               `yaml:"enabled"`
+	HTTP    OTLPProtocolConfig `yaml:"http"`
+	GRPC    OTLPProtocolConfig `yaml:"grpc"`
+}
+
+// OTLPProtocolConfig defines the configuration for an OTLP protocol.
+type OTLPProtocolConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Addr    string `yaml:"addr"`
 }
 
 // SyslogCollectionConfig defines the configuration for syslog collection

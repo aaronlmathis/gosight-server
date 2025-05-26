@@ -27,7 +27,6 @@ package httpserver
 import (
 	"net/http"
 
-	gosightauth "github.com/aaronlmathis/gosight-server/internal/auth"
 	gosighttemplate "github.com/aaronlmathis/gosight-server/internal/http/templates"
 	"github.com/aaronlmathis/gosight-server/internal/sys"
 	"github.com/aaronlmathis/gosight-shared/utils"
@@ -58,36 +57,9 @@ func NewServer(sys *sys.SystemContext) *HttpServer {
 	return s
 }
 
+// Start initializes the HTTP server, sets up routes, and starts listening for incoming requests.
 func (s *HttpServer) Start() error {
 
-	utils.Debug("HttpServer Init Check:\n"+
-		"   Config Loaded:           %v\n"+
-		"   MetricStore:             %T\n"+
-		"   MetricIndex:             %T\n"+
-		"   MetaTracker:             %T\n"+
-		"   Tracker:            %T\n"+
-		"   UserStore:               %T\n"+
-		"   DataStore:               %T\n"+
-		"   EventStore:              %T\n"+
-		"   RuleStore:               %T\n"+
-		"   RouteStore:              %T\n"+
-		"   AlertManager:            %T\n"+
-		"   Router Initialized:      %v\n"+
-		"   AuthProviders:           %v\n",
-		s.Sys.Cfg != nil,
-		s.Sys.Stores.Metrics,
-		s.Sys.Tele.Index,
-		s.Sys.Tele.Meta,
-		s.Sys.Tracker,
-		s.Sys.Stores.Users,
-		s.Sys.Stores.Data,
-		s.Sys.Stores.Events,
-		s.Sys.Stores.Rules,
-		s.Sys.Stores.Actions,
-		s.Sys.Tele.Alerts,
-		s.Router != nil,
-		getAuthProviderKeys(s.Sys.Auth),
-	)
 	s.setupRoutes()
 
 	tmpl, err := gosighttemplate.NewGoSightTemplate(s.Sys.Ctx, s.Sys.Cfg, s.Sys.Stores.Metrics, s.Sys.Tele.Index, s.Sys.Stores.Users)
@@ -105,14 +77,7 @@ func (s *HttpServer) Start() error {
 	return nil
 }
 
-func getAuthProviderKeys(m map[string]gosightauth.AuthProvider) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
+// Shutdown gracefully stops the HTTP server, allowing for cleanup and ensuring no active connections are abruptly terminated.
 func (s *HttpServer) Shutdown() error {
 	utils.Info("Shutting down HTTP server...")
 

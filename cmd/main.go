@@ -35,6 +35,7 @@ import (
 	"github.com/aaronlmathis/gosight-server/internal/bootstrap"
 	grpcserver "github.com/aaronlmathis/gosight-server/internal/grpc"
 	httpserver "github.com/aaronlmathis/gosight-server/internal/http"
+	"github.com/aaronlmathis/gosight-server/internal/otel"
 	"github.com/aaronlmathis/gosight-server/internal/syslog"
 	"github.com/aaronlmathis/gosight-shared/utils"
 	"google.golang.org/grpc/encoding/gzip"
@@ -82,7 +83,22 @@ func run() {
 			utils.Info("HTTP server started successfully")
 		}
 	}()
-	utils.Debug("Log store is: %T (inner: %T)", sys.Stores.Logs, sys.Buffers.Logs)
+
+	// Start OTel receiver for metrics and logs
+	// TODO: GRPC?
+	otelReceiver, err := otel.NewOTelReceiver(sys)
+	if sys.Cfg.OpenTelemetry.HTTP.Enabled {
+		if err != nil {
+			utils.Fatal("Failed to create OTel receiver: %v", err)
+		}
+		go func() {
+			if err := otelReceiver.Start(); err != nil {
+				utils.Fatal("Failed to start OTel receiver: %v", err)
+			} else {
+				utils.Info("OTel receiver started successfully: listening on %s", sys.Cfg.OpenTelemetry.HTTP.Addr)
+			}
+		}()
+	}
 
 	// Start Syslog server
 	syslogServer, err := syslog.NewSyslogServer(sys)
@@ -116,6 +132,10 @@ func run() {
 
 	if err := srv.Shutdown(); err != nil {
 		utils.Warn("Failed to shutdown HTTP server: %v", err)
+	}
+
+	if err := otelReceiver.Shutdown(); err != nil {
+		utils.Warn("Failed to shutdown OTel receiver: %v", err)
 	}
 	// Tell Agents to disconnect gracefully
 	grpcServer.GracefulDisconnectAllAgents()
