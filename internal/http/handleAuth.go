@@ -337,7 +337,7 @@ func (s *HttpServer) createFinalSessionAndRedirect(w http.ResponseWriter, r *htt
 	})
 
 	// handle redirect after login
-	next := "/dashboard"
+	next := "/"
 	if state := r.URL.Query().Get("state"); state != "" {
 		if decoded, err := base64.URLEncoding.DecodeString(state); err == nil {
 			next = string(decoded)
@@ -349,8 +349,9 @@ func (s *HttpServer) createFinalSessionAndRedirect(w http.ResponseWriter, r *htt
 
 	// Validate that the next URL is safe and local
 	next = strings.ReplaceAll(next, "\\", "/") // Normalize backslashes
-	if !strings.HasPrefix(next, "/") || strings.Contains(next, "..") {
-		next = "/dashboard"
+	if !strings.HasPrefix(next, "/") || strings.HasPrefix(next, "//") ||
+		strings.HasPrefix(next, "/\\") || strings.Contains(next, "..") {
+		next = "/"
 	}
 
 	http.Redirect(w, r, next, http.StatusSeeOther)

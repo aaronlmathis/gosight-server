@@ -164,5 +164,14 @@ export const websocketManager = {
       }
     });
     return unsubscribe;
+  },
+  
+  subscribeToProcesses(callback: (data: any) => void) {
+    const unsubscribe = processesWS.messages.subscribe((messages) => {
+      if (messages.length > 0) {
+        callback(messages[0]);
+      }
+    });
+    return unsubscribe;
   }
 };

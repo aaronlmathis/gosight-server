@@ -15,6 +15,39 @@ export interface User {
 	updatedAt?: string;
 	updated_at?: string;
 	last_login?: string;
+	profile?: UserProfile;
+}
+
+// User Profile types
+export interface UserProfile {
+	full_name?: string;
+	phone?: string;
+	avatar_url?: string;
+}
+
+export interface ProfileUpdateRequest {
+	full_name?: string;
+	phone?: string;
+}
+
+export interface PasswordChangeRequest {
+	current_password: string;
+	new_password: string;
+	confirm_password: string;
+}
+
+export interface UserPreferences {
+	theme?: string;
+	notifications?: boolean | {
+		email_alerts?: boolean;
+		push_alerts?: boolean;
+		alert_frequency?: string;
+	};
+	dashboard?: {
+		refresh_interval?: number;
+		default_time_range?: string;
+		show_system_metrics?: boolean;
+	};
 }
 
 // Layout data type
@@ -213,15 +246,25 @@ export interface EndpointMetric {
 
 // Metric types
 export interface Metric {
-	id: string;
+	id?: string;
 	name: string;
-	type: 'gauge' | 'counter' | 'histogram';
+	namespace?: string;
+	subnamespace?: string;
+	type?: 'gauge' | 'counter' | 'histogram';
 	value: number;
-	unit: string;
-	labels: Record<string, string>;
+	unit?: string;
+	labels?: Record<string, string>;
+	dimensions?: Record<string, string>;
 	timestamp: string;
 	endpointId?: string;
 	endpoint_id?: string;
+	stats?: {
+		min: number;
+		max: number;
+		count: number;
+		sum: number;
+	};
+	resolution?: number;
 }
 
 export interface MetricSeries {
@@ -254,29 +297,39 @@ export interface Event {
 }
 
 // Log types
-export interface LogEntry {
-	id: string;
-	timestamp: string;
-	level: 'debug' | 'info' | 'warning' | 'error' | 'fatal' | 'critical';
-	message: string;
-	source: string;
-	category?: string;
-	endpointId?: string;
-	endpoint_id?: string;
-	endpoint_name?: string;
-	metadata?: Record<string, any>;
-	meta?: Record<string, any>;
-	tags?: Record<string, string>;
-	target?: string;
-	unit?: string;
+export interface LogMeta {
+	platform?: string;
 	app_name?: string;
+	app_version?: string;
+	container_id?: string;
+	container_name?: string;
+	unit?: string;
 	service?: string;
 	event_id?: string;
 	user?: string;
-	container_id?: string;
-	container_name?: string;
-	platform?: string;
-	fields?: Record<string, any>;
+	exe?: string;
+	path?: string;
+	extra?: Record<string, string>;
+}
+
+export interface LogEntry {
+	id?: string; // Optional client-side ID for deduplication
+	timestamp: string; // ISO timestamp
+	level: string;
+	message: string;
+	source: string;
+	category?: string;
+	pid?: number;
+	fields?: Record<string, string>;
+	tags?: Record<string, string>;
+	meta?: LogMeta;
+}
+
+export interface LogResponse {
+	logs: LogEntry[];
+	next_cursor?: string;
+	has_more: boolean;
+	count: number;
 }
 
 // Process types

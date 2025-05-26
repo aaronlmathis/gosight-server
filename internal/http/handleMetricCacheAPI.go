@@ -95,9 +95,7 @@ func (s *HttpServer) GetMetricDimensions(w http.ResponseWriter, r *http.Request)
 	sub := strings.ToLower(vars["sub"])
 	metric := strings.ToLower(vars["metric"])
 
-	fullMetric := fmt.Sprintf("%s.%s.%s", ns, sub, metric)
-
-	dims, err := s.Sys.Stores.Metrics.FetchDimensionsForMetric(fullMetric)
+	dims, err := s.Sys.Stores.Metrics.FetchDimensionsForMetric(ns, sub, metric)
 	if err != nil {
 		utils.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return

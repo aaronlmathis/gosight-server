@@ -15,7 +15,7 @@
 
 	onMount(async () => {
 		// Get redirect parameter
-		next = $page.url.searchParams.get('next') || '/dashboard';
+		next = $page.url.searchParams.get('next') || '/';
 
 		// Check for error parameter from OAuth callback
 		const errorParam = $page.url.searchParams.get('error');

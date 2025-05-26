@@ -378,6 +378,17 @@ func (s *HttpServer) HandleCurrentUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get user profile information (optional - don't fail if it doesn't exist)
+	profile, err := s.Sys.Stores.Users.GetUserProfile(ctx, userID)
+	profileData := map[string]interface{}{}
+	if err == nil && profile != nil {
+		profileData = map[string]interface{}{
+			"full_name":  profile.FullName,
+			"phone":      profile.Phone,
+			"avatar_url": profile.AvatarURL,
+		}
+	}
+
 	// Return user data
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -387,6 +398,7 @@ func (s *HttpServer) HandleCurrentUser(w http.ResponseWriter, r *http.Request) {
 		"first_name":  user.FirstName,
 		"last_name":   user.LastName,
 		"permissions": gosightauth.FlattenPermissions(user.Roles),
+		"profile":     profileData,
 	})
 }
 
