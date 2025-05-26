@@ -520,7 +520,9 @@
 			<!-- CPU Load Chart -->
 			<div class="rounded-lg bg-gray-50 p-4 dark:bg-gray-900">
 				<h3 class="text-xs font-semibold text-gray-900 dark:text-white">
-					CPU Load Average - {latestLoad1.toFixed(2)}, {latestLoad5.toFixed(2)}, {latestLoad15.toFixed(2)}
+					CPU Load Average - {latestLoad1.toFixed(2)}, {latestLoad5.toFixed(2)}, {latestLoad15.toFixed(
+						2
+					)}
 				</h3>
 				<div use:chart={cpuLoadChartOptions} class="mt-2 h-64"></div>
 			</div>
@@ -543,131 +545,235 @@
 		</div>
 	</div>
 
-	<!-- CPU Info Cards Section -->
-	<div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-		<!-- CPU Info Card -->
-		<div class="rounded-lg bg-white p-4 shadow-md dark:bg-gray-800">
-			<h3 class="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-				<Cpu size={16} class="text-blue-600 dark:text-blue-400" />
-				CPU Information
-			</h3>
-			<div class="divide-y divide-gray-200 dark:divide-gray-700">
-				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
-					<span class="text-gray-500 dark:text-gray-400">Model:</span>
-					<span class="text-left font-medium text-gray-900 dark:text-white">{cpuInfo.model}</span>
-				</div>
-				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
-					<span class="text-gray-500 dark:text-gray-400">Vendor:</span>
-					<span class="text-left font-medium text-gray-900 dark:text-white">{cpuInfo.vendor}</span>
-				</div>
-				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
-					<span class="text-gray-500 dark:text-gray-400">Cores:</span>
-					<span class="text-left font-medium text-gray-900 dark:text-white">{cpuInfo.cores}</span>
-				</div>
-				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
-					<span class="text-gray-500 dark:text-gray-400">Threads:</span>
-					<span class="text-left font-medium text-gray-900 dark:text-white">{cpuInfo.threads}</span>
-				</div>
-				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
-					<span class="text-gray-500 dark:text-gray-400">Base Clock:</span>
-					<span class="text-left font-medium text-gray-900 dark:text-white"
-						>{cpuInfo.baseClock}</span
+	<!-- Main Layout: 2/3 - 1/3 Grid -->
+	<div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+		<!-- Left Column (2/3 width) - CPU Info, Time Counters, and Processes -->
+		<div class="lg:col-span-2">
+			<!-- CPU Info Cards Section -->
+			<div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+				<!-- CPU Info Card -->
+				<div class="rounded-lg bg-white p-4 shadow-md dark:bg-gray-800">
+					<h3
+						class="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white"
 					>
+						<Cpu size={16} class="text-blue-600 dark:text-blue-400" />
+						CPU Information
+					</h3>
+					<div class="divide-y divide-gray-200 dark:divide-gray-700">
+						<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
+							<span class="text-gray-500 dark:text-gray-400">Model:</span>
+							<span class="text-left font-medium text-gray-900 dark:text-white"
+								>{cpuInfo.model}</span
+							>
+						</div>
+						<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
+							<span class="text-gray-500 dark:text-gray-400">Vendor:</span>
+							<span class="text-left font-medium text-gray-900 dark:text-white"
+								>{cpuInfo.vendor}</span
+							>
+						</div>
+						<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
+							<span class="text-gray-500 dark:text-gray-400">Cores:</span>
+							<span class="text-left font-medium text-gray-900 dark:text-white"
+								>{cpuInfo.cores}</span
+							>
+						</div>
+						<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
+							<span class="text-gray-500 dark:text-gray-400">Threads:</span>
+							<span class="text-left font-medium text-gray-900 dark:text-white"
+								>{cpuInfo.threads}</span
+							>
+						</div>
+						<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
+							<span class="text-gray-500 dark:text-gray-400">Base Clock:</span>
+							<span class="text-left font-medium text-gray-900 dark:text-white"
+								>{cpuInfo.baseClock}</span
+							>
+						</div>
+						<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
+							<span class="text-gray-500 dark:text-gray-400">Cache:</span>
+							<span class="text-left font-medium text-gray-900 dark:text-white"
+								>{cpuInfo.cache}</span
+							>
+						</div>
+						<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
+							<span class="text-gray-500 dark:text-gray-400">Family:</span>
+							<span class="text-left font-medium text-gray-900 dark:text-white"
+								>{cpuInfo.family}</span
+							>
+						</div>
+						<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
+							<span class="text-gray-500 dark:text-gray-400">Stepping:</span>
+							<span class="text-left font-medium text-gray-900 dark:text-white"
+								>{cpuInfo.stepping}</span
+							>
+						</div>
+						<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
+							<span class="text-gray-500 dark:text-gray-400">Physical CPUs:</span>
+							<span class="text-left font-medium text-gray-900 dark:text-white"
+								>{cpuInfo.physical}</span
+							>
+						</div>
+					</div>
 				</div>
-				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
-					<span class="text-gray-500 dark:text-gray-400">Cache:</span>
-					<span class="text-left font-medium text-gray-900 dark:text-white">{cpuInfo.cache}</span>
-				</div>
-				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
-					<span class="text-gray-500 dark:text-gray-400">Family:</span>
-					<span class="text-left font-medium text-gray-900 dark:text-white">{cpuInfo.family}</span>
-				</div>
-				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
-					<span class="text-gray-500 dark:text-gray-400">Stepping:</span>
-					<span class="text-left font-medium text-gray-900 dark:text-white">{cpuInfo.stepping}</span
+
+				<!-- CPU Time Counters Card -->
+				<div class="rounded-lg bg-white p-4 shadow-md dark:bg-gray-800">
+					<h3
+						class="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white"
 					>
+						<Clock size={16} class="text-green-600 dark:text-green-400" />
+						CPU Time Counters
+					</h3>
+					<div class="divide-y divide-gray-200 dark:divide-gray-700">
+						<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
+							<span class="text-gray-500 dark:text-gray-400">User:</span>
+							<span class="text-left font-medium text-gray-900 dark:text-white"
+								>{cpuTimeCounters.user}</span
+							>
+						</div>
+						<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
+							<span class="text-gray-500 dark:text-gray-400">System:</span>
+							<span class="text-left font-medium text-gray-900 dark:text-white"
+								>{cpuTimeCounters.system}</span
+							>
+						</div>
+						<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
+							<span class="text-gray-500 dark:text-gray-400">Idle:</span>
+							<span class="text-left font-medium text-gray-900 dark:text-white"
+								>{cpuTimeCounters.idle}</span
+							>
+						</div>
+						<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
+							<span class="text-gray-500 dark:text-gray-400">Nice:</span>
+							<span class="text-left font-medium text-gray-900 dark:text-white"
+								>{cpuTimeCounters.nice}</span
+							>
+						</div>
+						<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
+							<span class="text-gray-500 dark:text-gray-400">IOWait:</span>
+							<span class="text-left font-medium text-gray-900 dark:text-white"
+								>{cpuTimeCounters.iowait}</span
+							>
+						</div>
+						<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
+							<span class="text-gray-500 dark:text-gray-400">IRQ:</span>
+							<span class="text-left font-medium text-gray-900 dark:text-white"
+								>{cpuTimeCounters.irq}</span
+							>
+						</div>
+						<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
+							<span class="text-gray-500 dark:text-gray-400">SoftIRQ:</span>
+							<span class="text-left font-medium text-gray-900 dark:text-white"
+								>{cpuTimeCounters.softirq}</span
+							>
+						</div>
+						<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
+							<span class="text-gray-500 dark:text-gray-400">Steal:</span>
+							<span class="text-left font-medium text-gray-900 dark:text-white"
+								>{cpuTimeCounters.steal}</span
+							>
+						</div>
+						<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
+							<span class="text-gray-500 dark:text-gray-400">Guest:</span>
+							<span class="text-left font-medium text-gray-900 dark:text-white"
+								>{cpuTimeCounters.guest}</span
+							>
+						</div>
+					</div>
 				</div>
-				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
-					<span class="text-gray-500 dark:text-gray-400">Physical CPUs:</span>
-					<span class="text-left font-medium text-gray-900 dark:text-white">{cpuInfo.physical}</span
-					>
+			</div>
+
+			<!-- Processes Section -->
+			<div class="rounded-lg bg-white p-4 shadow-md dark:bg-gray-800">
+				<h2 class="text-sm font-semibold text-gray-900 dark:text-white">Running Processes</h2>
+				<div class="mt-4">
+					<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+						<thead class="bg-gray-50 dark:bg-gray-800">
+							<tr>
+								<th
+									scope="col"
+									class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400"
+								>
+									PID
+								</th>
+								<th
+									scope="col"
+									class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400"
+								>
+									User
+								</th>
+								<th
+									scope="col"
+									class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400"
+								>
+									CPU %
+								</th>
+								<th
+									scope="col"
+									class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400"
+								>
+									Memory %
+								</th>
+								<th
+									scope="col"
+									class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400"
+								>
+									Command
+								</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
+							{#each Array.isArray(processes) ? processes.slice(0, 10) : [] as proc}
+								<tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
+									<td class="px-3 py-2 text-xs text-gray-900 dark:text-white">
+										{proc?.pid || 'N/A'}
+									</td>
+									<td class="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">
+										{proc?.username || proc?.user || 'N/A'}
+									</td>
+									<td class="px-3 py-2 text-xs text-gray-900 dark:text-white">
+										{parseFloat(proc?.cpu_percent || 0).toFixed(1)}%
+									</td>
+									<td class="px-3 py-2 text-xs text-gray-900 dark:text-white">
+										{parseFloat(proc?.mem_percent || 0).toFixed(1)}%
+									</td>
+									<td class="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">
+										<span
+											class="block max-w-xs truncate"
+											title={proc?.cmdline || proc?.command || proc?.name || 'N/A'}
+										>
+											{proc?.cmdline || proc?.command || proc?.name || 'N/A'}
+										</span>
+									</td>
+								</tr>
+							{:else}
+								<tr>
+									<td
+										colspan="5"
+										class="px-3 py-2 text-center text-xs text-gray-500 dark:text-gray-400"
+									>
+										Loading processes...
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
 				</div>
 			</div>
 		</div>
 
-		<!-- CPU Time Counters Card -->
-		<div class="rounded-lg bg-white p-4 shadow-md dark:bg-gray-800">
-			<h3 class="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-				<Clock size={16} class="text-green-600 dark:text-green-400" />
-				CPU Time Counters
-			</h3>
-			<div class="divide-y divide-gray-200 dark:divide-gray-700">
-				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
-					<span class="text-gray-500 dark:text-gray-400">User:</span>
-					<span class="text-left font-medium text-gray-900 dark:text-white"
-						>{cpuTimeCounters.user}</span
-					>
-				</div>
-				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
-					<span class="text-gray-500 dark:text-gray-400">System:</span>
-					<span class="text-left font-medium text-gray-900 dark:text-white"
-						>{cpuTimeCounters.system}</span
-					>
-				</div>
-				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
-					<span class="text-gray-500 dark:text-gray-400">Idle:</span>
-					<span class="text-left font-medium text-gray-900 dark:text-white"
-						>{cpuTimeCounters.idle}</span
-					>
-				</div>
-				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
-					<span class="text-gray-500 dark:text-gray-400">Nice:</span>
-					<span class="text-left font-medium text-gray-900 dark:text-white"
-						>{cpuTimeCounters.nice}</span
-					>
-				</div>
-				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
-					<span class="text-gray-500 dark:text-gray-400">IOWait:</span>
-					<span class="text-left font-medium text-gray-900 dark:text-white"
-						>{cpuTimeCounters.iowait}</span
-					>
-				</div>
-				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
-					<span class="text-gray-500 dark:text-gray-400">IRQ:</span>
-					<span class="text-left font-medium text-gray-900 dark:text-white"
-						>{cpuTimeCounters.irq}</span
-					>
-				</div>
-				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
-					<span class="text-gray-500 dark:text-gray-400">SoftIRQ:</span>
-					<span class="text-left font-medium text-gray-900 dark:text-white"
-						>{cpuTimeCounters.softirq}</span
-					>
-				</div>
-				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
-					<span class="text-gray-500 dark:text-gray-400">Steal:</span>
-					<span class="text-left font-medium text-gray-900 dark:text-white"
-						>{cpuTimeCounters.steal}</span
-					>
-				</div>
-				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
-					<span class="text-gray-500 dark:text-gray-400">Guest:</span>
-					<span class="text-left font-medium text-gray-900 dark:text-white"
-						>{cpuTimeCounters.guest}</span
-					>
-				</div>
-			</div>
-		</div>
-
-		<!-- Per-Core Usage Card -->
-		<div class="rounded-lg bg-white p-4 shadow-md dark:bg-gray-800">
-			<h3 class="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-				<Activity size={16} class="text-purple-600 dark:text-purple-400" />
-				Per-Core Usage
-			</h3>
-			<div class="max-h-64 overflow-y-auto">
-				{#if Object.keys(perCoreData).length > 0}
-					<div class="grid grid-cols-1 gap-2">
+		<!-- Right Column (1/3 width) - Per-Core Usage -->
+		<div class="lg:col-span-1">
+			<div class="rounded-lg bg-white p-4 shadow-md dark:bg-gray-800">
+				<h3
+					class="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white"
+				>
+					<Activity size={16} class="text-purple-600 dark:text-purple-400" />
+					Per-Core Usage
+				</h3>
+				<div class="space-y-2">
+					{#if Object.keys(perCoreData).length > 0}
 						{#each Object.entries(perCoreData).sort(([a], [b]) => parseInt(a.replace('core', '')) - parseInt(b.replace('core', ''))) as [coreId, coreData]}
 							<div class="rounded border bg-gray-50 p-2 dark:border-gray-600 dark:bg-gray-700">
 								<div class="flex items-center justify-between">
@@ -697,91 +803,13 @@
 								{/if}
 							</div>
 						{/each}
-					</div>
-				{:else}
-					<div class="py-4 text-center text-xs text-gray-500 dark:text-gray-400">
-						No per-core data available
-					</div>
-				{/if}
-			</div>
-		</div>
-	</div>
-
-	<!-- Processes Section -->
-	<div class="mb-6 rounded-lg bg-white p-4 shadow-md dark:bg-gray-800">
-		<h2 class="text-sm font-semibold text-gray-900 dark:text-white">Running Processes</h2>
-		<div class="mt-4">
-			<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-				<thead class="bg-gray-50 dark:bg-gray-800">
-					<tr>
-						<th
-							scope="col"
-							class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400"
-						>
-							PID
-						</th>
-						<th
-							scope="col"
-							class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400"
-						>
-							User
-						</th>
-						<th
-							scope="col"
-							class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400"
-						>
-							CPU %
-						</th>
-						<th
-							scope="col"
-							class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400"
-						>
-							Memory %
-						</th>
-						<th
-							scope="col"
-							class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400"
-						>
-							Command
-						</th>
-					</tr>
-				</thead>
-				<tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
-					{#each Array.isArray(processes) ? processes.slice(0, 10) : [] as proc}
-						<tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
-							<td class="px-3 py-2 text-xs text-gray-900 dark:text-white">
-								{proc?.pid || 'N/A'}
-							</td>
-							<td class="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">
-								{proc?.username || proc?.user || 'N/A'}
-							</td>
-							<td class="px-3 py-2 text-xs text-gray-900 dark:text-white">
-								{parseFloat(proc?.cpu_percent || 0).toFixed(1)}%
-							</td>
-							<td class="px-3 py-2 text-xs text-gray-900 dark:text-white">
-								{parseFloat(proc?.mem_percent || 0).toFixed(1)}%
-							</td>
-							<td class="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">
-								<span
-									class="block max-w-xs truncate"
-									title={proc?.cmdline || proc?.command || proc?.name || 'N/A'}
-								>
-									{proc?.cmdline || proc?.command || proc?.name || 'N/A'}
-								</span>
-							</td>
-						</tr>
 					{:else}
-						<tr>
-							<td
-								colspan="5"
-								class="px-3 py-2 text-center text-xs text-gray-500 dark:text-gray-400"
-							>
-								Loading processes...
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
+						<div class="py-4 text-center text-xs text-gray-500 dark:text-gray-400">
+							No per-core data available
+						</div>
+					{/if}
+				</div>
+			</div>
 		</div>
 	</div>
 </div>
