@@ -30,6 +30,10 @@
 	let processHistory: Array<{ timestamp: number; processes: any[] }> = [];
 	let latestCpuPercent = 0;
 	let latestMemUsedPercent = 0;
+	let latestSwapPercent = 0;
+	let latestLoad1 = 0;
+	let latestLoad5 = 0;
+	let latestLoad15 = 0;
 	let lastProcessedTimestamp = 0; // Track last processed metric timestamp
 
 	const MAX_DATA_POINTS = 50; // Keep last 50 points per chart
@@ -404,6 +408,10 @@
 				load5: dedupeSeries([...cpuLoadData.load5, ...newLoad5Data]).slice(-MAX_DATA_POINTS),
 				load15: dedupeSeries([...cpuLoadData.load15, ...newLoad15Data]).slice(-MAX_DATA_POINTS)
 			};
+			// Update latest load values
+			if (load1Metrics.length > 0) latestLoad1 = load1Metrics[load1Metrics.length - 1].value;
+			if (load5Metrics.length > 0) latestLoad5 = load5Metrics[load5Metrics.length - 1].value;
+			if (load15Metrics.length > 0) latestLoad15 = load15Metrics[load15Metrics.length - 1].value;
 		}
 
 		// --- Memory Usage ---
@@ -449,6 +457,7 @@
 		}
 		if (newSwapData.length > 0) {
 			swapUsageData = dedupeSeries([...swapUsageData, ...newSwapData]).slice(-MAX_DATA_POINTS);
+			latestSwapPercent = newSwapData[newSwapData.length - 1][1]; // Update latest swap percentage
 			console.log('Swap Usage % points:', newSwapData);
 		}
 
@@ -502,25 +511,33 @@
 		<div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
 			<!-- CPU Usage Chart -->
 			<div class="rounded-lg bg-gray-50 p-4 dark:bg-gray-900">
-				<h3 class="text-xs font-semibold text-gray-900 dark:text-white">CPU Usage Over Time</h3>
+				<h3 class="text-xs font-semibold text-gray-900 dark:text-white">
+					CPU Usage Over Time - {latestCpuPercent.toFixed(1)}%
+				</h3>
 				<div use:chart={cpuUsageChartOptions} class="mt-2 h-64"></div>
 			</div>
 
 			<!-- CPU Load Chart -->
 			<div class="rounded-lg bg-gray-50 p-4 dark:bg-gray-900">
-				<h3 class="text-xs font-semibold text-gray-900 dark:text-white">CPU Load Average</h3>
+				<h3 class="text-xs font-semibold text-gray-900 dark:text-white">
+					CPU Load Average - {latestLoad1.toFixed(2)}, {latestLoad5.toFixed(2)}, {latestLoad15.toFixed(2)}
+				</h3>
 				<div use:chart={cpuLoadChartOptions} class="mt-2 h-64"></div>
 			</div>
 
 			<!-- Memory Usage Chart -->
 			<div class="rounded-lg bg-gray-50 p-4 dark:bg-gray-900">
-				<h3 class="text-xs font-semibold text-gray-900 dark:text-white">Memory Usage Over Time</h3>
+				<h3 class="text-xs font-semibold text-gray-900 dark:text-white">
+					Memory Usage Over Time - {latestMemUsedPercent.toFixed(1)}%
+				</h3>
 				<div use:chart={memoryUsageChartOptions} class="mt-2 h-64"></div>
 			</div>
 
 			<!-- Swap Usage Chart -->
 			<div class="rounded-lg bg-gray-50 p-4 dark:bg-gray-900">
-				<h3 class="text-xs font-semibold text-gray-900 dark:text-white">Swap Usage Over Time</h3>
+				<h3 class="text-xs font-semibold text-gray-900 dark:text-white">
+					Swap Usage Over Time - {latestSwapPercent.toFixed(1)}%
+				</h3>
 				<div use:chart={swapUsageChartOptions} class="mt-2 h-64"></div>
 			</div>
 		</div>
