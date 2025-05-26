@@ -490,6 +490,7 @@
 					{cpuTimeCounters}
 					{perCoreData}
 					{processes}
+					{hostInfo}
 				/>
 			{:else if activeTab === 'network'}
 				<NetworkTab bind:this={networkTabRef} {metrics} />

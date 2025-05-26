@@ -2,13 +2,14 @@
 	import { onMount, tick } from 'svelte';
 	import type { Metric } from '$lib/types';
 	import { chart } from 'svelte-apexcharts';
-	import { Cpu, Clock, Activity } from 'lucide-svelte';
+	import { Cpu, Clock, Activity, ChevronUp, ChevronDown, Users } from 'lucide-svelte';
 
 	export let metrics: Metric[];
 	export let cpuInfo: Record<string, string>;
 	export let cpuTimeCounters: Record<string, string>;
 	export let perCoreData: Record<string, { usage?: number; clock?: number }>;
 	export let processes: any[] = [];
+	export let hostInfo: Record<string, any> = {};
 
 	// Chart instances
 	let cpuChart: ApexCharts;
@@ -35,6 +36,10 @@
 	let latestLoad5 = 0;
 	let latestLoad15 = 0;
 	let lastProcessedTimestamp = 0; // Track last processed metric timestamp
+
+	// Sorting state for processes table
+	let sortColumn: 'pid' | 'user' | 'command' | 'cpu' | 'memory' = 'cpu';
+	let sortDirection: 'asc' | 'desc' = 'desc';
 
 	const MAX_DATA_POINTS = 50; // Keep last 50 points per chart
 
@@ -70,6 +75,53 @@
 		if (type === 'memory') return latestMemUsedPercent;
 		return 0;
 	}
+
+	// Sorting function for processes table
+	function handleSort(column: 'pid' | 'user' | 'command' | 'cpu' | 'memory') {
+		if (sortColumn === column) {
+			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+		} else {
+			sortColumn = column;
+			sortDirection = column === 'pid' ? 'asc' : 'desc'; // Default to ascending for PID, descending for others
+		}
+	}
+
+	// Reactive sorted processes
+	$: sortedProcesses = Array.isArray(processes) 
+		? [...processes].sort((a, b) => {
+			let aVal: any;
+			let bVal: any;
+
+			switch (sortColumn) {
+				case 'pid':
+					aVal = parseInt(a?.pid || '0');
+					bVal = parseInt(b?.pid || '0');
+					break;
+				case 'user':
+					aVal = (a?.username || a?.user || '').toLowerCase();
+					bVal = (b?.username || b?.user || '').toLowerCase();
+					break;
+				case 'command':
+					aVal = (a?.cmdline || a?.command || a?.name || '').toLowerCase();
+					bVal = (b?.cmdline || b?.command || b?.name || '').toLowerCase();
+					break;
+				case 'cpu':
+					aVal = parseFloat(a?.cpu_percent || '0');
+					bVal = parseFloat(b?.cpu_percent || '0');
+					break;
+				case 'memory':
+					aVal = parseFloat(a?.mem_percent || '0');
+					bVal = parseFloat(b?.mem_percent || '0');
+					break;
+				default:
+					return 0;
+			}
+
+			if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+			if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+			return 0;
+		})
+		: [];
 
 	// Generate process tooltip for charts
 	function generateProcessTooltip(isMem: boolean) {
@@ -683,60 +735,109 @@
 					</div>
 				</div>
 			</div>
-
-			<!-- Processes Section -->
-			<div class="rounded-lg bg-white p-4 shadow-md dark:bg-gray-800">
-				<h2 class="text-sm font-semibold text-gray-900 dark:text-white">Running Processes</h2>
+		<!-- Processes Section -->
+		<div class="rounded-lg bg-white p-4 shadow-md dark:bg-gray-800">
+			<h2 class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+				<Users size={16} class="text-gray-600 dark:text-gray-400" />
+				Running Processes
+				{#if hostInfo.procs && hostInfo.procs !== '--'}
+					<span class="text-xs font-normal text-gray-500 dark:text-gray-400">({hostInfo.procs})</span>
+				{/if}
+			</h2>
 				<div class="mt-4">
 					<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
 						<thead class="bg-gray-50 dark:bg-gray-800">
 							<tr>
 								<th
 									scope="col"
-									class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400"
+									class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+									on:click={() => handleSort('pid')}
 								>
-									PID
+									<div class="flex items-center gap-1">
+										PID
+										{#if sortColumn === 'pid'}
+											{#if sortDirection === 'asc'}
+												<ChevronUp size={12} />
+											{:else}
+												<ChevronDown size={12} />
+											{/if}
+										{/if}
+									</div>
 								</th>
 								<th
 									scope="col"
-									class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400"
+									class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+									on:click={() => handleSort('user')}
 								>
-									User
+									<div class="flex items-center gap-1">
+										User
+										{#if sortColumn === 'user'}
+											{#if sortDirection === 'asc'}
+												<ChevronUp size={12} />
+											{:else}
+												<ChevronDown size={12} />
+											{/if}
+										{/if}
+									</div>
 								</th>
 								<th
 									scope="col"
-									class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400"
+									class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+									on:click={() => handleSort('command')}
 								>
-									CPU %
+									<div class="flex items-center gap-1">
+										Command
+										{#if sortColumn === 'command'}
+											{#if sortDirection === 'asc'}
+												<ChevronUp size={12} />
+											{:else}
+												<ChevronDown size={12} />
+											{/if}
+										{/if}
+									</div>
 								</th>
 								<th
 									scope="col"
-									class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400"
+									class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+									on:click={() => handleSort('cpu')}
 								>
-									Memory %
+									<div class="flex items-center gap-1">
+										CPU %
+										{#if sortColumn === 'cpu'}
+											{#if sortDirection === 'asc'}
+												<ChevronUp size={12} />
+											{:else}
+												<ChevronDown size={12} />
+											{/if}
+										{/if}
+									</div>
 								</th>
 								<th
 									scope="col"
-									class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400"
+									class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+									on:click={() => handleSort('memory')}
 								>
-									Command
+									<div class="flex items-center gap-1">
+										Memory %
+										{#if sortColumn === 'memory'}
+											{#if sortDirection === 'asc'}
+												<ChevronUp size={12} />
+											{:else}
+												<ChevronDown size={12} />
+											{/if}
+										{/if}
+									</div>
 								</th>
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
-							{#each Array.isArray(processes) ? processes.slice(0, 10) : [] as proc}
+							{#each sortedProcesses.slice(0, 10) as proc}
 								<tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
 									<td class="px-3 py-2 text-xs text-gray-900 dark:text-white">
 										{proc?.pid || 'N/A'}
 									</td>
 									<td class="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">
 										{proc?.username || proc?.user || 'N/A'}
-									</td>
-									<td class="px-3 py-2 text-xs text-gray-900 dark:text-white">
-										{parseFloat(proc?.cpu_percent || 0).toFixed(1)}%
-									</td>
-									<td class="px-3 py-2 text-xs text-gray-900 dark:text-white">
-										{parseFloat(proc?.mem_percent || 0).toFixed(1)}%
 									</td>
 									<td class="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">
 										<span
@@ -745,6 +846,12 @@
 										>
 											{proc?.cmdline || proc?.command || proc?.name || 'N/A'}
 										</span>
+									</td>
+									<td class="px-3 py-2 text-xs text-gray-900 dark:text-white">
+										{parseFloat(proc?.cpu_percent || 0).toFixed(1)}%
+									</td>
+									<td class="px-3 py-2 text-xs text-gray-900 dark:text-white">
+										{parseFloat(proc?.mem_percent || 0).toFixed(1)}%
 									</td>
 								</tr>
 							{:else}
