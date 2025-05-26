@@ -2,6 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import type { Metric } from '$lib/types';
 	import { chart } from 'svelte-apexcharts';
+	import { Cpu, Clock, Activity } from 'lucide-svelte';
 
 	export let metrics: Metric[];
 	export let cpuInfo: Record<string, string>;
@@ -529,7 +530,10 @@
 	<div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
 		<!-- CPU Info Card -->
 		<div class="rounded-lg bg-white p-4 shadow-md dark:bg-gray-800">
-			<h3 class="mb-4 text-sm font-semibold text-gray-900 dark:text-white">CPU Information</h3>
+			<h3 class="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+				<Cpu size={16} class="text-blue-600 dark:text-blue-400" />
+				CPU Information
+			</h3>
 			<div class="divide-y divide-gray-200 dark:divide-gray-700">
 				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
 					<span class="text-gray-500 dark:text-gray-400">Model:</span>
@@ -576,7 +580,10 @@
 
 		<!-- CPU Time Counters Card -->
 		<div class="rounded-lg bg-white p-4 shadow-md dark:bg-gray-800">
-			<h3 class="mb-4 text-sm font-semibold text-gray-900 dark:text-white">CPU Time Counters</h3>
+			<h3 class="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+				<Clock size={16} class="text-green-600 dark:text-green-400" />
+				CPU Time Counters
+			</h3>
 			<div class="divide-y divide-gray-200 dark:divide-gray-700">
 				<div class="grid grid-cols-2 gap-x-4 py-2 text-xs">
 					<span class="text-gray-500 dark:text-gray-400">User:</span>
@@ -637,7 +644,10 @@
 
 		<!-- Per-Core Usage Card -->
 		<div class="rounded-lg bg-white p-4 shadow-md dark:bg-gray-800">
-			<h3 class="mb-4 text-sm font-semibold text-gray-900 dark:text-white">Per-Core Usage</h3>
+			<h3 class="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+				<Activity size={16} class="text-purple-600 dark:text-purple-400" />
+				Per-Core Usage
+			</h3>
 			<div class="max-h-64 overflow-y-auto">
 				{#if Object.keys(perCoreData).length > 0}
 					<div class="grid grid-cols-1 gap-2">
