@@ -12,3 +12,14 @@
     font-size: 11px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
     }
+    
+.dark .apexcharts-tooltip.custom-process-tooltip {
+    background: rgba(24, 24, 27, 0.90) !important;  /* deep dark, translucent */
+    border: 1px solid #374151 !important;           /* Tailwind gray-700 border */
+    border-radius: 6px;
+    padding: 10px 12px !important;
+    backdrop-filter: blur(6px);
+    color: #e5e7eb;                                 /* Tailwind gray-200 text */
+    font-size: 11px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.20);
+}

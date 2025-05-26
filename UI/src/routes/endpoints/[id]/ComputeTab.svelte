@@ -70,13 +70,21 @@
 	function generateProcessTooltip(isMem: boolean) {
 		return function ({ series, seriesIndex, dataPointIndex, w }: any) {
 			const point = w.config.series[seriesIndex].data[dataPointIndex];
-			if (!point || !point.x) return '';
+			let hoverTime;
 
-			const hoverTime = point.x;
+			if (Array.isArray(point)) {
+				hoverTime = point[0];
+			} else if (point && typeof point === 'object' && 'x' in point) {
+				hoverTime = point.x;
+			} else if (typeof point === 'number') {
+				hoverTime = point;
+			} else {
+				return 'No process data';
+			}
 			const snapshot = findClosestSnapshot(hoverTime);
 			if (!snapshot || !snapshot.processes) return 'No process data';
 
-			const labelKey = isMem ? 'memory_percent' : 'cpu_percent';
+			const labelKey = isMem ? 'mem_percent' : 'cpu_percent';
 			const processes = snapshot.processes;
 
 			const rows = processes
@@ -100,7 +108,7 @@
 				.join('');
 
 			return `
-				<div style="background:rgba(255,255,255,0.95); border:1px solid #e5e7eb; border-radius:8px; padding:8px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">
+				<div >
 					<div style="font-weight:600; font-size:12px; margin-bottom:6px; display:flex; justify-content:space-between;">
 						<span>Top Processes (${isMem ? 'Memory' : 'CPU'})</span>
 						<span>Total: ${getCurrentUsage(isMem ? 'memory' : 'cpu').toFixed(1)}%</span>
@@ -169,7 +177,7 @@
 	// CPU Load Chart Options
 	$: cpuLoadChartOptions = {
 		chart: {
-			type: 'area',
+			type: 'line',
 			height: 250,
 			toolbar: { show: false },
 			animations: { enabled: true },
@@ -182,10 +190,7 @@
 		},
 		series: [], // Empty series - will be populated via updateSeries
 		stroke: { curve: 'smooth', width: 3 },
-		fill: {
-			type: 'gradient',
-			gradient: { shadeIntensity: 1, opacityFrom: 0.5, opacityTo: 0.2, stops: [0, 90, 100] }
-		},
+
 		xaxis: {
 			type: 'datetime',
 			labels: {
@@ -194,8 +199,6 @@
 			}
 		},
 		yaxis: {
-			min: 0,
-			max: 4,
 			tickAmount: 4,
 			labels: {
 				formatter: (val: number) => val.toFixed(2),
@@ -322,6 +325,21 @@
 		theme: { mode: theme }
 	};
 
+	const SWAP_BUCKET_MS = 1000; // 1s for tolerant pairing
+
+	function dedupeSeries(series: Array<[number, number]>): Array<[number, number]> {
+		const seen = new Set();
+		return series.filter(([ts]) => {
+			if (seen.has(ts)) return false;
+			seen.add(ts);
+			return true;
+		});
+	}
+
+	function norm(str: string | undefined) {
+		return (str || '').toLowerCase();
+	}
+
 	// Process metrics data when they change
 	function processMetrics(allMetrics: Metric[]) {
 		// Filter to only process new metrics (timestamps greater than last processed)
@@ -337,39 +355,36 @@
 
 		const now = Date.now();
 
+		// --- CPU Usage ---
 		const totalCpuMetrics = newMetrics.filter(
 			(m) =>
-				m.namespace === 'System' &&
-				m.subnamespace === 'CPU' &&
+				norm(m.namespace) === 'system' &&
+				norm(m.subnamespace) === 'cpu' &&
 				m.name === 'usage_percent' &&
 				m.dimensions?.scope === 'total'
 		);
-		console.log('ComputeTab: Found', totalCpuMetrics.length, 'new CPU metrics');
-
-		// Add new CPU data points to existing array
 		if (totalCpuMetrics.length > 0) {
 			const newCpuData: Array<[number, number]> = totalCpuMetrics.map((m) => [
 				new Date(m.timestamp).getTime(),
 				m.value
 			]);
-			cpuUsageData = [...cpuUsageData, ...newCpuData].slice(-MAX_DATA_POINTS);
-
-			// Update latest CPU percent for tooltips
+			cpuUsageData = dedupeSeries([...cpuUsageData, ...newCpuData]).slice(-MAX_DATA_POINTS);
 			latestCpuPercent = totalCpuMetrics[totalCpuMetrics.length - 1].value;
 		}
 
-		// Extract load average data (System.load_avg_1, load_avg_5, load_avg_15)
+		// --- CPU Load ---
 		const load1Metrics = newMetrics.filter(
-			(m) => m.namespace === 'System' && m.subnamespace === 'CPU' && m.name === 'load_avg_1'
+			(m) =>
+				norm(m.namespace) === 'system' && norm(m.subnamespace) === 'cpu' && m.name === 'load_avg_1'
 		);
 		const load5Metrics = newMetrics.filter(
-			(m) => m.namespace === 'System' && m.subnamespace === 'CPU' && m.name === 'load_avg_5'
+			(m) =>
+				norm(m.namespace) === 'system' && norm(m.subnamespace) === 'cpu' && m.name === 'load_avg_5'
 		);
 		const load15Metrics = newMetrics.filter(
-			(m) => m.namespace === 'System' && m.subnamespace === 'CPU' && m.name === 'load_avg_15'
+			(m) =>
+				norm(m.namespace) === 'system' && norm(m.subnamespace) === 'cpu' && m.name === 'load_avg_15'
 		);
-
-		// Add new load data points
 		if (load1Metrics.length > 0 || load5Metrics.length > 0 || load15Metrics.length > 0) {
 			const newLoad1Data: Array<[number, number]> = load1Metrics.map((m) => [
 				new Date(m.timestamp).getTime(),
@@ -383,70 +398,65 @@
 				new Date(m.timestamp).getTime(),
 				m.value
 			]);
-
 			cpuLoadData = {
-				load1: [...cpuLoadData.load1, ...newLoad1Data].slice(-MAX_DATA_POINTS),
-				load5: [...cpuLoadData.load5, ...newLoad5Data].slice(-MAX_DATA_POINTS),
-				load15: [...cpuLoadData.load15, ...newLoad15Data].slice(-MAX_DATA_POINTS)
+				load1: dedupeSeries([...cpuLoadData.load1, ...newLoad1Data]).slice(-MAX_DATA_POINTS),
+				load5: dedupeSeries([...cpuLoadData.load5, ...newLoad5Data]).slice(-MAX_DATA_POINTS),
+				load15: dedupeSeries([...cpuLoadData.load15, ...newLoad15Data]).slice(-MAX_DATA_POINTS)
 			};
 		}
 
-		// Extract memory usage data (System.used_percent with type=memory)
+		// --- Memory Usage ---
 		const memoryMetrics = newMetrics.filter(
-			(m) => m.namespace === 'System' && m.subnamespace == 'Memory' && m.name === 'used_percent'
+			(m) =>
+				norm(m.namespace) === 'system' &&
+				norm(m.subnamespace) === 'memory' &&
+				m.name === 'used_percent'
 		);
-
-		// Add new memory data points
 		if (memoryMetrics.length > 0) {
 			const newMemoryData: Array<[number, number]> = memoryMetrics.map((m) => [
 				new Date(m.timestamp).getTime(),
 				m.value
 			]);
-			memoryUsageData = [...memoryUsageData, ...newMemoryData].slice(-MAX_DATA_POINTS);
-
-			// Update latest memory percent for tooltips
+			memoryUsageData = dedupeSeries([...memoryUsageData, ...newMemoryData]).slice(
+				-MAX_DATA_POINTS
+			);
 			latestMemUsedPercent = memoryMetrics[memoryMetrics.length - 1].value;
 		}
 
-		// Collect swap metrics by timestamp
-		const swapTotalByTime: Record<number, number> = {};
-		const swapFreeByTime: Record<number, number> = {};
-
+		// --- Swap Usage (bucketed pairing, tolerant to ms mismatches) ---
+		const swapBuckets: Record<number, { total?: number; free?: number }> = {};
 		newMetrics.forEach((m) => {
 			if (
-				m.namespace === 'System' &&
-				m.subnamespace === 'Memory' &&
+				norm(m.namespace) === 'system' &&
+				norm(m.subnamespace) === 'memory' &&
 				(m.name === 'swap_total' || m.name === 'swap_free')
 			) {
-				const ts = new Date(m.timestamp).getTime();
-				if (m.name === 'swap_total') swapTotalByTime[ts] = m.value;
-				if (m.name === 'swap_free') swapFreeByTime[ts] = m.value;
+				const ts = Math.round(new Date(m.timestamp).getTime() / SWAP_BUCKET_MS) * SWAP_BUCKET_MS;
+				if (!swapBuckets[ts]) swapBuckets[ts] = {};
+				if (m.name === 'swap_total') swapBuckets[ts].total = m.value;
+				if (m.name === 'swap_free') swapBuckets[ts].free = m.value;
 			}
 		});
-
-		// Calculate swap used percent for timestamps where both exist
 		const newSwapData: Array<[number, number]> = [];
-		for (const tsStr of Object.keys(swapTotalByTime)) {
+		for (const tsStr of Object.keys(swapBuckets)) {
 			const ts = Number(tsStr);
-			const total = swapTotalByTime[ts];
-			const free = swapFreeByTime[ts];
+			const { total, free } = swapBuckets[ts];
 			if (typeof total === 'number' && typeof free === 'number' && total > 0) {
 				const usedPercent = (100 * (total - free)) / total;
 				newSwapData.push([ts, usedPercent]);
 			}
 		}
-
 		if (newSwapData.length > 0) {
-			swapUsageData = [...swapUsageData, ...newSwapData].slice(-MAX_DATA_POINTS);
+			swapUsageData = dedupeSeries([...swapUsageData, ...newSwapData]).slice(-MAX_DATA_POINTS);
 			console.log('Swap Usage % points:', newSwapData);
 		}
 
-		// Add process snapshot for tooltips
+		// --- Process History ---
 		if (processes && processes.length > 0) {
 			processHistory = [...processHistory, { timestamp: now, processes }].slice(-50);
 		}
 
-		// Update last processed timestamp to the newest metric timestamp
+		// --- Last processed timestamp ---
 		if (newMetrics.length > 0) {
 			const timestamps = newMetrics.map((m) => new Date(m.timestamp).getTime());
 			lastProcessedTimestamp = Math.max(...timestamps);
@@ -700,7 +710,7 @@
 								{parseFloat(proc?.cpu_percent || 0).toFixed(1)}%
 							</td>
 							<td class="px-3 py-2 text-xs text-gray-900 dark:text-white">
-								{parseFloat(proc?.memory_percent || 0).toFixed(1)}%
+								{parseFloat(proc?.mem_percent || 0).toFixed(1)}%
 							</td>
 							<td class="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">
 								<span
