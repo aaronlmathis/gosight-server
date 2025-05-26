@@ -246,15 +246,25 @@ export interface EndpointMetric {
 
 // Metric types
 export interface Metric {
-	id: string;
+	id?: string;
 	name: string;
-	type: 'gauge' | 'counter' | 'histogram';
+	namespace?: string;
+	subnamespace?: string;
+	type?: 'gauge' | 'counter' | 'histogram';
 	value: number;
-	unit: string;
-	labels: Record<string, string>;
+	unit?: string;
+	labels?: Record<string, string>;
+	dimensions?: Record<string, string>;
 	timestamp: string;
 	endpointId?: string;
 	endpoint_id?: string;
+	stats?: {
+		min: number;
+		max: number;
+		count: number;
+		sum: number;
+	};
+	resolution?: number;
 }
 
 export interface MetricSeries {
