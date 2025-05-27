@@ -23,6 +23,7 @@ interface MetricSubscription {
 	subnamespace: string;
 	metric: string;
 	endpointId?: string;
+	tags?: Record<string, string>;
 	callback: (data: MetricDataPoint[]) => void;
 }
 
@@ -188,7 +189,7 @@ class DataService {
 					data = await this.getSystemOverviewData();
 					break;
 				case 'quick_links':
-					data = { links: widget.config?.links || [] };
+					data = { links: widget.config?.links || [], status: 'success' };
 					break;
 				default:
 					data = { value: 0, status: 'unknown' };
@@ -224,7 +225,8 @@ class DataService {
 		subnamespace: string,
 		metric: string,
 		callback: (data: MetricDataPoint[]) => void,
-		endpointId?: string
+		endpointId?: string,
+		tags?: Record<string, string>
 	): () => void {
 		const subscriptionId = `${widgetId}-${namespace}-${subnamespace}-${metric}`;
 		
@@ -234,14 +236,17 @@ class DataService {
 			subnamespace,
 			metric,
 			endpointId,
-			callback
+			callback,
+			tags
 		});
 
 		// Send existing data if available
 		const metricKey = `${namespace}.${subnamespace}.${metric}`;
 		const history = this.metricsHistory.get(metricKey);
 		if (history) {
-			callback(history);
+			// Filter history by tags if provided
+			const filteredHistory = tags ? this.filterMetricsByTags(history, tags) : history;
+			callback(filteredHistory);
 		}
 
 		// Return unsubscribe function
@@ -262,8 +267,8 @@ class DataService {
 
 		try {
 			// Get latest value
-			const latest = await api.metrics.getMetricLatest(namespace, subnamespace, metric);
-			const value = parseFloat(latest.value || 0);
+			const latest = await api.metrics.getMetricLatest(namespace, subnamespace, metric) as any;
+			const value = parseFloat((latest?.value || 0).toString());
 			
 			// Get recent history for trend calculation
 			const historyData = await api.metrics.getMetricData(namespace, subnamespace, metric, {
@@ -272,14 +277,14 @@ class DataService {
 			});
 
 			const trend = this.calculateTrend(Array.isArray(historyData) ? historyData : []);
-			const status = this.determineStatus(value, widget.config?.thresholds);
+			const status = this.determineStatus(value, widget.config?.threshold);
 
 			return {
 				value,
 				trend,
 				status,
 				unit: widget.config?.unit || '',
-				timestamp: latest.timestamp
+				timestamp: latest?.timestamp
 			};
 		} catch (error) {
 			console.error(`Failed to get metric data for ${namespace}.${subnamespace}.${metric}:`, error);
@@ -420,8 +425,8 @@ class DataService {
 			]);
 
 			const activeCount = Array.isArray(active) ? active.length : 0;
-			const bySeverity = summary?.by_severity || {};
-			const total = Object.values(bySeverity).reduce((sum, count) => sum + (count as number), 0);
+			const bySeverity = (summary as any)?.by_severity || {};
+			const total = Object.values(bySeverity as Record<string, number>).reduce((sum: number, count) => sum + (count as number), 0);
 
 			this.alertCounts.set({ active: activeCount, total, bySeverity });
 
@@ -441,7 +446,7 @@ class DataService {
 	 */
 	private async getSystemOverviewData(): Promise<WidgetData> {
 		try {
-			const overview = await api.metrics.getSystemOverview();
+			const overview = await api.metrics.getSystemOverview() as Record<string, number>;
 			
 			this.systemMetrics.set(overview);
 
@@ -460,7 +465,7 @@ class DataService {
 	 */
 	private async refreshSystemMetrics() {
 		try {
-			const overview = await api.metrics.getSystemOverview();
+			const overview = await api.metrics.getSystemOverview() as Record<string, number>;
 			this.systemMetrics.set(overview);
 		} catch (error) {
 			console.error('Failed to refresh system metrics:', error);
@@ -475,9 +480,9 @@ class DataService {
 			const data = await this.getEndpointCountData();
 			if (data.details) {
 				this.endpointCounts.set({
-					hosts: data.details.hosts,
-					containers: data.details.containers,
-					total: data.value
+					hosts: data.details.hosts || 0,
+					containers: data.details.containers || 0,
+					total: data.value || 0
 				});
 			}
 		} catch (error) {
@@ -493,9 +498,9 @@ class DataService {
 			const data = await this.getAlertCountData();
 			if (data.details) {
 				this.alertCounts.set({
-					active: data.value,
-					total: Object.values(data.details).reduce((sum, count) => sum + (count as number), 0),
-					bySeverity: data.details
+					active: data.value || 0,
+					total: Object.values(data.details as Record<string, number>).reduce((sum: number, count) => sum + (count as number), 0),
+					bySeverity: data.details as Record<string, number>
 				});
 			}
 		} catch (error) {
@@ -728,6 +733,24 @@ class DataService {
 		}
 		
 		return 'success';
+	}
+
+	/**
+	 * Filter metric data points by tags
+	 */
+	private filterMetricsByTags(data: MetricDataPoint[], tags: Record<string, string>): MetricDataPoint[] {
+		if (!tags || Object.keys(tags).length === 0) {
+			return data;
+		}
+
+		return data.filter(point => {
+			if (!point.dimensions) return false;
+			
+			// Check if all required tags match
+			return Object.entries(tags).every(([key, value]) => 
+				point.dimensions?.[key] === value
+			);
+		});
 	}
 
 	/**

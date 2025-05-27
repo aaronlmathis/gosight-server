@@ -283,23 +283,21 @@ return this.api.request(`/metrics${query ? `?${query}` : ''}`);
 
 async getSystemOverview() {
 return this.api.request('/metrics/system');
-}
+	} async getNamespaces() {
+		return this.api.request('/metrics');
+	}
 
-async getNamespaces() {
-return this.api.request('/metrics/namespaces');
-}
+	async getSubNamespaces(namespace: string) {
+		return this.api.request(`/metrics/${namespace}`);
+	}
 
-async getSubNamespaces(namespace: string) {
-return this.api.request(`/metrics/namespaces/${namespace}`);
-}
+	async getMetricNames(namespace: string, subNamespace: string) {
+		return this.api.request(`/metrics/${namespace}/${subNamespace}`);
+	}
 
-async getMetricNames(namespace: string, subNamespace: string) {
-return this.api.request(`/metrics/namespaces/${namespace}/${subNamespace}`);
-}
-
-async getMetricDimensions(namespace: string, subNamespace: string, metric: string) {
-return this.api.request(`/metrics/namespaces/${namespace}/${subNamespace}/${metric}/dimensions`);
-}
+	async getMetricDimensions(namespace: string, subNamespace: string, metric: string) {
+		return this.api.request(`/metrics/${namespace}/${subNamespace}/${metric}/dimensions`);
+	}
 
 async getMetricData(namespace: string, subNamespace: string, metric: string, params: any) {
 const searchParams = appendSearchParams(new URLSearchParams(), params ?? {});

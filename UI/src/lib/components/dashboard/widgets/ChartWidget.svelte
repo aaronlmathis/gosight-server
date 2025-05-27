@@ -16,7 +16,7 @@
 	// Initialize chart options with empty data
 	let chartOptions = {
 		chart: {
-			type: widget.config?.chartType || 'line',
+			type: widget.config?.chartConfig?.chartType || 'line',
 			height: '100%',
 			toolbar: { show: false },
 			animations: { enabled: true, easing: 'easeinout', speed: 800 }
@@ -103,10 +103,11 @@
 
 	// Setup real-time subscriptions for configured metrics
 	function setupRealTimeSubscriptions() {
-		const metrics = widget.config?.metrics || [];
+		const chartConfig = widget.config?.chartConfig;
+		const selectedMetrics = chartConfig?.selectedMetrics || [];
 
-		metrics.forEach((metricConfig: any) => {
-			const { namespace, subnamespace, metric } = metricConfig;
+		selectedMetrics.forEach((metricOption: any) => {
+			const { namespace, subnamespace, name: metric, tags } = metricOption;
 
 			if (namespace && subnamespace && metric) {
 				const unsubscribe = dataService.subscribeToMetric(
@@ -123,18 +124,26 @@
 
 						// Update the specific series
 						if (chart) {
-							const seriesIndex = metrics.findIndex(
+							const seriesIndex = selectedMetrics.findIndex(
 								(m: any) =>
 									m.namespace === namespace &&
 									m.subnamespace === subnamespace &&
-									m.metric === metric
+									m.name === metric
 							);
 
 							if (seriesIndex >= 0) {
+								// Create series name with tags for better identification
+								const tagString = Object.entries(tags || {})
+									.map(([key, value]) => `${key}=${value}`)
+									.join(',');
+								const seriesName = tagString 
+									? `${metricOption.label} (${tagString})`
+									: metricOption.label;
+
 								chart.updateSeries(
 									[
 										{
-											name: metricConfig.label || `${namespace}.${subnamespace}.${metric}`,
+											name: seriesName,
 											data: chartData
 										}
 									],
@@ -144,7 +153,8 @@
 							}
 						}
 					},
-					widget.config?.endpointId
+					widget.config?.endpointId,
+					tags // Pass tags for filtering
 				);
 
 				unsubscribeFunctions.push(unsubscribe);
