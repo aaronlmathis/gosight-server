@@ -49,7 +49,7 @@
 				auth.setUser(response.user);
 
 				// Redirect to original page or dashboard
-				goto(next);
+				window.location.href = next;
 			} else {
 				error = response.message || 'MFA verification failed';
 				triggerShake();
