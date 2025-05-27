@@ -13,7 +13,7 @@ import "github.com/aaronlmathis/gosight-server/internal/store/metricstore/victor
 - [type VictoriaStore](<#VictoriaStore>)
   - [func NewVictoriaStore\(url string, metricCache cache.MetricCache\) \(\*VictoriaStore, error\)](<#NewVictoriaStore>)
   - [func \(v \*VictoriaStore\) Close\(\) error](<#VictoriaStore.Close>)
-  - [func \(v \*VictoriaStore\) FetchDimensionsForMetric\(metric string\) \(\[\]string, error\)](<#VictoriaStore.FetchDimensionsForMetric>)
+  - [func \(v \*VictoriaStore\) FetchDimensionsForMetric\(namespace, subnamespace, metricName string\) \(\[\]string, error\)](<#VictoriaStore.FetchDimensionsForMetric>)
   - [func \(v \*VictoriaStore\) GetAllKnownMetricNames\(\) \[\]string](<#VictoriaStore.GetAllKnownMetricNames>)
   - [func \(v \*VictoriaStore\) ListLabelValues\(label string, contains string\) \(\[\]string, error\)](<#VictoriaStore.ListLabelValues>)
   - [func \(v \*VictoriaStore\) QueryInstant\(metric string, filters map\[string\]string\) \(\[\]model.MetricRow, error\)](<#VictoriaStore.QueryInstant>)
@@ -71,25 +71,25 @@ func (v *VictoriaStore) Close() error
 
 
 <a name="VictoriaStore.FetchDimensionsForMetric"></a>
-### func \(\*VictoriaStore\) [FetchDimensionsForMetric](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/metricstore/victoriametrics/queries.go#L353>)
+### func \(\*VictoriaStore\) [FetchDimensionsForMetric](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/metricstore/victoriametrics/queries.go#L357>)
 
 ```go
-func (v *VictoriaStore) FetchDimensionsForMetric(metric string) ([]string, error)
+func (v *VictoriaStore) FetchDimensionsForMetric(namespace, subnamespace, metricName string) ([]string, error)
 ```
 
 FetchDimensionsForMetric queries VictoriaMetrics for a given metric and extracts dimension keys.
 
 <a name="VictoriaStore.GetAllKnownMetricNames"></a>
-### func \(\*VictoriaStore\) [GetAllKnownMetricNames](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/metricstore/victoriametrics/queries.go#L155>)
+### func \(\*VictoriaStore\) [GetAllKnownMetricNames](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/metricstore/victoriametrics/queries.go#L157>)
 
 ```go
 func (v *VictoriaStore) GetAllKnownMetricNames() []string
 ```
 
-
+GetAllKnownMetricNames retrieves all known metric names from the cache.
 
 <a name="VictoriaStore.ListLabelValues"></a>
-### func \(\*VictoriaStore\) [ListLabelValues](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/metricstore/victoriametrics/queries.go#L416>)
+### func \(\*VictoriaStore\) [ListLabelValues](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/metricstore/victoriametrics/queries.go#L430>)
 
 ```go
 func (v *VictoriaStore) ListLabelValues(label string, contains string) ([]string, error)
@@ -98,7 +98,7 @@ func (v *VictoriaStore) ListLabelValues(label string, contains string) ([]string
 
 
 <a name="VictoriaStore.QueryInstant"></a>
-### func \(\*VictoriaStore\) [QueryInstant](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/metricstore/victoriametrics/queries.go#L41>)
+### func \(\*VictoriaStore\) [QueryInstant](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/metricstore/victoriametrics/queries.go#L42>)
 
 ```go
 func (v *VictoriaStore) QueryInstant(metric string, filters map[string]string) ([]model.MetricRow, error)
@@ -107,25 +107,25 @@ func (v *VictoriaStore) QueryInstant(metric string, filters map[string]string) (
 QueryInstant fetches the latest data points for a given metric with optional label filters.
 
 <a name="VictoriaStore.QueryMultiInstant"></a>
-### func \(\*VictoriaStore\) [QueryMultiInstant](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/metricstore/victoriametrics/queries.go#L159>)
+### func \(\*VictoriaStore\) [QueryMultiInstant](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/metricstore/victoriametrics/queries.go#L162>)
 
 ```go
 func (v *VictoriaStore) QueryMultiInstant(metricNames []string, filters map[string]string) ([]model.MetricRow, error)
 ```
 
-
+QueryMultiInstant fetches the latest data points for multiple metrics with optional label filters.
 
 <a name="VictoriaStore.QueryMultiRange"></a>
-### func \(\*VictoriaStore\) [QueryMultiRange](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/metricstore/victoriametrics/queries.go#L253>)
+### func \(\*VictoriaStore\) [QueryMultiRange](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/metricstore/victoriametrics/queries.go#L257>)
 
 ```go
 func (v *VictoriaStore) QueryMultiRange(metrics []string, start, end time.Time, step string, filters map[string]string) ([]model.MetricRow, error)
 ```
 
-
+QueryMultiRange fetches time series data for multiple metrics over a time range with optional label filters.
 
 <a name="VictoriaStore.QueryRange"></a>
-### func \(\*VictoriaStore\) [QueryRange](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/metricstore/victoriametrics/queries.go#L94>)
+### func \(\*VictoriaStore\) [QueryRange](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/metricstore/victoriametrics/queries.go#L95>)
 
 ```go
 func (v *VictoriaStore) QueryRange(metric string, start, end time.Time, step string, filters map[string]string) ([]model.Point, error)

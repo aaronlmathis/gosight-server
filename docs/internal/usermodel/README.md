@@ -8,14 +8,61 @@ import "github.com/aaronlmathis/gosight-server/internal/usermodel"
 
 ## Index
 
+- [type CompleteUser](<#CompleteUser>)
+- [type NotificationPreferences](<#NotificationPreferences>)
+- [type PasswordChangeRequest](<#PasswordChangeRequest>)
 - [type Permission](<#Permission>)
+- [type ProfileUpdateRequest](<#ProfileUpdateRequest>)
 - [type Role](<#Role>)
 - [type SafeUser](<#SafeUser>)
 - [type User](<#User>)
+- [type UserPreferencesRequest](<#UserPreferencesRequest>)
+- [type UserProfile](<#UserProfile>)
+- [type UserSetting](<#UserSetting>)
+- [type UserSettings](<#UserSettings>)
 
+
+<a name="CompleteUser"></a>
+## type [CompleteUser](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L80-L84>)
+
+CompleteUser represents a user with their profile and settings
+
+```go
+type CompleteUser struct {
+    User     *User        `json:"user"`
+    Profile  *UserProfile `json:"profile"`
+    Settings UserSettings `json:"settings"`
+}
+```
+
+<a name="NotificationPreferences"></a>
+## type [NotificationPreferences](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L73-L77>)
+
+NotificationPreferences represents detailed notification settings
+
+```go
+type NotificationPreferences struct {
+    EmailAlerts    bool   `json:"email_alerts"`
+    PushAlerts     bool   `json:"push_alerts"`
+    AlertFrequency string `json:"alert_frequency"`
+}
+```
+
+<a name="PasswordChangeRequest"></a>
+## type [PasswordChangeRequest](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L59-L63>)
+
+PasswordChangeRequest represents the request payload for password changes
+
+```go
+type PasswordChangeRequest struct {
+    CurrentPassword string `json:"current_password"`
+    NewPassword     string `json:"new_password"`
+    ConfirmPassword string `json:"confirm_password"`
+}
+```
 
 <a name="Permission"></a>
-## type [Permission](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L37-L41>)
+## type [Permission](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L93-L97>)
 
 
 
@@ -27,8 +74,20 @@ type Permission struct {
 }
 ```
 
+<a name="ProfileUpdateRequest"></a>
+## type [ProfileUpdateRequest](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L53-L56>)
+
+ProfileUpdateRequest represents the request payload for profile updates
+
+```go
+type ProfileUpdateRequest struct {
+    FullName string `json:"full_name"`
+    Phone    string `json:"phone"`
+}
+```
+
 <a name="Role"></a>
-## type [Role](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L30-L35>)
+## type [Role](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L86-L91>)
 
 
 
@@ -42,7 +101,7 @@ type Role struct {
 ```
 
 <a name="SafeUser"></a>
-## type [SafeUser](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L23-L28>)
+## type [SafeUser](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L26-L31>)
 
 
 
@@ -56,7 +115,7 @@ type SafeUser struct {
 ```
 
 <a name="User"></a>
-## type [User](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L5-L22>)
+## type [User](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L8-L25>)
 
 
 
@@ -79,6 +138,56 @@ type User struct {
     LastLogin     time.Time
     Scopes        map[string][]string
 }
+```
+
+<a name="UserPreferencesRequest"></a>
+## type [UserPreferencesRequest](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L66-L70>)
+
+UserPreferencesRequest represents the request payload for user preferences
+
+```go
+type UserPreferencesRequest struct {
+    Theme         string                  `json:"theme"`
+    Notifications NotificationPreferences `json:"notifications"`
+    Dashboard     map[string]interface{}  `json:"dashboard"`
+}
+```
+
+<a name="UserProfile"></a>
+## type [UserProfile](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L34-L40>)
+
+UserProfile represents the user\_profiles table
+
+```go
+type UserProfile struct {
+    UserID    string    `json:"user_id"`
+    FullName  string    `json:"full_name"`
+    Phone     string    `json:"phone"`
+    AvatarURL string    `json:"avatar_url"`
+    UpdatedAt time.Time `json:"updated_at"`
+}
+```
+
+<a name="UserSetting"></a>
+## type [UserSetting](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L43-L47>)
+
+UserSetting represents a single setting from the user\_settings table
+
+```go
+type UserSetting struct {
+    UserID string          `json:"user_id"`
+    Key    string          `json:"key"`
+    Value  json.RawMessage `json:"value"`
+}
+```
+
+<a name="UserSettings"></a>
+## type [UserSettings](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L50>)
+
+UserSettings represents a collection of user settings
+
+```go
+type UserSettings map[string]json.RawMessage
 ```
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)

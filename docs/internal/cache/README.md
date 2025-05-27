@@ -60,7 +60,7 @@ LogCache is an interface that defines methods for adding and retrieving log entr
 ```go
 type LogCache interface {
     Add(batch []*model.StoredLog)
-    Get(logID string) (*model.LogEntry, bool)
+    Get(logID string) (*model.StoredLog, bool)
     GetLogs() []*model.StoredLog
 }
 ```
@@ -164,7 +164,7 @@ type StringSet map[string]struct{}
 ```
 
 <a name="StringSet.Add"></a>
-### func \(StringSet\) [Add](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/cache/tags.go#L33>)
+### func \(StringSet\) [Add](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/cache/tags.go#L34>)
 
 ```go
 func (s StringSet) Add(val string)
@@ -173,7 +173,7 @@ func (s StringSet) Add(val string)
 Add adds a value to the StringSet
 
 <a name="TagCache"></a>
-## type [TagCache](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/cache/tags.go#L42-L54>)
+## type [TagCache](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/cache/tags.go#L43-L55>)
 
 
 
@@ -194,7 +194,7 @@ type TagCache interface {
 ```
 
 <a name="NewTagCache"></a>
-### func [NewTagCache](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/cache/tags.go#L75>)
+### func [NewTagCache](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/cache/tags.go#L76>)
 
 ```go
 func NewTagCache() TagCache

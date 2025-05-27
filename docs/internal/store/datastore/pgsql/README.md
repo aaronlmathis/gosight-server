@@ -13,13 +13,15 @@ Package pgstore implements the userstore.Store interface using PostgreSQL
 - [type PGDataStore](<#PGDataStore>)
   - [func NewPGDataStore\(db \*sql.DB\) \*PGDataStore](<#NewPGDataStore>)
   - [func \(s \*PGDataStore\) Close\(\) error](<#PGDataStore.Close>)
+  - [func \(s \*PGDataStore\) DeleteNetworkDeviceByID\(ctx context.Context, id string\) error](<#PGDataStore.DeleteNetworkDeviceByID>)
   - [func \(s \*PGDataStore\) DeleteTag\(ctx context.Context, endpointID, key string\) error](<#PGDataStore.DeleteTag>)
   - [func \(s \*PGDataStore\) GetAgentByHostname\(ctx context.Context, hostname string\) \(\*model.Agent, error\)](<#PGDataStore.GetAgentByHostname>)
   - [func \(s \*PGDataStore\) GetAgentByID\(ctx context.Context, id string\) \(\*model.Agent, error\)](<#PGDataStore.GetAgentByID>)
+  - [func \(s \*PGDataStore\) GetAllNetworkDevices\(ctx context.Context\) \(\[\]\*model.NetworkDevice, error\)](<#PGDataStore.GetAllNetworkDevices>)
   - [func \(s \*PGDataStore\) GetAllTags\(ctx context.Context\) \(\[\]model.Tag, error\)](<#PGDataStore.GetAllTags>)
   - [func \(s \*PGDataStore\) GetContainerByID\(ctx context.Context, id string\) \(\*model.Container, error\)](<#PGDataStore.GetContainerByID>)
   - [func \(s \*PGDataStore\) GetNetworkDeviceByAddress\(ctx context.Context, address string\) \(\*model.NetworkDevice, error\)](<#PGDataStore.GetNetworkDeviceByAddress>)
-  - [func \(s \*PGDataStore\) GetNetworkDevices\(ctx context.Context\) \(\[\]\*model.NetworkDevice, error\)](<#PGDataStore.GetNetworkDevices>)
+  - [func \(s \*PGDataStore\) GetNetworkDevices\(ctx context.Context, filter \*model.NetworkDeviceFilter\) \(\[\]\*model.NetworkDevice, error\)](<#PGDataStore.GetNetworkDevices>)
   - [func \(s \*PGDataStore\) GetTags\(ctx context.Context, endpointID string\) \(map\[string\]string, error\)](<#PGDataStore.GetTags>)
   - [func \(s \*PGDataStore\) InsertFullProcessPayload\(ctx context.Context, payload \*model.ProcessPayload\) error](<#PGDataStore.InsertFullProcessPayload>)
   - [func \(s \*PGDataStore\) InsertProcessInfos\(ctx context.Context, snapshotID int64, payload \*model.ProcessPayload\) error](<#PGDataStore.InsertProcessInfos>)
@@ -31,8 +33,10 @@ Package pgstore implements the userstore.Store interface using PostgreSQL
   - [func \(s \*PGDataStore\) ListValues\(ctx context.Context, key string\) \(\[\]string, error\)](<#PGDataStore.ListValues>)
   - [func \(s \*PGDataStore\) QueryProcessInfos\(ctx context.Context, filter \*model.ProcessQueryFilter\) \(\[\]model.ProcessInfo, error\)](<#PGDataStore.QueryProcessInfos>)
   - [func \(s \*PGDataStore\) SetTags\(ctx context.Context, endpointID string, tags map\[string\]string\) error](<#PGDataStore.SetTags>)
+  - [func \(s \*PGDataStore\) ToggleNetworkDeviceStatus\(ctx context.Context, id string\) error](<#PGDataStore.ToggleNetworkDeviceStatus>)
   - [func \(s \*PGDataStore\) UpsertAgent\(ctx context.Context, agent \*model.Agent\) error](<#PGDataStore.UpsertAgent>)
   - [func \(s \*PGDataStore\) UpsertContainer\(ctx context.Context, c \*model.Container\) error](<#PGDataStore.UpsertContainer>)
+  - [func \(s \*PGDataStore\) UpsertNetworkDevice\(ctx context.Context, device \*model.NetworkDevice\) error](<#PGDataStore.UpsertNetworkDevice>)
   - [func \(s \*PGDataStore\) Write\(ctx context.Context, batches \[\]\*model.ProcessPayload\) error](<#PGDataStore.Write>)
 
 
@@ -65,6 +69,15 @@ func (s *PGDataStore) Close() error
 
 Close closes the database connection It checks if the db is not nil before attempting to close it
 
+<a name="PGDataStore.DeleteNetworkDeviceByID"></a>
+### func \(\*PGDataStore\) [DeleteNetworkDeviceByID](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/networkdevices.go#L260>)
+
+```go
+func (s *PGDataStore) DeleteNetworkDeviceByID(ctx context.Context, id string) error
+```
+
+DeleteNetworkDeviceByID deletes a network device by its ID
+
 <a name="PGDataStore.DeleteTag"></a>
 ### func \(\*PGDataStore\) [DeleteTag](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/tags.go#L105>)
 
@@ -92,6 +105,15 @@ func (s *PGDataStore) GetAgentByID(ctx context.Context, id string) (*model.Agent
 
 GetAgentByAgentID retrieves an agent by its agent\_id This is used for the agent to check in with the server
 
+<a name="PGDataStore.GetAllNetworkDevices"></a>
+### func \(\*PGDataStore\) [GetAllNetworkDevices](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/networkdevices.go#L34>)
+
+```go
+func (s *PGDataStore) GetAllNetworkDevices(ctx context.Context) ([]*model.NetworkDevice, error)
+```
+
+GetNetworkDevices returns all network devices from the database
+
 <a name="PGDataStore.GetAllTags"></a>
 ### func \(\*PGDataStore\) [GetAllTags](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/tags.go#L53>)
 
@@ -111,7 +133,7 @@ func (s *PGDataStore) GetContainerByID(ctx context.Context, id string) (*model.C
 GetContainerByID retrieves a container by its container\_id
 
 <a name="PGDataStore.GetNetworkDeviceByAddress"></a>
-### func \(\*PGDataStore\) [GetNetworkDeviceByAddress](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/networkdevices.go#L81>)
+### func \(\*PGDataStore\) [GetNetworkDeviceByAddress](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/networkdevices.go#L184>)
 
 ```go
 func (s *PGDataStore) GetNetworkDeviceByAddress(ctx context.Context, address string) (*model.NetworkDevice, error)
@@ -120,13 +142,13 @@ func (s *PGDataStore) GetNetworkDeviceByAddress(ctx context.Context, address str
 GetNetworkDeviceByAddress looks up a single NetworkDevice by its IP/hostname. Returns \(nil, nil\) if no matching device is found.
 
 <a name="PGDataStore.GetNetworkDevices"></a>
-### func \(\*PGDataStore\) [GetNetworkDevices](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/networkdevices.go#L34>)
+### func \(\*PGDataStore\) [GetNetworkDevices](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/networkdevices.go#L80>)
 
 ```go
-func (s *PGDataStore) GetNetworkDevices(ctx context.Context) ([]*model.NetworkDevice, error)
+func (s *PGDataStore) GetNetworkDevices(ctx context.Context, filter *model.NetworkDeviceFilter) ([]*model.NetworkDevice, error)
 ```
 
-GetNetworkDevices returns all network devices from the database
+
 
 <a name="PGDataStore.GetTags"></a>
 ### func \(\*PGDataStore\) [GetTags](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/tags.go#L34>)
@@ -227,6 +249,15 @@ func (s *PGDataStore) SetTags(ctx context.Context, endpointID string, tags map[s
 
 SetTags replaces all tags for a given endpoint ID with the provided tags.
 
+<a name="PGDataStore.ToggleNetworkDeviceStatus"></a>
+### func \(\*PGDataStore\) [ToggleNetworkDeviceStatus](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/networkdevices.go#L267>)
+
+```go
+func (s *PGDataStore) ToggleNetworkDeviceStatus(ctx context.Context, id string) error
+```
+
+ToggleNetworkDeviceStatus toggles the status \(enabled/disabled\) of a device by ID
+
 <a name="PGDataStore.UpsertAgent"></a>
 ### func \(\*PGDataStore\) [UpsertAgent](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/tracker.go#L42>)
 
@@ -244,6 +275,15 @@ func (s *PGDataStore) UpsertContainer(ctx context.Context, c *model.Container) e
 ```
 
 UpsertContainer inserts or updates a container in the database This is used for the agent to check in with the server It also updates the last\_seen field to the current time and the status field to "Running" if the container is running or "Stopped" if the container is stopped UpsertContainer inserts or updates a container in the database
+
+<a name="PGDataStore.UpsertNetworkDevice"></a>
+### func \(\*PGDataStore\) [UpsertNetworkDevice](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/networkdevices.go#L224>)
+
+```go
+func (s *PGDataStore) UpsertNetworkDevice(ctx context.Context, device *model.NetworkDevice) error
+```
+
+UpsertNetworkDevice inserts a new network device or updates an existing one
 
 <a name="PGDataStore.Write"></a>
 ### func \(\*PGDataStore\) [Write](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/processes.go#L36>)

@@ -51,7 +51,7 @@ func InitAlertStore(cfg *config.Config) (alertstore.AlertStore, error)
 InitAlertStore initializes the alert store for the GoSight server. The alert store is responsible for storing and retrieving alert instances.
 
 <a name="InitAuth"></a>
-## func [InitAuth](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/auth.go#L33>)
+## func [InitAuth](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/auth.go#L34>)
 
 ```go
 func InitAuth(cfg *config.Config, userStore userstore.UserStore) (map[string]gosightauth.AuthProvider, error)

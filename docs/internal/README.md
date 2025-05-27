@@ -11,6 +11,7 @@
 - [events](./events/README.md)
 - [grpc](./grpc/README.md)
 - [http](./http/README.md)
+- [otel](./otel/README.md)
 - [rules](./rules/README.md)
 - [runner](./runner/README.md)
 - [store](./store/README.md)

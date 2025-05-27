@@ -41,7 +41,7 @@ all: server
 .PHONY: run
 run: server
 	@echo "Running GoSight server with GOSIGHT_SERVER_CONFIG=$(GOSIGHT_SERVER_CONFIG)"
-	sudo GOSIGHT_SERVER_CONFIG=$(GOSIGHT_SERVER_CONFIG) $(SERVER_OUT)
+	sudo  $(SERVER_OUT) -config='../configs/server.yaml'
 
 # Build the GoSight server
 server:

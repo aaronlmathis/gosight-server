@@ -29,11 +29,13 @@ Package config provides configuration loading and management for the GoSight ser
   - [func \(g \*GoogleConfig\) ToOAuthConfig\(\) \*oauth2.Config](<#GoogleConfig.ToOAuthConfig>)
 - [type LogBufferConfig](<#LogBufferConfig>)
 - [type MetricBufferConfig](<#MetricBufferConfig>)
+- [type OTLPProtocolConfig](<#OTLPProtocolConfig>)
+- [type OpenTelemetryConfig](<#OpenTelemetryConfig>)
 - [type SyslogCollectionConfig](<#SyslogCollectionConfig>)
 
 
 <a name="ApplyEnvOverrides"></a>
-## func [ApplyEnvOverrides](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L212>)
+## func [ApplyEnvOverrides](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L227>)
 
 ```go
 func ApplyEnvOverrides(cfg *Config)
@@ -51,7 +53,7 @@ func EnsureDefaultConfig(path string) error
 EnsureDefaultConfig checks if the default configuration file exists at the specified path.
 
 <a name="AWSConfig"></a>
-## type [AWSConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L171-L177>)
+## type [AWSConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L186-L192>)
 
 AWSConfig represents the configuration for AWS Cognito authentication
 
@@ -66,7 +68,7 @@ type AWSConfig struct {
 ```
 
 <a name="AWSConfig.ToOAuthConfig"></a>
-### func \(\*AWSConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L267>)
+### func \(\*AWSConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L282>)
 
 ```go
 func (a *AWSConfig) ToOAuthConfig() *oauth2.Config
@@ -90,7 +92,7 @@ type AlertBufferConfig struct {
 ```
 
 <a name="AzureConfig"></a>
-## type [AzureConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L180-L185>)
+## type [AzureConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L195-L200>)
 
 AzureConfig represents the configuration for Azure AD authentication
 
@@ -104,7 +106,7 @@ type AzureConfig struct {
 ```
 
 <a name="AzureConfig.ToOAuthConfig"></a>
-### func \(\*AzureConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L281>)
+### func \(\*AzureConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L296>)
 
 ```go
 func (a *AzureConfig) ToOAuthConfig() *oauth2.Config
@@ -132,7 +134,7 @@ type BufferEngineConfig struct {
 ```
 
 <a name="Config"></a>
-## type [Config](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L43-L147>)
+## type [Config](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L43-L148>)
 
 Config represents the configuration structure for the GoSight server. It includes settings for server address, storage engine, database path, logging, TLS settings, and debug options.
 
@@ -171,7 +173,6 @@ type Config struct {
         EnableReflection bool `yaml:"enable_reflection"`
     }   `yaml:"debug"`
 
-    // TODO - split up storage engine configs.
     MetricStore struct {
         Engine        string `yaml:"engine"`
         URL           string `yaml:"url"`
@@ -241,11 +242,13 @@ type Config struct {
         Azure      AzureConfig  `yaml:"azure"`
         GitHub     GitHubConfig `yaml:"github"`
     }   `yaml:"auth"`
+
+    OpenTelemetry OpenTelemetryConfig `yaml:"opentelemetry"`
 }
 ```
 
 <a name="LoadConfig"></a>
-### func [LoadConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L196>)
+### func [LoadConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L211>)
 
 ```go
 func LoadConfig(path string) (*Config, error)
@@ -298,7 +301,7 @@ type EventBufferConfig struct {
 ```
 
 <a name="GitHubConfig"></a>
-## type [GitHubConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L188-L192>)
+## type [GitHubConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L203-L207>)
 
 GitHubConfig represents the configuration for GitHub OAuth authentication
 
@@ -311,7 +314,7 @@ type GitHubConfig struct {
 ```
 
 <a name="GitHubConfig.ToOAuthConfig"></a>
-### func \(\*GitHubConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L301>)
+### func \(\*GitHubConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L316>)
 
 ```go
 func (g *GitHubConfig) ToOAuthConfig() *oauth2.Config
@@ -320,7 +323,7 @@ func (g *GitHubConfig) ToOAuthConfig() *oauth2.Config
 ToOAuthConfig converts the GitHubConfig to an OAuth2 configuration
 
 <a name="GoogleConfig"></a>
-## type [GoogleConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L164-L168>)
+## type [GoogleConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L179-L183>)
 
 GoogleConfig represents the configuration for Google OAuth2 authentication. It includes the client ID, client secret, and redirect URI.
 
@@ -333,7 +336,7 @@ type GoogleConfig struct {
 ```
 
 <a name="GoogleConfig.ToOAuthConfig"></a>
-### func \(\*GoogleConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L256>)
+### func \(\*GoogleConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L271>)
 
 ```go
 func (g *GoogleConfig) ToOAuthConfig() *oauth2.Config
@@ -374,8 +377,33 @@ type MetricBufferConfig struct {
 }
 ```
 
+<a name="OTLPProtocolConfig"></a>
+## type [OTLPProtocolConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L159-L162>)
+
+OTLPProtocolConfig defines the configuration for an OTLP protocol.
+
+```go
+type OTLPProtocolConfig struct {
+    Enabled bool   `yaml:"enabled"`
+    Addr    string `yaml:"addr"`
+}
+```
+
+<a name="OpenTelemetryConfig"></a>
+## type [OpenTelemetryConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L152-L156>)
+
+OpenTelemetryConfig defines the configuration for OpenTelemetry It includes settings for the OTLP receiver
+
+```go
+type OpenTelemetryConfig struct {
+    Enabled bool               `yaml:"enabled"`
+    HTTP    OTLPProtocolConfig `yaml:"http"`
+    GRPC    OTLPProtocolConfig `yaml:"grpc"`
+}
+```
+
 <a name="SyslogCollectionConfig"></a>
-## type [SyslogCollectionConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L151-L160>)
+## type [SyslogCollectionConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L166-L175>)
 
 SyslogCollectionConfig defines the configuration for syslog collection The syslog collection can be used to collect syslog messages from network devices.
 

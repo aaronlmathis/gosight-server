@@ -18,7 +18,7 @@ Package syslog provides a syslog server implementation to receive syslog message
 
 
 <a name="SyslogFormat"></a>
-## type [SyslogFormat](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/syslog/handlelog.go#L91>)
+## type [SyslogFormat](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/syslog/handlelog.go#L89>)
 
 SyslogFormat represents the detected format of a syslog message
 

@@ -27,6 +27,7 @@ import (
 	gosightauth "github.com/aaronlmathis/gosight-server/internal/auth"
 	"github.com/aaronlmathis/gosight-server/internal/config"
 	"github.com/aaronlmathis/gosight-server/internal/store/userstore"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 // InitAuth initializes the authentication providers for the GoSight server.
@@ -86,6 +87,7 @@ func buildAuthProviders(cfg *config.Config, store userstore.UserStore) (map[stri
 			return nil, fmt.Errorf("unsupported auth provider: %s", name)
 		}
 	}
-
+	utils.Debug("Auth providers configured: %v", cfg.Web.AuthProviders)
+	utils.Debug("Auth providers initialized: %v", providers)
 	return providers, nil
 }

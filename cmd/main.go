@@ -26,8 +26,6 @@ package main
 
 import (
 	"context"
-	"flag"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -161,14 +159,6 @@ func run() {
 
 // main is the entry point for the GoSight server.
 func main() {
-	versionFlag := flag.Bool("version", false, "print version information and exit")
-	flag.Parse()
-	if *versionFlag {
-		fmt.Printf(
-			"GoSight %s (built %s, commit %s)\n",
-			Version, BuildTime, GitCommit,
-		)
-		os.Exit(0)
-	}
+
 	run()
 }
