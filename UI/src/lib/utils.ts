@@ -47,6 +47,17 @@ export function capitalize(str: string): string {
 	return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
 
+export function getUserInitials(firstName: string | undefined, lastName: string | undefined): string {
+	const first = (firstName || '').trim();
+	const last = (lastName || '').trim();
+	
+	if (!first && !last) return '?';
+	if (!first) return last.charAt(0).toUpperCase();
+	if (!last) return first.charAt(0).toUpperCase();
+	
+	return (first.charAt(0) + last.charAt(0)).toUpperCase();
+}
+
 // Duration formatting
 export function formatDuration(seconds: number): string {
   if (seconds === undefined || seconds === null) return '—';

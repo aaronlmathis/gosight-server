@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { darkMode, activeAlertsCount } from '$lib/stores';
 	import { auth } from '$lib/stores/auth';
+	import { getUserInitials } from '$lib/utils';
 	import { Moon, Sun, Bell, Menu } from 'lucide-svelte';
 
 	let dropdownOpen = false;
@@ -134,11 +135,24 @@
 							on:click={toggleDropdown}
 							class="h-11 w-11 rounded-full object-cover shadow-md focus:ring-2 focus:ring-gray-600"
 						>
-							<img
-								class="h-11 w-11 rounded-full object-cover"
-								src={$auth.user.avatar || '/default-avatar.png'}
-								alt="User avatar"
-							/>
+							{#if $auth.user.profile?.avatar_url}
+								<img
+									class="h-11 w-11 rounded-full object-cover"
+									src={$auth.user.profile.avatar_url}
+									alt="User avatar"
+								/>
+							{:else}
+								<div
+									class="relative inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-gray-100 dark:bg-gray-600"
+								>
+									<span class="font-medium text-gray-600 dark:text-gray-300">
+										{getUserInitials(
+											$auth.user.firstName || $auth.user.first_name,
+											$auth.user.lastName || $auth.user.last_name
+										)}
+									</span>
+								</div>
+							{/if}
 						</button>
 
 						{#if dropdownOpen}

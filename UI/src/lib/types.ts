@@ -75,12 +75,13 @@ export interface Alert {
 	message: string; // expanded from template
 	labels?: Record<string, string>;
 	resolved_at?: string; // when it was resolved
+	timestamp?: string; // alert timestamp
 	
-	// Legacy fields for backwards compatibility
+	// Widget-expected fields for compatibility
 	name?: string;
 	title?: string;
 	description?: string;
-	severity?: 'low' | 'medium' | 'high';
+	severity?: 'critical' | 'warning' | 'info' | 'success'; // Updated to match widget expectations
 	status?: 'active' | 'resolved' | 'acknowledged';
 	createdAt?: string;
 	created_at?: string;
@@ -294,6 +295,13 @@ export interface Event {
 	endpoint_name?: string;
 	user_name?: string;
 	meta?: Record<string, any>;
+	
+	// Widget-expected fields for compatibility
+	title?: string;
+	name?: string;
+	description?: string;
+	created_at?: string;
+	metadata?: Record<string, any>;
 }
 
 // Log types

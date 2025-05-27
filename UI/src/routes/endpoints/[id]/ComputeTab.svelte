@@ -87,40 +87,40 @@
 	}
 
 	// Reactive sorted processes
-	$: sortedProcesses = Array.isArray(processes) 
+	$: sortedProcesses = Array.isArray(processes)
 		? [...processes].sort((a, b) => {
-			let aVal: any;
-			let bVal: any;
+				let aVal: any;
+				let bVal: any;
 
-			switch (sortColumn) {
-				case 'pid':
-					aVal = parseInt(a?.pid || '0');
-					bVal = parseInt(b?.pid || '0');
-					break;
-				case 'user':
-					aVal = (a?.username || a?.user || '').toLowerCase();
-					bVal = (b?.username || b?.user || '').toLowerCase();
-					break;
-				case 'command':
-					aVal = (a?.cmdline || a?.command || a?.name || '').toLowerCase();
-					bVal = (b?.cmdline || b?.command || b?.name || '').toLowerCase();
-					break;
-				case 'cpu':
-					aVal = parseFloat(a?.cpu_percent || '0');
-					bVal = parseFloat(b?.cpu_percent || '0');
-					break;
-				case 'memory':
-					aVal = parseFloat(a?.mem_percent || '0');
-					bVal = parseFloat(b?.mem_percent || '0');
-					break;
-				default:
-					return 0;
-			}
+				switch (sortColumn) {
+					case 'pid':
+						aVal = parseInt(a?.pid || '0');
+						bVal = parseInt(b?.pid || '0');
+						break;
+					case 'user':
+						aVal = (a?.username || a?.user || '').toLowerCase();
+						bVal = (b?.username || b?.user || '').toLowerCase();
+						break;
+					case 'command':
+						aVal = (a?.cmdline || a?.command || a?.name || '').toLowerCase();
+						bVal = (b?.cmdline || b?.command || b?.name || '').toLowerCase();
+						break;
+					case 'cpu':
+						aVal = parseFloat(a?.cpu_percent || '0');
+						bVal = parseFloat(b?.cpu_percent || '0');
+						break;
+					case 'memory':
+						aVal = parseFloat(a?.mem_percent || '0');
+						bVal = parseFloat(b?.mem_percent || '0');
+						break;
+					default:
+						return 0;
+				}
 
-			if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-			if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
-			return 0;
-		})
+				if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+				if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+				return 0;
+			})
 		: [];
 
 	// Generate process tooltip for charts
@@ -735,22 +735,24 @@
 					</div>
 				</div>
 			</div>
-		<!-- Processes Section -->
-		<div class="rounded-lg bg-white p-4 shadow-md dark:bg-gray-800">
-			<h2 class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-				<Users size={16} class="text-gray-600 dark:text-gray-400" />
-				Running Processes
-				{#if hostInfo.procs && hostInfo.procs !== '--'}
-					<span class="text-xs font-normal text-gray-500 dark:text-gray-400">({hostInfo.procs})</span>
-				{/if}
-			</h2>
+			<!-- Processes Section -->
+			<div class="rounded-lg bg-white p-4 shadow-md dark:bg-gray-800">
+				<h2 class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+					<Users size={16} class="text-gray-600 dark:text-gray-400" />
+					Running Processes
+					{#if hostInfo.procs && hostInfo.procs !== '--'}
+						<span class="text-xs font-normal text-gray-500 dark:text-gray-400"
+							>({hostInfo.procs})</span
+						>
+					{/if}
+				</h2>
 				<div class="mt-4">
 					<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
 						<thead class="bg-gray-50 dark:bg-gray-800">
 							<tr>
 								<th
 									scope="col"
-									class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+									class="cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
 									on:click={() => handleSort('pid')}
 								>
 									<div class="flex items-center gap-1">
@@ -766,7 +768,7 @@
 								</th>
 								<th
 									scope="col"
-									class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+									class="cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
 									on:click={() => handleSort('user')}
 								>
 									<div class="flex items-center gap-1">
@@ -782,7 +784,7 @@
 								</th>
 								<th
 									scope="col"
-									class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+									class="cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
 									on:click={() => handleSort('command')}
 								>
 									<div class="flex items-center gap-1">
@@ -798,7 +800,7 @@
 								</th>
 								<th
 									scope="col"
-									class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+									class="cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
 									on:click={() => handleSort('cpu')}
 								>
 									<div class="flex items-center gap-1">
@@ -814,7 +816,7 @@
 								</th>
 								<th
 									scope="col"
-									class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+									class="cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
 									on:click={() => handleSort('memory')}
 								>
 									<div class="flex items-center gap-1">
