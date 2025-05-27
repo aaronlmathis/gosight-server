@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { Card, Badge } from 'flowbite-svelte';
-	import CompatButton from '$lib/components/CompatButton.svelte';
 	import { AlertTriangle, Shield, AlertCircle, XCircle, Clock, Loader } from 'lucide-svelte';
 	import type { Widget, WidgetData } from '$lib/types/dashboard';
 	import { dataService } from '$lib/services/dataService';
@@ -205,9 +204,12 @@
 							<span>{formatTimeRange(alertTimeRange)}</span>
 						</div>
 						{#if (data.value || 0) > 0}
-							<CompatButton size="xs" color="red" class="px-2 py-1 text-xs"
-								>View Details</CompatButton
+							<button
+								type="button"
+								class="inline-flex items-center rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 focus:ring-4 focus:ring-red-300 focus:outline-none dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
 							>
+								View Details
+							</button>
 						{/if}
 					</div>
 				</div>

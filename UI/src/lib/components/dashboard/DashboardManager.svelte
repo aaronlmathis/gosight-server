@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
-	import { Modal, Card, Input, Label, Select, Textarea, Badge, Spinner } from 'flowbite-svelte';
-	import CompatButton from '$lib/components/CompatButton.svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
+	import { Card, Input, Label, Select, Textarea, Badge, Spinner } from 'flowbite-svelte';
+	import Modal from '$lib/components/Modal.svelte';
 	import {
 		Plus,
 		Download,
@@ -10,13 +10,19 @@
 		Trash2,
 		Edit3,
 		Save,
-		X,
 		FileText,
 		Folder
 	} from 'lucide-svelte';
 	import { dashboardStore } from '$lib/stores/dashboard';
 	import type { Dashboard, DashboardPreferences, Widget } from '$lib/types/dashboard';
 	import { dataService } from '$lib/services/dataService';
+
+	onMount(() => {
+		// Try to load dashboard store data
+		dashboardStore.load().catch((err) => {
+			console.error('Failed to load dashboard store:', err);
+		});
+	});
 
 	const dispatch = createEventDispatcher<{
 		selectDashboard: { dashboardId: string };
@@ -467,6 +473,29 @@
 		showCreateModal = true;
 	}
 
+	function useTemplate(template: any) {
+		selectedTemplate = template.id;
+		newDashboardName = template.name;
+		newDashboardDescription = template.description;
+		showCreateModal = true;
+	}
+
+	function switchToManageTab() {
+		activeTab = 'manage';
+	}
+
+	function switchToTemplatesTab() {
+		activeTab = 'templates';
+	}
+
+	function switchToImportExportTab() {
+		activeTab = 'import-export';
+	}
+
+	function selectDashboard(dashboardId: string) {
+		dispatch('selectDashboard', { dashboardId });
+	}
+
 	function openDeleteModal(dashboard: Dashboard) {
 		dashboardToDelete = dashboard;
 		error = '';
@@ -487,16 +516,8 @@
 	}
 </script>
 
-<Modal bind:open={isOpen} size="xl" class="w-full max-w-6xl">
+<Modal bind:show={isOpen} size="xl" title="Dashboard Manager" on:close={() => dispatch('close')}>
 	<div class="p-6">
-		<!-- Header -->
-		<div class="mb-6 flex items-center justify-between">
-			<h2 class="text-2xl font-bold text-gray-900 dark:text-white">Dashboard Manager</h2>
-			<CompatButton color="light" size="sm" on:click={() => dispatch('close')}>
-				<X class="h-4 w-4" />
-			</CompatButton>
-		</div>
-
 		<!-- Error Display -->
 		{#if error}
 			<div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3">
@@ -508,28 +529,31 @@
 		<div class="mb-6 border-b border-gray-200 dark:border-gray-700">
 			<nav class="-mb-px flex space-x-8">
 				<button
+					type="button"
 					class="border-b-2 px-1 py-2 text-sm font-medium {activeTab === 'manage'
 						? 'border-blue-500 text-blue-600'
 						: 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}"
-					on:click={() => (activeTab = 'manage')}
+					on:click={switchToManageTab}
 				>
 					<Folder class="mr-2 inline h-4 w-4" />
 					Manage Dashboards
 				</button>
 				<button
+					type="button"
 					class="border-b-2 px-1 py-2 text-sm font-medium {activeTab === 'templates'
 						? 'border-blue-500 text-blue-600'
 						: 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}"
-					on:click={() => (activeTab = 'templates')}
+					on:click={switchToTemplatesTab}
 				>
 					<FileText class="mr-2 inline h-4 w-4" />
 					Templates
 				</button>
 				<button
+					type="button"
 					class="border-b-2 px-1 py-2 text-sm font-medium {activeTab === 'import-export'
 						? 'border-blue-500 text-blue-600'
 						: 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}"
-					on:click={() => (activeTab = 'import-export')}
+					on:click={switchToImportExportTab}
 				>
 					<Upload class="mr-2 inline h-4 w-4" />
 					Import/Export
@@ -546,14 +570,20 @@
 					<h3 class="text-lg font-medium text-gray-900 dark:text-white">
 						Your Dashboards ({dashboards.length})
 					</h3>
-					<CompatButton color="blue" size="sm" on:click={openCreateModal}>
-						<Plus class="mr-2 h-4 w-4" />
-						Create Dashboard
-					</CompatButton>
+					<div class="flex gap-2">
+						<button
+							type="button"
+							class="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
+							on:click={openCreateModal}
+						>
+							<Plus class="mr-2 h-4 w-4" />
+							Create Dashboard
+						</button>
+					</div>
 				</div>
 
 				<!-- Dashboards Grid -->
-				<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+				<div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
 					{#each dashboards as dashboard (dashboard.id)}
 						<Card
 							class="relative {dashboard.id === currentDashboardId ? 'ring-2 ring-blue-500' : ''}"
@@ -574,47 +604,44 @@
 								</div>
 
 								<!-- Actions -->
-								<div class="flex items-center justify-between">
-									<div class="flex space-x-2">
-										<CompatButton
-											size="xs"
-											color="blue"
+								<div class="flex flex-col gap-2">
+									<div class="flex flex-wrap gap-1">
+										<button
+											type="button"
+											class="inline-flex items-center rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 focus:outline-none dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
 											on:click={() => dispatch('selectDashboard', { dashboardId: dashboard.id })}
 										>
 											{dashboard.id === currentDashboardId ? 'Current' : 'Select'}
-										</CompatButton>
-										<CompatButton
-											size="xs"
-											color="light"
+										</button>
+										<button
+											type="button"
+											class="inline-flex items-center rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-50 focus:ring-4 focus:ring-gray-200 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
 											on:click={() => openRenameModal(dashboard)}
 										>
 											<Edit3 class="h-3 w-3" />
-										</CompatButton>
-										<CompatButton
-											size="xs"
-											color="light"
+										</button>
+										<button
+											type="button"
+											class="inline-flex items-center rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-50 focus:ring-4 focus:ring-gray-200 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
 											on:click={() => duplicateDashboard(dashboard)}
 										>
 											<Copy class="h-3 w-3" />
-										</CompatButton>
-									</div>
-
-									<div class="flex space-x-2">
-										<CompatButton
-											size="xs"
-											color="light"
+										</button>
+										<button
+											type="button"
+											class="inline-flex items-center rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-50 focus:ring-4 focus:ring-gray-200 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
 											on:click={() => exportDashboard(dashboard)}
 										>
 											<Download class="h-3 w-3" />
-										</CompatButton>
+										</button>
 										{#if !dashboard.isDefault}
-											<CompatButton
-												size="xs"
-												color="red"
+											<button
+												type="button"
+												class="inline-flex items-center rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 focus:ring-4 focus:ring-red-200 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700 dark:focus:ring-red-800"
 												on:click={() => openDeleteModal(dashboard)}
 											>
 												<Trash2 class="h-3 w-3" />
-											</CompatButton>
+											</button>
 										{/if}
 									</div>
 								</div>
@@ -629,7 +656,7 @@
 				<h3 class="text-lg font-medium text-gray-900 dark:text-white">Dashboard Templates</h3>
 
 				<!-- Templates Grid -->
-				<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+				<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 					{#each dashboardTemplates as template (template.id)}
 						<Card class="p-4">
 							<div class="mb-3 flex items-start justify-between">
@@ -656,19 +683,13 @@
 								</span>
 							</div>
 
-							<CompatButton
-								size="sm"
-								color="blue"
-								class="w-full"
-								on:click={() => {
-									selectedTemplate = template.id;
-									newDashboardName = template.name;
-									newDashboardDescription = template.description;
-									showCreateModal = true;
-								}}
+							<button
+								type="button"
+								class="w-full rounded-md border border-transparent bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
+								on:click={() => useTemplate(template)}
 							>
 								Use Template
-							</CompatButton>
+							</button>
 						</Card>
 					{/each}
 				</div>
@@ -676,7 +697,7 @@
 		{:else if activeTab === 'import-export'}
 			<!-- Import/Export Tab -->
 			<div class="space-y-6">
-				<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+				<div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
 					<!-- Import Section -->
 					<Card class="p-4">
 						<h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-white">Import Dashboard</h3>
@@ -694,9 +715,9 @@
 								/>
 							</div>
 
-							<CompatButton
-								color="blue"
-								class="w-full"
+							<button
+								type="button"
+								class="flex w-full items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
 								disabled={!importData.trim() || loading}
 								on:click={importDashboard}
 							>
@@ -705,7 +726,7 @@
 								{/if}
 								<Upload class="mr-2 h-4 w-4" />
 								Import Dashboard
-							</CompatButton>
+							</button>
 						</div>
 					</Card>
 
@@ -729,14 +750,14 @@
 												{dashboard.widgets.length} widgets
 											</p>
 										</div>
-										<CompatButton
-											size="xs"
-											color="light"
+										<button
+											type="button"
+											class="inline-flex items-center rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-50 focus:ring-4 focus:ring-gray-200 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
 											on:click={() => exportDashboard(dashboard)}
 										>
 											<Download class="h-3 w-3" />
 											Export
-										</CompatButton>
+										</button>
 									</div>
 								{/each}
 							</div>
@@ -749,10 +770,8 @@
 </Modal>
 
 <!-- Create Dashboard Modal -->
-<Modal bind:open={showCreateModal} size="lg">
+<Modal bind:show={showCreateModal} size="lg" title="Create New Dashboard">
 	<div class="p-6">
-		<h3 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">Create New Dashboard</h3>
-
 		<div class="space-y-4">
 			<div>
 				<Label for="dashboard-name" class="mb-2">Dashboard Name</Label>
@@ -785,9 +804,16 @@
 		</div>
 
 		<div class="mt-6 flex justify-end space-x-3">
-			<CompatButton color="light" on:click={() => (showCreateModal = false)}>Cancel</CompatButton>
-			<CompatButton
-				color="blue"
+			<button
+				type="button"
+				class="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-50 focus:ring-4 focus:ring-gray-200 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
+				on:click={() => (showCreateModal = false)}
+			>
+				Cancel
+			</button>
+			<button
+				type="button"
+				class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
 				disabled={!newDashboardName.trim() || loading}
 				on:click={createDashboard}
 			>
@@ -795,45 +821,60 @@
 					<Spinner size="4" class="mr-2" />
 				{/if}
 				Create Dashboard
-			</CompatButton>
+			</button>
 		</div>
 	</div>
 </Modal>
 
 <!-- Delete Confirmation Modal -->
-<Modal bind:open={showDeleteModal} size="md">
+<Modal bind:show={showDeleteModal} size="md" title="Delete Dashboard">
 	<div class="p-6">
-		<h3 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">Delete Dashboard</h3>
 		<p class="mb-6 text-gray-600 dark:text-gray-400">
 			Are you sure you want to delete "{dashboardToDelete?.name}"? This action cannot be undone.
 		</p>
 
 		<div class="flex justify-end space-x-3">
-			<CompatButton color="light" on:click={() => (showDeleteModal = false)}>Cancel</CompatButton>
-			<CompatButton color="red" disabled={loading} on:click={deleteDashboard}>
+			<button
+				type="button"
+				class="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-50 focus:ring-4 focus:ring-gray-200 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
+				on:click={() => (showDeleteModal = false)}
+			>
+				Cancel
+			</button>
+			<button
+				type="button"
+				class="rounded-lg bg-red-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-red-700 focus:ring-4 focus:ring-red-300 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
+				disabled={loading}
+				on:click={deleteDashboard}
+			>
 				{#if loading}
 					<Spinner size="4" class="mr-2" />
 				{/if}
 				Delete Dashboard
-			</CompatButton>
+			</button>
 		</div>
 	</div>
 </Modal>
 
 <!-- Rename Modal -->
-<Modal bind:open={showRenameModal} size="md">
+<Modal bind:show={showRenameModal} size="md" title="Rename Dashboard">
 	<div class="p-6">
-		<h3 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">Rename Dashboard</h3>
-
 		<div class="mb-6">
 			<Label for="rename-input" class="mb-2">Dashboard Name</Label>
 			<Input id="rename-input" bind:value={renameValue} placeholder="Enter new name" />
 		</div>
 
 		<div class="flex justify-end space-x-3">
-			<CompatButton color="light" on:click={() => (showRenameModal = false)}>Cancel</CompatButton>
-			<CompatButton
-				color="blue"
+			<button
+				type="button"
+				class="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-50 focus:ring-4 focus:ring-gray-200 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
+				on:click={() => (showRenameModal = false)}
+			>
+				Cancel
+			</button>
+			<button
+				type="button"
+				class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
 				disabled={!renameValue.trim() || loading}
 				on:click={renameDashboard}
 			>
@@ -841,16 +882,14 @@
 					<Spinner size="4" class="mr-2" />
 				{/if}
 				Rename
-			</CompatButton>
+			</button>
 		</div>
 	</div>
 </Modal>
 
 <!-- Export Modal -->
-<Modal bind:open={showExportModal} size="lg">
+<Modal bind:show={showExportModal} size="lg" title="Export Dashboard">
 	<div class="p-6">
-		<h3 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">Export Dashboard</h3>
-
 		<div class="space-y-4">
 			<div>
 				<Label class="mb-2">Configuration JSON</Label>
@@ -859,21 +898,70 @@
 
 			<div class="flex justify-between">
 				<div class="space-x-2">
-					<CompatButton color="light" size="sm" on:click={copyExportData}>
+					<button
+						type="button"
+						class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 focus:ring-4 focus:ring-gray-200 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
+						on:click={copyExportData}
+					>
 						<Copy class="mr-2 h-4 w-4" />
 						Copy to Clipboard
-					</CompatButton>
-					<CompatButton
-						color="light"
-						size="sm"
+					</button>
+					<button
+						type="button"
+						class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 focus:ring-4 focus:ring-gray-200 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
 						on:click={() => downloadExportData(dashboardToDelete!)}
 					>
 						<Download class="mr-2 h-4 w-4" />
 						Download File
-					</CompatButton>
+					</button>
 				</div>
-				<CompatButton color="blue" on:click={() => (showExportModal = false)}>Done</CompatButton>
+				<button
+					type="button"
+					class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 focus:outline-none dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+					on:click={() => (showExportModal = false)}
+				>
+					Done
+				</button>
 			</div>
+		</div>
+	</div>
+</Modal>
+
+<!-- Import Modal -->
+<Modal bind:show={showImportModal} size="lg" title="Import Dashboard">
+	<div class="p-6">
+		<div class="space-y-4">
+			<div>
+				<Label for="import-data" class="mb-2">Dashboard Configuration JSON</Label>
+				<Textarea
+					id="import-data"
+					bind:value={importData}
+					placeholder="Paste dashboard configuration JSON here..."
+					rows={12}
+					class="font-mono text-xs"
+				/>
+			</div>
+		</div>
+
+		<div class="mt-6 flex justify-end space-x-3">
+			<button
+				type="button"
+				class="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-50 focus:ring-4 focus:ring-gray-200 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
+				on:click={() => (showImportModal = false)}
+			>
+				Cancel
+			</button>
+			<button
+				type="button"
+				class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+				disabled={!importData.trim() || loading}
+				on:click={importDashboard}
+			>
+				{#if loading}
+					<Spinner size="4" class="mr-2" />
+				{/if}
+				Import Dashboard
+			</button>
 		</div>
 	</div>
 </Modal>

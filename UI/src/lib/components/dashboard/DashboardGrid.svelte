@@ -145,8 +145,10 @@
 	}
 
 	function handleWidgetConfigure(event: CustomEvent<{ widget: Widget }>) {
+		console.log('Widget configure event received:', event.detail.widget);
 		configModal.widget = event.detail.widget;
 		configModal.isOpen = true;
+		console.log('Modal state set to open:', configModal.isOpen);
 	}
 
 	function handleConfigSave(event: CustomEvent<{ config: any }>) {
@@ -225,7 +227,7 @@
 	<!-- Empty State -->
 	{#if widgets.length === 0}
 		<div class="col-span-full row-span-full flex items-center justify-center">
-			<div class="text-center text-gray-500">
+			<div class="text-center text-gray-500 dark:text-gray-400">
 				<div class="mb-2 text-xl">📊</div>
 				<h3 class="mb-2 text-lg font-medium">No widgets yet</h3>
 				<p class="text-sm">
@@ -254,6 +256,13 @@
 			linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
 			linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
 		background-size: 20px 20px;
+	}
+
+	/* Dark mode grid pattern */
+	:global(.dark) .dashboard-grid {
+		background-image:
+			linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+			linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
 	}
 
 	.drop-preview {

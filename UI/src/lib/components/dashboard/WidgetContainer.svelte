@@ -77,7 +77,15 @@
 		}
 	}
 
-	function handleClick() {
+	function handleClick(event: Event) {
+		// Don't handle click if it's on a button
+		if (event.target instanceof HTMLElement) {
+			if (event.target.tagName === 'BUTTON' || event.target.closest('button')) {
+				console.log('Click on button detected, ignoring container click');
+				return;
+			}
+		}
+		console.log('Container clicked, dispatching select');
 		dispatch('select', { widget });
 	}
 
@@ -88,6 +96,7 @@
 
 	function handleConfigure(event: Event) {
 		event.stopPropagation();
+		event.preventDefault();
 		dispatch('configure', { widget });
 	}
 

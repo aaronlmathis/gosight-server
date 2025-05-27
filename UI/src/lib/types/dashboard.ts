@@ -73,6 +73,27 @@ export interface WidgetConfig {
 	dataSource?: string;
 	metrics?: string[];
 	
+	// Enhanced chart configuration
+	chartConfig?: {
+		dataSource?: string;
+		namespace?: string;
+		subnamespace?: string;
+		metric?: string;
+		selectedMetrics?: Array<{
+			label: string;
+			namespace: string;
+			subnamespace: string;
+			name: string;
+		}>;
+		tags?: Record<string, string>;
+		chartType?: string;
+		timeFrame?: string;
+		stepInterval?: string;
+		aggregateBy?: string;
+		groupBy?: string;
+		isStacked?: boolean;
+	};
+
 	// Quick links config
 	links?: QuickLink[];
 	

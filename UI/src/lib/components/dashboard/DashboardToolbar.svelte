@@ -1,9 +1,13 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import { Dropdown, Badge } from 'flowbite-svelte';
-	import CompatButton from '$lib/components/CompatButton.svelte';
 	import CompatDropdownItem from '$lib/components/CompatDropdownItem.svelte';
-	import { dashboardStore, isEditMode, hasUnsavedChanges } from '$lib/stores/dashboard';
+	import {
+		dashboardStore,
+		isEditMode,
+		hasUnsavedChanges,
+		currentDashboard
+	} from '$lib/stores/dashboard';
 	import {
 		Edit3,
 		Save,
@@ -66,18 +70,20 @@
 	}
 </script>
 
-<div class="flex items-center justify-between border-b border-gray-200 bg-white p-4">
+<div
+	class="flex items-center justify-between border-b border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900"
+>
 	<!-- Left Side - Dashboard Info -->
 	<div class="flex items-center gap-4">
 		<div>
-			<h1 class="flex items-center gap-2 text-xl font-semibold text-gray-900">
+			<h1 class="flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-white">
 				{activeDashboard?.name || 'Dashboard'}
 				{#if unsavedChanges}
 					<Badge color="yellow" class="text-xs">Unsaved</Badge>
 				{/if}
 			</h1>
 			{#if activeDashboard?.description}
-				<p class="mt-1 text-sm text-gray-600">
+				<p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
 					{activeDashboard.description}
 				</p>
 			{/if}
@@ -88,22 +94,36 @@
 	<div class="flex items-center gap-2">
 		<!-- Save Button -->
 		{#if $isEditMode && unsavedChanges}
-			<CompatButton on:click={saveDashboard} color="green" size="sm">
+			<button
+				type="button"
+				class="inline-flex items-center rounded-md border border-transparent bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none"
+				on:click={saveDashboard}
+			>
 				<Save class="mr-2 h-4 w-4" />
 				Save Changes
-			</CompatButton>
+			</button>
 		{/if}
 
 		<!-- Add Widget Button -->
 		{#if $isEditMode}
-			<CompatButton on:click={handleAddWidget} color="blue" size="sm">
+			<button
+				type="button"
+				class="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
+				on:click={handleAddWidget}
+			>
 				<Plus class="mr-2 h-4 w-4" />
 				Add Widget
-			</CompatButton>
+			</button>
 		{/if}
 
 		<!-- Edit Mode Toggle -->
-		<CompatButton on:click={toggleEditMode} color={$isEditMode ? 'red' : 'light'} size="sm">
+		<button
+			type="button"
+			class="inline-flex items-center px-3 py-2 text-sm font-medium {$isEditMode
+				? 'bg-red-600 text-white hover:bg-red-700'
+				: 'bg-gray-200 text-gray-700 hover:bg-gray-300'} rounded-md border border-transparent focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
+			on:click={toggleEditMode}
+		>
 			{#if $isEditMode}
 				<Eye class="mr-2 h-4 w-4" />
 				View Mode
@@ -111,12 +131,15 @@
 				<Edit3 class="mr-2 h-4 w-4" />
 				Edit Mode
 			{/if}
-		</CompatButton>
+		</button>
 
 		<!-- Dashboard Menu -->
-		<CompatButton color="light" size="sm" class="!p-2">
+		<button
+			type="button"
+			class="flex items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 focus:ring-4 focus:ring-gray-200 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
+		>
 			<MoreVertical class="h-4 w-4" />
-		</CompatButton>
+		</button>
 		<Dropdown>
 			<CompatDropdownItem on:click={handleCreateDashboard}>
 				<Grid3x3 class="mr-2 h-4 w-4" />
@@ -140,13 +163,13 @@
 
 <!-- Dashboard Tabs -->
 {#if $dashboardStore.dashboards.length > 1}
-	<div class="flex items-center gap-1 border-b bg-gray-50 px-4 py-2">
+	<div class="flex items-center gap-1 border-b bg-gray-50 px-4 py-2 dark:bg-gray-800">
 		{#each $dashboardStore.dashboards as dashboard}
 			<button
 				class="rounded-md px-3 py-1 text-sm transition-colors {dashboard.id === activeDashboardId
-					? 'bg-blue-100 font-medium text-blue-700'
-					: 'text-gray-600 hover:bg-gray-100'}"
-				on:click={() => dashboardStore.setActiveDashboard(dashboard.id)}
+					? 'bg-blue-100 font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+					: 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'}"
+				on:click={() => currentDashboard.set(dashboard.id)}
 			>
 				{dashboard.name}
 				{#if dashboard.widgets.length === 0}

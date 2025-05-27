@@ -35,6 +35,28 @@ const DEFAULT_PREFERENCES: DashboardPreferences = {
 function createDashboardStore() {
 	const { subscribe, set, update } = writable<DashboardPreferences>(DEFAULT_PREFERENCES);
 
+	// Helper function to save preferences
+	async function savePreferences(preferences: DashboardPreferences) {
+		if (!browser) return;
+		
+		try {
+			// Save to localStorage as backup
+			localStorage.setItem('gosight-dashboard-preferences', JSON.stringify(preferences));
+			
+			// Save to API
+			await fetch('/api/v1/users/preferences', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'include',
+				body: JSON.stringify({
+					dashboard: preferences
+				})
+			});
+		} catch (error) {
+			console.error('Failed to save dashboard preferences:', error);
+		}
+	}
+
 	return {
 		subscribe,
 		
@@ -72,31 +94,15 @@ function createDashboardStore() {
 		// Save dashboard preferences to API and localStorage
 		async save(preferences: DashboardPreferences) {
 			set(preferences);
-			
-			if (!browser) return;
-			
-			try {
-				// Save to localStorage as backup
-				localStorage.setItem('gosight-dashboard-preferences', JSON.stringify(preferences));
-				
-				// Save to API
-				await fetch('/api/v1/users/preferences', {
-					method: 'PUT',
-					headers: { 'Content-Type': 'application/json' },
-					credentials: 'include',
-					body: JSON.stringify({
-						dashboard: preferences
-					})
-				});
-			} catch (error) {
-				console.error('Failed to save dashboard preferences:', error);
-			}
+			await savePreferences(preferences);
 		},
 
 		// Save specific dashboard (alias for save with current preferences)
 		async saveDashboard(dashboardId: string) {
-			const current = this.getCurrentPreferences();
-			await this.save(current);
+			let current: DashboardPreferences;
+			const unsubscribe = subscribe(prefs => current = prefs);
+			unsubscribe();
+			await savePreferences(current!);
 		},
 
 		// Add a new dashboard
@@ -113,7 +119,8 @@ function createDashboardStore() {
 					...prefs,
 					dashboards: [...prefs.dashboards, newDashboard]
 				};
-				this.save(updated);
+				// Save in background without blocking the update
+				savePreferences(updated);
 				return updated;
 			});
 			
@@ -131,22 +138,22 @@ function createDashboardStore() {
 							: d
 					)
 				};
-				this.save(updated);
+				// Save in background without blocking the update
+				savePreferences(updated);
 				return updated;
 			});
-		},
-
-		// Delete dashboard
+		},		// Delete dashboard
 		deleteDashboard(dashboardId: string) {
 			update(prefs => {
 				const updated = {
 					...prefs,
 					dashboards: prefs.dashboards.filter(d => d.id !== dashboardId),
-					defaultDashboardId: prefs.defaultDashboardId === dashboardId 
+					defaultDashboardId: prefs.defaultDashboardId === dashboardId
 						? prefs.dashboards.find(d => d.id !== dashboardId)?.id || 'default'
 						: prefs.defaultDashboardId
 				};
-				this.save(updated);
+				// Save in background without blocking the update
+				savePreferences(updated);
 				return updated;
 			});
 		},
@@ -173,7 +180,8 @@ function createDashboardStore() {
 							: d
 					)
 				};
-				this.save(updated);
+				// Save in background without blocking the update
+				savePreferences(updated);
 				return updated;
 			});
 
@@ -199,7 +207,8 @@ function createDashboardStore() {
 							: d
 					)
 				};
-				this.save(updated);
+				// Save in background without blocking the update
+				savePreferences(updated);
 				return updated;
 			});
 		},
@@ -219,7 +228,8 @@ function createDashboardStore() {
 							: d
 					)
 				};
-				this.save(updated);
+				// Save in background without blocking the update
+				savePreferences(updated);
 				return updated;
 			});
 		},
@@ -231,7 +241,8 @@ function createDashboardStore() {
 					...prefs,
 					globalSettings: { ...prefs.globalSettings, ...settings }
 				};
-				this.save(updated);
+				// Save in background without blocking the update
+				savePreferences(updated);
 				return updated;
 			});
 		},
@@ -243,29 +254,39 @@ function createDashboardStore() {
 					...prefs,
 					defaultDashboardId: dashboardId
 				};
-				this.save(updated);
+				// Save in background without blocking the update
+				savePreferences(updated);
 				return updated;
 			});
 		},
 
 		// Set active dashboard
 		setActiveDashboard(dashboardId: string) {
-			update(prefs => {
-				if (prefs.dashboards.find(d => d.id === dashboardId)) {
-					return { ...prefs, defaultDashboardId: dashboardId };
-				}
-				return prefs;
-			});
+			const dashboard = this.getDashboard(dashboardId);
+			if (dashboard) {
+				currentDashboard.set(dashboardId);
+			}
 		},
 
 		// Move widget to new position
 		moveWidget(dashboardId: string, widgetId: string, position: Pick<WidgetPosition, 'x' | 'y'>) {
-			this.updateWidget(dashboardId, widgetId, { 
-				position: {
-					...this.getWidget(dashboardId, widgetId)?.position || { x: 0, y: 0, width: 2, height: 2 },
-					...position
-				}
-			});
+			// Get current preferences
+			let currentPrefs: DashboardPreferences;
+			const unsubscribe = subscribe(prefs => currentPrefs = prefs);
+			unsubscribe();
+			
+			const widget = currentPrefs!.dashboards
+				.find(d => d.id === dashboardId)?.widgets
+				.find(w => w.id === widgetId);
+			
+			if (widget) {
+				this.updateWidget(dashboardId, widgetId, { 
+					position: {
+						...widget.position || { x: 0, y: 0, width: 2, height: 2 },
+						...position
+					}
+				});
+			}
 		},
 
 		// Resize widget
@@ -275,7 +296,15 @@ function createDashboardStore() {
 
 		// Duplicate widget
 		duplicateWidget(dashboardId: string, widgetId: string, position: WidgetPosition) {
-			const original = this.getWidget(dashboardId, widgetId);
+			// Get current preferences
+			let currentPrefs: DashboardPreferences;
+			const unsubscribe = subscribe(prefs => currentPrefs = prefs);
+			unsubscribe();
+			
+			const original = currentPrefs!.dashboards
+				.find(d => d.id === dashboardId)?.widgets
+				.find(w => w.id === widgetId);
+			
 			if (!original) return;
 
 			const newWidget = {
@@ -292,20 +321,28 @@ function createDashboardStore() {
 
 		// Get widget by ID (helper method)
 		getWidget(dashboardId: string, widgetId: string): Widget | undefined {
-			const dashboard = this.getDashboard(dashboardId);
+			let currentPrefs: DashboardPreferences;
+			const unsubscribe = subscribe(prefs => currentPrefs = prefs);
+			unsubscribe();
+			
+			const dashboard = currentPrefs!.dashboards.find(d => d.id === dashboardId);
 			return dashboard?.widgets.find(w => w.id === widgetId);
 		},
 
 		// Get dashboard by ID (helper method)
 		getDashboard(dashboardId: string): Dashboard | undefined {
-			const current = this.getCurrentPreferences();
-			return current.dashboards.find(d => d.id === dashboardId);
+			let currentPrefs: DashboardPreferences;
+			const unsubscribe = subscribe(prefs => currentPrefs = prefs);
+			unsubscribe();
+			
+			return currentPrefs!.dashboards.find(d => d.id === dashboardId);
 		},
 
 		// Get current preferences (helper method)
 		getCurrentPreferences(): DashboardPreferences {
 			let current: DashboardPreferences;
-			this.subscribe(prefs => current = prefs)();
+			const unsubscribe = subscribe(prefs => current = prefs);
+			unsubscribe();
 			return current!;
 		}
 	};

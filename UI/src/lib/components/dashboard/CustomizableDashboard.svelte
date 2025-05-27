@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { dashboardStore, isEditMode } from '$lib/stores/dashboard';
+	import { dashboardStore, isEditMode, currentDashboard } from '$lib/stores/dashboard';
 	import type { WidgetTemplate, WidgetPosition } from '$lib/types/dashboard';
 	import DashboardToolbar from './DashboardToolbar.svelte';
 	import DashboardGrid from './DashboardGrid.svelte';
@@ -12,8 +12,12 @@
 	let showDashboardManager = false;
 	let gridSize = { width: 12, height: 8 };
 
+	// Subscribe to current dashboard store
+	$: activeDashboardId = $currentDashboard;
+
 	$: if ($dashboardStore.dashboards.length > 0 && !activeDashboardId) {
 		activeDashboardId = $dashboardStore.dashboards[0].id;
+		currentDashboard.set(activeDashboardId);
 	}
 
 	function handleAddWidget() {
@@ -89,7 +93,6 @@
 	}
 
 	function handleDashboardSelected(event: CustomEvent<{ dashboardId: string }>) {
-		activeDashboardId = event.detail.dashboardId;
 		dashboardStore.setActiveDashboard(event.detail.dashboardId);
 		showDashboardManager = false;
 	}
@@ -117,12 +120,20 @@
 			};
 
 			const dashboard = dashboardStore.addDashboard(defaultDashboardData);
-			activeDashboardId = dashboard.id;
+			currentDashboard.set(dashboard.id);
+		} else {
+			// Set the first dashboard as active if none is set
+			if (
+				!$currentDashboard ||
+				!$dashboardStore.dashboards.find((d) => d.id === $currentDashboard)
+			) {
+				currentDashboard.set($dashboardStore.dashboards[0].id);
+			}
 		}
 	});
 </script>
 
-<div class="flex h-screen flex-col bg-gray-50">
+<div class="flex h-screen flex-col bg-gray-50 dark:bg-gray-900">
 	<!-- Toolbar -->
 	<DashboardToolbar
 		{activeDashboardId}
@@ -145,8 +156,12 @@
 			<div class="flex h-full items-center justify-center">
 				<div class="text-center">
 					<div class="mb-4 text-6xl">📊</div>
-					<h2 class="mb-2 text-2xl font-semibold text-gray-900">Welcome to GoSight</h2>
-					<p class="mb-4 text-gray-600">Create your first dashboard to get started</p>
+					<h2 class="mb-2 text-2xl font-semibold text-gray-900 dark:text-white">
+						Welcome to GoSight
+					</h2>
+					<p class="mb-4 text-gray-600 dark:text-gray-400">
+						Create your first dashboard to get started
+					</p>
 					<button
 						on:click={handleCreateDashboard}
 						class="rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
@@ -181,6 +196,13 @@
 		class="fixed right-4 bottom-4 flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white shadow-lg"
 	>
 		<div class="h-2 w-2 animate-pulse rounded-full bg-white"></div>
-		Edit Mode Active
+		Edit Mode Active - Click gear icons to configure widgets
+	</div>
+{:else}
+	<div
+		class="fixed right-4 bottom-4 flex items-center gap-2 rounded-lg bg-gray-600 px-4 py-2 text-white shadow-lg"
+	>
+		<div class="h-2 w-2 rounded-full bg-white"></div>
+		View Mode - Enable edit mode to configure widgets
 	</div>
 {/if}

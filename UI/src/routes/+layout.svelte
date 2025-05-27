@@ -126,6 +126,12 @@
 		color: #1f2937; /* text-gray-900 */
 	}
 
+	/* Dark mode active sidebar link */
+	:global(.dark .sidebar-link.active) {
+		background-color: #374151; /* dark:bg-gray-700 */
+		color: #f9fafb; /* dark:text-gray-50 */
+	}
+
 	:global(body.sidebar-collapsed #sidebar) {
 		width: 4rem;
 		overflow: visible;
