@@ -35,10 +35,10 @@ import (
 
 	"github.com/aaronlmathis/gosight-server/internal/config"
 	"github.com/aaronlmathis/gosight-server/internal/sys"
-
 	"github.com/aaronlmathis/gosight-server/internal/telemetry"
 	"github.com/aaronlmathis/gosight-shared/proto"
 	"github.com/aaronlmathis/gosight-shared/utils"
+	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -108,8 +108,8 @@ func NewGRPCServer(sys *sys.SystemContext) (*GrpcServer, error) {
 	proto.RegisterStreamServiceServer(grpcServer, streamHandler)
 
 	// create streamhandler for logs.
-	logHandler := telemetry.NewLogsHandler(sys)
-	proto.RegisterLogServiceServer(grpcServer, logHandler)
+	logsHandler := telemetry.NewLogsHandler(sys)
+	collogpb.RegisterLogsServiceServer(grpcServer, logsHandler)
 
 	if sys.Cfg.Debug.EnableReflection {
 		utils.Info("Enabling gRPC reflection")
@@ -118,7 +118,7 @@ func NewGRPCServer(sys *sys.SystemContext) (*GrpcServer, error) {
 
 	return &GrpcServer{
 		Sys:           sys,
-		LogHandler:    logHandler,
+		LogHandler:    logsHandler,
 		StreamHandler: streamHandler,
 		Listener:      listener,
 		Server:        grpcServer,
