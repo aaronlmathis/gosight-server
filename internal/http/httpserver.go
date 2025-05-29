@@ -89,3 +89,9 @@ func (s *HttpServer) Shutdown() error {
 	utils.Info("HTTP server shut down cleanly")
 	return nil
 }
+
+// WithAccessLog provides access to the access logging middleware for external route packages.
+// This allows route packages to apply access logging to their handlers.
+func (s *HttpServer) WithAccessLog(h http.Handler) http.Handler {
+	return s.withAccessLog(h)
+}

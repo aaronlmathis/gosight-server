@@ -39,6 +39,7 @@ import (
 	"github.com/aaronlmathis/gosight-shared/proto"
 	"github.com/aaronlmathis/gosight-shared/utils"
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
+	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -67,9 +68,9 @@ func NewGRPCServer(sys *sys.SystemContext) (*GrpcServer, error) {
 	}
 
 	// Create gRPC listener
-	listener, err := net.Listen("tcp", sys.Cfg.Server.GRPCAddr)
+	listener, err := net.Listen("tcp", sys.Cfg.OpenTelemetry.GRPC.Addr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to listen on %s: %w", sys.Cfg.Server.GRPCAddr, err)
+		return nil, fmt.Errorf("failed to listen on %s: %w", sys.Cfg.OpenTelemetry.GRPC.Addr, err)
 	}
 
 	// Generate credentials from tlsCfg and start gRPC Server
@@ -106,6 +107,10 @@ func NewGRPCServer(sys *sys.SystemContext) (*GrpcServer, error) {
 	// Create stream handler for metrics and commands
 	streamHandler := telemetry.NewStreamHandler(sys)
 	proto.RegisterStreamServiceServer(grpcServer, streamHandler)
+
+	// Register OTLP MetricsService
+	metricHandler := telemetry.NewMetricsHandler(sys)
+	colmetricpb.RegisterMetricsServiceServer(grpcServer, metricHandler)
 
 	// create streamhandler for logs.
 	logsHandler := telemetry.NewLogsHandler(sys)

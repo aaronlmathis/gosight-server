@@ -1,6 +1,8 @@
 package telemetry
 
-import "github.com/aaronlmathis/gosight-shared/model"
+import (
+	"github.com/aaronlmathis/gosight-shared/model"
+)
 
 // TODO - do this better.
 func MergeDimensionsWithMeta(base map[string]string, meta *model.Meta) map[string]string {

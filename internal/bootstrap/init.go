@@ -26,7 +26,7 @@ import (
 	"fmt"
 
 	"github.com/aaronlmathis/gosight-server/internal/alerts"
-	"github.com/aaronlmathis/gosight-server/internal/dispatcher"
+	"github.com/aaronlmathis/gosight-server/internal/core/events/dispatcher"
 	"github.com/aaronlmathis/gosight-server/internal/events"
 	"github.com/aaronlmathis/gosight-server/internal/rules"
 	"github.com/aaronlmathis/gosight-server/internal/store/metastore"
@@ -36,12 +36,56 @@ import (
 	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
-// initGoSight initializes the GoSight server by setting up various components
-// such as logging, metric index, log store, metric store, data store,
-// agent tracker, meta tracker, websocket hub, user store, event store,
-// rule store, emitter/alert manager, evaluator, and authentication providers.
-// It loads these components into a SystemContext and returns an error if any
-// of the components fail to initialize.
+// InitGoSight performs comprehensive initialization of the GoSight monitoring server.
+// This is the main bootstrap function that orchestrates the startup of all system
+// components in the correct order, handling dependencies and error conditions.
+//
+// The initialization process follows a carefully ordered sequence:
+//
+// 1. Configuration Loading:
+//   - Command line flags, environment variables, and config files
+//   - Logging system with multiple output streams
+//
+// 2. Core Storage Systems:
+//   - Metric index for fast metric lookup
+//   - Data store for persistent system data
+//   - Event store for audit logs and system events
+//   - Alert store for alert instances and history
+//   - Rule store for monitoring rules and conditions
+//   - Route store for routing configurations
+//   - User store for authentication and authorization
+//   - Resource store for system resource inventory
+//
+// 3. Caching Layer:
+//   - Multi-tier caching system for improved performance
+//   - Cache warming and synchronization
+//
+// 4. Real-time Components:
+//   - WebSocket hub for real-time client communication
+//   - Event emitter for system-wide event distribution
+//   - Alert manager for alert processing and notifications
+//   - Rule evaluator for continuous monitoring
+//
+// 5. System Tracking:
+//   - Endpoint tracker for agent and service monitoring
+//   - Resource discovery for automatic inventory management
+//   - Metadata tracker for system topology
+//
+// 6. Integration Modules:
+//   - Authentication providers (local, OAuth, MFA)
+//   - Buffer engine for high-performance data ingestion
+//   - Sync manager for cache consistency
+//
+// The function uses utils.Must() for critical components that must succeed for
+// the server to operate correctly. Any initialization failure results in
+// immediate shutdown with a descriptive error message.
+//
+// Parameters:
+//   - ctx: Context for server lifecycle management and graceful shutdown
+//
+// Returns:
+//   - *sys.SystemContext: Fully initialized system with all components ready
+//   - error: If any critical component fails to initialize
 func InitGoSight(ctx context.Context) (*sys.SystemContext, error) {
 
 	// Initialize the GoSight server
@@ -109,14 +153,21 @@ func InitGoSight(ctx context.Context) (*sys.SystemContext, error) {
 	authProviders, err := InitAuth(cfg, userStore)
 	utils.Must("Auth providers", err)
 
+	// Initialize resource store
+	resourceStore, err := InitResourceStore(cfg)
+	utils.Must("Resource store", err)
+
 	// Initialize agent tracker
 	tracker := tracker.NewEndpointTracker(ctx, emitter, dataStore)
 	utils.Must("Agent tracker", err)
 
 	// Initialize cache
-	caches, err := InitCaches(ctx, dataStore)
+	caches, err := InitCaches(ctx, cfg, resourceStore)
 	utils.Must("Caches", err)
-	fmt.Printf(">>> caches.Logs = %#v (type %T)\n", caches.Logs, caches.Logs)
+	// Initialize resource discovery
+	resourceDiscovery, err := InitResourceDiscovery(caches.Resources, resourceStore)
+	utils.Must("Resource discovery", err)
+
 	// Init metric store
 	metricStore, err := InitMetricStore(ctx, cfg, caches.Metrics)
 	utils.Must("Metric store", err)
@@ -138,6 +189,7 @@ func InitGoSight(ctx context.Context) (*sys.SystemContext, error) {
 		ruleStore,
 		actionStore,
 		alertStore,
+		resourceStore,
 	)
 	buffers := InitBufferEngine(ctx, &cfg.BufferEngine, stores)
 	// Build telemetry
@@ -148,6 +200,7 @@ func InitGoSight(ctx context.Context) (*sys.SystemContext, error) {
 		alertMgr,
 		emitter,
 		dispatcher,
+		resourceDiscovery,
 	)
 
 	// Initialize the system context

@@ -447,6 +447,9 @@ try {
 const response = await fetch('/api/v1/users/avatar', {
 method: 'POST',
 credentials: 'include',
+headers: {
+'X-API-Version': 'v1'
+},
 body: formData,
 // Don't set Content-Type - let the browser set it with the boundary
 });
@@ -469,6 +472,7 @@ async cropAvatar(cropData: { x: number; y: number; width: number; height: number
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-API-Version': 'v1'
             },
             credentials: 'include',
             body: JSON.stringify(cropData),
@@ -518,18 +522,18 @@ this.metrics = new MetricsApi(this);
 this.reports = new ReportsApi(this);
 this.commands = new CommandsApi(this);
 this.auth = new AuthApi(this);
-}
+}	async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+		const url = `${this.baseUrl}${endpoint}`;
 
-async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-const url = `${this.baseUrl}${endpoint}`;
-
-const response = await fetch(url, {
-...options,
-headers: {
-'Content-Type': 'application/json',
-...options.headers
-}
-});
+		const response = await fetch(url, {
+			...options,
+			credentials: 'include',
+			headers: {
+				'Content-Type': 'application/json',
+				'X-API-Version': 'v1',
+				...options.headers
+			}
+		});
 
 if (!response.ok) {
 const errorMessage = await response.text();
@@ -674,6 +678,7 @@ async updateProfile(data: { full_name: string; phone: string }): Promise<{ succe
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
+                'X-API-Version': 'v1'
             },
             credentials: 'include',
             body: JSON.stringify(data),
@@ -770,11 +775,13 @@ export const api = new ApiClient();
 
 // Legacy compatibility function for existing JS code
 export function gosightFetch(url: string, options?: RequestInit) {
-return fetch(url, {
-...options,
-headers: {
-'Content-Type': 'application/json',
-...options?.headers
-}
-});
+	return fetch(url, {
+		...options,
+		credentials: 'include',
+		headers: {
+			'Content-Type': 'application/json',
+			'X-API-Version': 'v1',
+			...options?.headers
+		}
+	});
 }

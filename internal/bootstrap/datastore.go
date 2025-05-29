@@ -32,9 +32,23 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// InitDataStore initializes the data store for the GoSight server.
-// The data store is responsible for storing and retrieving data instances.
-// It supports different types of data stores, such as PostgreSQL.
+// InitDataStore initializes the data store component for the GoSight server.
+// The data store provides persistent storage for various data types including
+// metrics, logs, and system data. It abstracts the underlying storage engine
+// to allow different implementations while maintaining a consistent interface.
+//
+// Currently supported engines:
+//   - postgres: PostgreSQL database backend for relational data storage
+//
+// The function establishes a database connection, tests connectivity, and
+// returns a configured data store instance ready for use by the application.
+//
+// Parameters:
+//   - cfg: Configuration containing data store settings including engine type and DSN
+//
+// Returns:
+//   - datastore.DataStore: Initialized data store interface implementation
+//   - error: If database connection fails or unsupported engine is specified
 func InitDataStore(cfg *config.Config) (datastore.DataStore, error) {
 	dataStoreType := cfg.DataStore.Engine
 
@@ -47,7 +61,6 @@ func InitDataStore(cfg *config.Config) (datastore.DataStore, error) {
 			return nil, err
 		}
 
-		// Optionally test the connection
 		if err := db.Ping(); err != nil {
 			return nil, err
 		}

@@ -32,25 +32,132 @@ import (
 	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
-// MetricCache is an in-memory cache for metrics as well as their meta data
-// and tags. It is used to store and retrieve metric information efficiently.
-// The cache is designed to be thread-safe and allows concurrent access.
-// It uses a mutex to synchronize access to the underlying data structure.
+// MetricCache provides high-performance in-memory caching for time-series metrics
+// and their associated metadata. It serves as the primary interface for storing,
+// retrieving, and querying metric data in the GoSight monitoring system.
+//
+// The cache is designed to handle high-throughput metric ingestion while providing
+// fast query capabilities for dashboards, alerting, and analytics. It maintains
+// comprehensive indexes for metrics, namespaces, dimensions, and tags to enable
+// efficient data discovery and filtering operations.
+//
+// Key Features:
+//   - Thread-safe concurrent operations with optimized locking strategies
+//   - Hierarchical namespace organization (namespace -> subnamespace -> metric)
+//   - Multi-dimensional tag indexing for complex filtering queries
+//   - Automatic dimension discovery and metadata extraction
+//   - Time-based data retention and cleanup policies
+//   - Memory-efficient storage with configurable limits
+//   - Fast namespace and metric name enumeration
+//   - Advanced tag-based metric discovery and filtering
+//
+// The cache supports the full metric lifecycle from ingestion to query, providing
+// the foundation for real-time monitoring and analytics capabilities.
+//
+// Architecture:
+//   - Namespace hierarchy enables logical grouping of related metrics
+//   - Tag indexes support complex multi-dimensional queries
+//   - Dimension tracking enables dynamic dashboard and query building
+//   - Memory management prevents unbounded cache growth
 type MetricCache interface {
+	// Add ingests a metric payload into the cache, extracting and indexing all
+	// metadata including namespace, subnamespace, metric names, dimensions, and tags.
+	// This method is optimized for high-throughput ingestion scenarios.
+	//
+	// Parameters:
+	//   - payload: Complete metric payload containing metrics and metadata
 	Add(payload *model.MetricPayload)
-	GetNamespaces() []string                                // Get all known namespaces
-	GetSubNamespaces(nameSpace string) []string             // Get all subnamespaces for a namespace
-	GetMetricNames(nameSpace, subNamespace string) []string // Get all metric names for Namespace+Subnamespace
 
-	GetAllMetricNames() []string                    // Get all known metric names
-	GetAvailableDimensions() map[string][]string    // Get all available dimensions (known)
-	GetMetricDimensions(metricName string) []string // Get all dimension keys known for a metric
+	// GetNamespaces returns all known metric namespaces in the cache. Namespaces
+	// provide the top-level organization for metrics (e.g., "System", "Application").
+	//
+	// Returns:
+	//   - []string: Slice of all namespace names
+	GetNamespaces() []string
 
-	GetAllTagKeys() []string                   // Get all known tag keys
-	GetAllTagValuesForKey(key string) []string // Get all known values for tag key
+	// GetSubNamespaces retrieves all subnamespaces within a specific namespace.
+	// Subnamespaces provide secondary organization (e.g., "CPU", "Memory" under "System").
+	//
+	// Parameters:
+	//   - nameSpace: The parent namespace to query
+	//
+	// Returns:
+	//   - []string: Slice of subnamespace names within the namespace
+	GetSubNamespaces(nameSpace string) []string
 
-	GetAllKnownLabelValues(label, contains string) []string  // Get all known values for a given label key (dimensions + tags) (optionally filtered)
-	GetLabelValues(label, contains string) []string          // Get all label values for a known label (optionally filtered)
+	// GetMetricNames returns all metric names within a specific namespace and subnamespace.
+	// This enables discovery of available metrics for dashboard configuration.
+	//
+	// Parameters:
+	//   - nameSpace: The namespace containing the metrics
+	//   - subNamespace: The subnamespace containing the metrics
+	//
+	// Returns:
+	//   - []string: Slice of metric names in the specified hierarchy
+	GetMetricNames(nameSpace, subNamespace string) []string
+
+	// GetAllMetricNames returns every metric name known to the cache across all
+	// namespaces. Useful for global metric discovery and validation.
+	//
+	// Returns:
+	//   - []string: Complete list of all metric names
+	GetAllMetricNames() []string
+
+	// GetAvailableDimensions returns all known dimensions (labels) organized by
+	// dimension key. This enables dynamic query building and filter construction.
+	//
+	// Returns:
+	//   - map[string][]string: Map of dimension keys to their possible values
+	GetAvailableDimensions() map[string][]string
+
+	// GetMetricDimensions returns all dimension keys associated with a specific metric.
+	// This helps in understanding what dimensions are available for filtering.
+	//
+	// Parameters:
+	//   - metricName: The metric to query for dimensions
+	//
+	// Returns:
+	//   - []string: Slice of dimension keys for the metric
+	GetMetricDimensions(metricName string) []string
+
+	// GetAllTagKeys returns all tag keys present in the cache. Tags provide
+	// additional metadata beyond standard dimensions.
+	//
+	// Returns:
+	//   - []string: Complete list of all tag keys
+	GetAllTagKeys() []string
+
+	// GetAllTagValuesForKey returns all known values for a specific tag key.
+	// This supports tag-based filtering and validation.
+	//
+	// Parameters:
+	//   - key: The tag key to query
+	//
+	// Returns:
+	//   - []string: All values associated with the tag key
+	GetAllTagValuesForKey(key string) []string
+
+	// GetAllKnownLabelValues retrieves all values for a specified label key across
+	// both dimensions and tags. Optionally filters results containing a substring.
+	//
+	// Parameters:
+	//   - label: The label key to search for
+	//   - contains: Optional substring filter (empty string returns all values)
+	//
+	// Returns:
+	//   - []string: All label values matching the criteria
+	GetAllKnownLabelValues(label, contains string) []string
+
+	// GetLabelValues returns all values for a known label key with optional filtering.
+	// This method focuses on established labels with confirmed existence.
+	//
+	// Parameters:
+	//   - label: The established label key to query
+	//   - contains: Optional substring filter for value matching
+	//
+	// Returns:
+	//   - []string: Filtered label values for the specified key
+	GetLabelValues(label, contains string) []string
 	GetMetricsWithLabels(filters map[string]string) []string // Get all metric names that match a given label filter
 
 	Prune()

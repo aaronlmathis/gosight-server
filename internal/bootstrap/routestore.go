@@ -26,7 +26,27 @@ import (
 	"github.com/aaronlmathis/gosight-server/internal/store/routestore"
 )
 
-// InitMetricIndex initializes the metric index for the GoSight agent.
+// InitRouteStore initializes the route store component for the GoSight server.
+// The route store manages routing configurations for data flow, load balancing,
+// and service mesh integration. It stores and retrieves routing rules that
+// determine how requests and data are directed throughout the system.
+//
+// Route store capabilities:
+//   - Service routing and load balancing rules
+//   - Data pipeline routing configurations
+//   - Traffic routing and failover rules
+//   - Service mesh integration settings
+//   - Dynamic routing rule updates
+//
+// The route store uses file-based storage for routing configurations,
+// allowing for easy management and version control of routing rules.
+//
+// Parameters:
+//   - cfg: Configuration containing route store settings including file path
+//
+// Returns:
+//   - *routestore.RouteStore: Initialized route store for routing management
+//   - error: If route store initialization or file access fails
 func InitRouteStore(cfg *config.Config) (*routestore.RouteStore, error) {
 	// Initialize the route store
 	routeStore, err := routestore.NewRouteStore(cfg.RouteStore.Path)

@@ -29,8 +29,30 @@ import (
 	"github.com/aaronlmathis/gosight-server/internal/tracker"
 )
 
-// InitEndpointTracker initializes the unified endpoint tracker.
-// Tracks both agents and containers, and emits lifecycle events.
+// InitTracker initializes the unified endpoint tracker for the GoSight server.
+// The endpoint tracker monitors and manages the lifecycle of all system endpoints
+// including agents, containers, and services. It provides real-time tracking of
+// endpoint status, health, and availability while emitting lifecycle events for
+// system monitoring and alerting.
+//
+// Key responsibilities:
+//   - Tracking agent registration and heartbeats
+//   - Monitoring container lifecycle events
+//   - Detecting endpoint failures and recoveries
+//   - Emitting lifecycle events for monitoring
+//   - Maintaining endpoint metadata and status
+//   - Providing endpoint discovery and inventory
+//
+// The tracker integrates with the event emitter to publish endpoint changes
+// and uses the data store for persistent tracking state.
+//
+// Parameters:
+//   - ctx: Context for tracker operations and lifecycle management
+//   - dataStore: Persistent storage for tracking state and endpoint data
+//   - emitter: Event emitter for publishing endpoint lifecycle events
+//
+// Returns:
+//   - *tracker.EndpointTracker: Initialized endpoint tracker ready for monitoring
 func InitTracker(ctx context.Context, dataStore datastore.DataStore, emitter *events.Emitter) *tracker.EndpointTracker {
 	t := tracker.NewEndpointTracker(ctx, emitter, dataStore)
 

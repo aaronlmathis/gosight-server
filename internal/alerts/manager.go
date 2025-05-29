@@ -32,7 +32,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aaronlmathis/gosight-server/internal/dispatcher"
+	"github.com/aaronlmathis/gosight-server/internal/core/events/dispatcher"
 	"github.com/aaronlmathis/gosight-server/internal/events"
 	"github.com/aaronlmathis/gosight-server/internal/store/alertstore"
 	"github.com/aaronlmathis/gosight-server/internal/websocket"

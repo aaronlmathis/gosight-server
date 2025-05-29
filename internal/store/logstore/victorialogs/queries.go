@@ -35,21 +35,10 @@ import (
 	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
-// vlResponse represents the JSON response structure from VictoriaLogs.
-// VictoriaLogs returns query results in this format when using the
-// /select/logsql endpoint.
-type vlResponse struct {
-	Data []vlLogEntry `json:"data"` // Array of log entries matching the query
-}
-
-// vlLogEntry represents a single log entry in VictoriaLogs response format.
-// The structure uses inline field mapping to capture all log fields
-// as a flat map alongside the standard _time and _msg fields.
-type vlLogEntry struct {
-	Time   string            `json:"_time"`   // RFC3339Nano timestamp
-	Msg    string            `json:"_msg"`    // Original log message
-	Fields map[string]string `json:",inline"` // All other fields as key-value pairs
-}
+// vlLogEntry represents a single log entry in VictoriaLogs NDJSON response format.
+// VictoriaLogs returns each log entry as a separate JSON object on its own line.
+// We need to capture all fields as a flat map since VictoriaLogs stores everything as top-level fields.
+type vlLogEntry map[string]interface{}
 
 // GetLogs retrieves log entries from VictoriaLogs based on the provided filter.
 // It constructs a LogsQL query from the filter parameters, executes it against
@@ -82,8 +71,11 @@ type vlLogEntry struct {
 //	}
 //	logs, err := store.GetLogs(filter)
 func (v *VictoriaLogsStore) GetLogs(filter model.LogFilter) ([]model.LogEntry, error) {
+	utils.Debug("VictoriaLogsStore.GetLogs called with filter: %+v", filter)
+
 	// Build LogsQL query
 	query := v.buildLogsQLQuery(filter)
+	utils.Debug("VictoriaLogsStore: Built LogsQL query: %s", query)
 
 	// Set time range
 	start := filter.Start
@@ -108,9 +100,9 @@ func (v *VictoriaLogsStore) GetLogs(filter model.LogFilter) ([]model.LogEntry, e
 	}
 
 	// Build request URL
-	reqURL := fmt.Sprintf("%s/select/logsql?%s", v.url, params.Encode())
+	reqURL := fmt.Sprintf("%s/select/logsql/query?%s", v.url, params.Encode())
 
-	utils.Debug("VictoriaLogs query: %s", reqURL)
+	utils.Debug("VictoriaLogs full request URL: %s", reqURL)
 
 	// Make request
 	resp, err := v.client.Get(reqURL)
@@ -121,18 +113,40 @@ func (v *VictoriaLogsStore) GetLogs(filter model.LogFilter) ([]model.LogEntry, e
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
+		fmt.Println("VictoriaLogs error body:", string(body))
 		return nil, fmt.Errorf("VictoriaLogs query failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
-	// Parse response
-	var vlResp vlResponse
-	if err := json.NewDecoder(resp.Body).Decode(&vlResp); err != nil {
-		return nil, fmt.Errorf("failed to decode VictoriaLogs response: %w", err)
+	// Parse response - VictoriaLogs returns NDJSON (newline-delimited JSON)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read VictoriaLogs response body: %w", err)
 	}
+
+	utils.Debug("VictoriaLogs raw response body: %s", string(body))
+
+	// Parse NDJSON format - each line is a separate JSON object
+	lines := strings.Split(strings.TrimSpace(string(body)), "\n")
+	var vlEntries []vlLogEntry
+
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+
+		var vlEntry vlLogEntry
+		if err := json.Unmarshal([]byte(line), &vlEntry); err != nil {
+			utils.Warn("Failed to parse VictoriaLogs entry line %d: %v", i+1, err)
+			continue
+		}
+		vlEntries = append(vlEntries, vlEntry)
+	}
+
+	utils.Debug("VictoriaLogs parsed: %d entries from %d lines", len(vlEntries), len(lines))
 
 	// Convert VictoriaLogs entries to model.LogEntry
 	var result []model.LogEntry
-	for _, vlEntry := range vlResp.Data {
+	for _, vlEntry := range vlEntries {
 		logEntry, err := v.convertVLEntryToLogEntry(vlEntry)
 		if err != nil {
 			utils.Warn("Failed to convert VictoriaLogs entry: %v", err)
@@ -272,45 +286,63 @@ func (v *VictoriaLogsStore) buildLogsQLQuery(filter model.LogFilter) string {
 //   - *model.LogEntry: Converted log entry in GoSight format
 //   - error: Any conversion or parsing error
 func (v *VictoriaLogsStore) convertVLEntryToLogEntry(vlEntry vlLogEntry) (*model.LogEntry, error) {
-	// Parse timestamp
-	timestamp, err := time.Parse(time.RFC3339Nano, vlEntry.Time)
+	// Extract timestamp
+	timeStr, ok := vlEntry["_time"].(string)
+	if !ok {
+		return nil, fmt.Errorf("missing or invalid _time field")
+	}
+
+	timestamp, err := time.Parse(time.RFC3339Nano, timeStr)
 	if err != nil {
 		// Try alternative formats
-		if timestamp, err = time.Parse(time.RFC3339, vlEntry.Time); err != nil {
+		if timestamp, err = time.Parse(time.RFC3339, timeStr); err != nil {
 			return nil, fmt.Errorf("failed to parse timestamp: %w", err)
 		}
 	}
 
+	// Extract message
+	message, _ := vlEntry["_msg"].(string)
+
 	// Create log entry
 	logEntry := &model.LogEntry{
 		Timestamp: timestamp,
-		Message:   vlEntry.Msg,
+		Message:   message,
 		Fields:    make(map[string]string),
 		Tags:      make(map[string]string),
 	}
 
+	// Helper function to safely convert interface{} to string
+	toString := func(v interface{}) string {
+		if s, ok := v.(string); ok {
+			return s
+		}
+		return fmt.Sprintf("%v", v)
+	}
+
 	// Parse fields from VictoriaLogs response
-	for k, v := range vlEntry.Fields {
+	for k, v := range vlEntry {
 		switch k {
-		case "_time", "_msg":
-			// Skip these as they're already processed
+		case "_time", "_msg", "_stream_id", "_stream":
+			// Skip internal VictoriaLogs fields
 			continue
 		case "level":
-			logEntry.Level = v
+			logEntry.Level = toString(v)
 		case "source":
-			logEntry.Source = v
+			logEntry.Source = toString(v)
 		case "category":
-			logEntry.Category = v
+			logEntry.Category = toString(v)
 		case "pid":
-			if pid, err := strconv.Atoi(v); err == nil {
-				logEntry.PID = pid
+			if pidStr := toString(v); pidStr != "" {
+				if pid, err := strconv.Atoi(pidStr); err == nil {
+					logEntry.PID = pid
+				}
 			}
 		default:
 			// Handle prefixed fields
 			if strings.HasPrefix(k, "field_") {
-				logEntry.Fields[strings.TrimPrefix(k, "field_")] = v
+				logEntry.Fields[strings.TrimPrefix(k, "field_")] = toString(v)
 			} else if strings.HasPrefix(k, "tag_") {
-				logEntry.Tags[strings.TrimPrefix(k, "tag_")] = v
+				logEntry.Tags[strings.TrimPrefix(k, "tag_")] = toString(v)
 			} else if strings.HasPrefix(k, "meta_") {
 				// Initialize Meta if needed
 				if logEntry.Meta == nil {
@@ -318,7 +350,7 @@ func (v *VictoriaLogsStore) convertVLEntryToLogEntry(vlEntry vlLogEntry) (*model
 						Extra: make(map[string]string),
 					}
 				}
-				logEntry.Meta.Extra[strings.TrimPrefix(k, "meta_")] = v
+				logEntry.Meta.Extra[strings.TrimPrefix(k, "meta_")] = toString(v)
 			} else {
 				// Handle other meta fields
 				if logEntry.Meta == nil {
@@ -328,30 +360,30 @@ func (v *VictoriaLogsStore) convertVLEntryToLogEntry(vlEntry vlLogEntry) (*model
 				}
 				switch k {
 				case "platform":
-					logEntry.Meta.Platform = v
+					logEntry.Meta.Platform = toString(v)
 				case "app_name":
-					logEntry.Meta.AppName = v
+					logEntry.Meta.AppName = toString(v)
 				case "app_version":
-					logEntry.Meta.AppVersion = v
+					logEntry.Meta.AppVersion = toString(v)
 				case "container_id":
-					logEntry.Meta.ContainerID = v
+					logEntry.Meta.ContainerID = toString(v)
 				case "container_name":
-					logEntry.Meta.ContainerName = v
+					logEntry.Meta.ContainerName = toString(v)
 				case "unit":
-					logEntry.Meta.Unit = v
+					logEntry.Meta.Unit = toString(v)
 				case "service":
-					logEntry.Meta.Service = v
+					logEntry.Meta.Service = toString(v)
 				case "event_id":
-					logEntry.Meta.EventID = v
+					logEntry.Meta.EventID = toString(v)
 				case "user":
-					logEntry.Meta.User = v
+					logEntry.Meta.User = toString(v)
 				case "executable":
-					logEntry.Meta.Executable = v
+					logEntry.Meta.Executable = toString(v)
 				case "path":
-					logEntry.Meta.Path = v
+					logEntry.Meta.Path = toString(v)
 				default:
-					// Add as tag
-					logEntry.Tags[k] = v
+					// Add as tag for other fields
+					logEntry.Tags[k] = toString(v)
 				}
 			}
 		}

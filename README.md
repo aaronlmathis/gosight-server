@@ -1,13 +1,14 @@
 ![Go](https://img.shields.io/badge/built%20with-Go-blue) ![License](https://img.shields.io/github/license/aaronlmathis/gosight-server) ![Status](https://img.shields.io/badge/status-active-brightgreen) [![Go Report Card](https://goreportcard.com/badge/github.com/aaronlmathis/gosight-server)](https://goreportcard.com/report/github.com/aaronlmathis/gosight-server)
 # GoSight Server
 
-GoSight Server is a high-performance observability backend built in Go. It receives telemetry from GoSight Agents, stores metrics and logs, processes alerts, and serves a dynamic web UI for visualization and investigation.
+GoSight Server is a high-performance observability backend built in Go. It receives telemetry from GoSight Agents, OpenTelemetry Endpoints (GRPC) and SDK, and Syslog, stores metrics and logs, processes alerts, and serves a dynamic web UI for visualization and investigation.
 
 ## Documentation
 [Documentation](docs/)
 
 ## Features
 
+- OpenTelemetry Endpoint for ingesting Metrics, Logs, and Traces
 - TLS/mTLS-secured gRPC endpoints
 - RFC 3164 / RFC 5424 / CEF compatible SysLog Server for ingesting logs
 - VictoriaMetrics integration for metric and log storage (Time-Series + Compressed JSON for logs)
@@ -15,7 +16,7 @@ GoSight Server is a high-performance observability backend built in Go. It recei
 - Rule-based alert evaluation + dispatch
 - Live WebSocket telemetry streaming
 - REST API for metrics, logs, endpoints, and alerts
-- Dynamic Flowbite+Tailwind UI with ApexCharts
+- Reactive Sveltekit+Flowbite+Tailwind UI with ApexCharts and customizable dashboards
 
 ## Architecture
 

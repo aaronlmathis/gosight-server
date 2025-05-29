@@ -22,8 +22,19 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 package telemetry
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/aaronlmathis/gosight-shared/model"
 	"github.com/aaronlmathis/gosight-shared/proto"
+	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
+	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
+	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
 )
 
 // ConvertToModelPayload converts a protobuf MetricPayload to a model.MetricPayload.
@@ -208,5 +219,549 @@ func convertProtoMetaToModelMeta(pbMeta *proto.Meta) *model.Meta {
 		MACAddress:           pbMeta.MacAddress,
 		NetworkInterface:     pbMeta.NetworkInterface,
 		Tags:                 pbMeta.Tags,
+	}
+}
+
+// convertOTLPToModelMetricPayloads converts OTLP ExportMetricsServiceRequest to GoSight model.MetricPayload(s).
+// This function extracts resource attributes and converts OTLP metrics to GoSight model format,
+// preserving all metadata and metric data for proper processing by GoSight business logic.
+func convertOTLPToModelMetricPayloads(req *colmetricpb.ExportMetricsServiceRequest) []model.MetricPayload {
+	if req == nil || len(req.ResourceMetrics) == 0 {
+		return []model.MetricPayload{}
+	}
+
+	var payloads []model.MetricPayload
+
+	for _, resourceMetric := range req.ResourceMetrics {
+		// Extract resource attributes to build Meta
+		meta := convertOTLPResourceToMeta(resourceMetric.Resource)
+
+		for _, scopeMetric := range resourceMetric.ScopeMetrics {
+			// Collect metrics for this scope
+			var metrics []model.Metric
+
+			for _, otlpMetric := range scopeMetric.Metrics {
+				convertedMetrics := convertOTLPMetricToModelMetrics(otlpMetric, scopeMetric.Scope)
+				metrics = append(metrics, convertedMetrics...)
+			}
+
+			if len(metrics) > 0 {
+				// Create payload with current timestamp if not available
+				timestamp := time.Now()
+				if len(metrics) > 0 {
+					timestamp = metrics[0].Timestamp
+				}
+
+				payload := model.MetricPayload{
+					AgentID:    meta.AgentID,
+					HostID:     meta.HostID,
+					Hostname:   meta.Hostname,
+					EndpointID: meta.EndpointID,
+					Timestamp:  timestamp,
+					Metrics:    metrics,
+					Meta:       meta,
+				}
+
+				payloads = append(payloads, payload)
+			}
+		}
+	}
+
+	return payloads
+}
+
+// convertOTLPResourceToMeta converts OTLP Resource to GoSight Meta
+func convertOTLPResourceToMeta(resource *resourcepb.Resource) *model.Meta {
+	if resource == nil {
+		return &model.Meta{}
+	}
+
+	meta := &model.Meta{
+		Tags: make(map[string]string),
+	}
+
+	// Process resource attributes
+	for _, attr := range resource.Attributes {
+		if attr.Value == nil {
+			continue
+		}
+
+		key := attr.Key
+		var value string
+
+		// Extract string value from AnyValue
+		switch v := attr.Value.Value.(type) {
+		case *commonpb.AnyValue_StringValue:
+			value = v.StringValue
+		case *commonpb.AnyValue_IntValue:
+			value = string(rune(v.IntValue))
+		case *commonpb.AnyValue_DoubleValue:
+			value = string(rune(int64(v.DoubleValue)))
+		case *commonpb.AnyValue_BoolValue:
+			if v.BoolValue {
+				value = "true"
+			} else {
+				value = "false"
+			}
+		default:
+			continue
+		}
+
+		// Map OTLP standard attributes to GoSight Meta fields
+		switch key {
+		case "host.id":
+			meta.HostID = value
+		case "agent.id", "service.instance.id":
+			meta.AgentID = value
+		case "host.name":
+			meta.Hostname = value
+		case "endpoint.id":
+			meta.EndpointID = value
+		case "service.name":
+			meta.Service = value
+		case "service.version":
+			meta.Version = value
+		case "host.ip":
+			meta.IPAddress = value
+		case "os.type":
+			meta.OS = value
+		case "os.version":
+			meta.OSVersion = value
+		case "host.arch":
+			meta.Architecture = value
+		case "cloud.provider":
+			meta.CloudProvider = value
+		case "cloud.region":
+			meta.Region = value
+		case "cloud.availability_zone":
+			meta.AvailabilityZone = value
+		case "cloud.instance.id":
+			meta.InstanceID = value
+		case "cloud.instance.type":
+			meta.InstanceType = value
+		case "cloud.account.id":
+			meta.AccountID = value
+		case "cloud.project.id":
+			meta.ProjectID = value
+		case "container.id":
+			meta.ContainerID = value
+		case "container.name":
+			meta.ContainerName = value
+		case "container.image.id":
+			meta.ContainerImageID = value
+		case "container.image.name":
+			meta.ContainerImageName = value
+		case "k8s.pod.name":
+			meta.PodName = value
+		case "k8s.namespace.name":
+			meta.Namespace = value
+		case "k8s.cluster.name":
+			meta.ClusterName = value
+		case "k8s.node.name":
+			meta.NodeName = value
+		default:
+			// Store unknown attributes as tags
+			meta.Tags[key] = value
+		}
+	}
+
+	return meta
+}
+
+// convertOTLPMetricToModelMetrics converts a single OTLP Metric to one or more GoSight model.Metric
+func convertOTLPMetricToModelMetrics(otlpMetric *metricpb.Metric, scope *commonpb.InstrumentationScope) []model.Metric {
+	if otlpMetric == nil {
+		return []model.Metric{}
+	}
+
+	var metrics []model.Metric
+
+	// Determine namespace and subnamespace from scope
+	namespace := "metrics"
+	subNamespace := ""
+	if scope != nil && scope.Name != "" {
+		parts := strings.Split(scope.Name, ".")
+		if len(parts) >= 1 {
+			namespace = parts[0]
+		}
+		if len(parts) >= 2 {
+			subNamespace = strings.Join(parts[1:], ".")
+		}
+	}
+
+	switch data := otlpMetric.Data.(type) {
+	case *metricpb.Metric_Gauge:
+		for _, dataPoint := range data.Gauge.DataPoints {
+			metric := model.Metric{
+				Namespace:    namespace,
+				SubNamespace: subNamespace,
+				Name:         otlpMetric.Name,
+				Unit:         otlpMetric.Unit,
+				Timestamp:    time.Unix(0, int64(dataPoint.TimeUnixNano)),
+				Dimensions:   convertOTLPAttributes(dataPoint.Attributes),
+				Type:         "gauge",
+			}
+
+			// Extract numeric value
+			switch value := dataPoint.Value.(type) {
+			case *metricpb.NumberDataPoint_AsDouble:
+				metric.Value = value.AsDouble
+			case *metricpb.NumberDataPoint_AsInt:
+				metric.Value = float64(value.AsInt)
+			}
+
+			metrics = append(metrics, metric)
+		}
+
+	case *metricpb.Metric_Sum:
+		for _, dataPoint := range data.Sum.DataPoints {
+			metric := model.Metric{
+				Namespace:    namespace,
+				SubNamespace: subNamespace,
+				Name:         otlpMetric.Name,
+				Unit:         otlpMetric.Unit,
+				Timestamp:    time.Unix(0, int64(dataPoint.TimeUnixNano)),
+				Dimensions:   convertOTLPAttributes(dataPoint.Attributes),
+				Type:         "sum",
+			}
+
+			// Extract numeric value
+			switch value := dataPoint.Value.(type) {
+			case *metricpb.NumberDataPoint_AsDouble:
+				metric.Value = value.AsDouble
+			case *metricpb.NumberDataPoint_AsInt:
+				metric.Value = float64(value.AsInt)
+			}
+
+			metrics = append(metrics, metric)
+		}
+
+	case *metricpb.Metric_Histogram:
+		for _, dataPoint := range data.Histogram.DataPoints {
+			metric := model.Metric{
+				Namespace:    namespace,
+				SubNamespace: subNamespace,
+				Name:         otlpMetric.Name,
+				Unit:         otlpMetric.Unit,
+				Timestamp:    time.Unix(0, int64(dataPoint.TimeUnixNano)),
+				Dimensions:   convertOTLPAttributes(dataPoint.Attributes),
+				Type:         "histogram",
+			}
+
+			// Convert histogram to statistical values
+			if dataPoint.Count > 0 {
+				metric.StatisticValues = &model.StatisticValues{
+					SampleCount: int(dataPoint.Count),
+				}
+
+				if dataPoint.Sum != nil {
+					metric.StatisticValues.Sum = *dataPoint.Sum
+					metric.Value = *dataPoint.Sum / float64(dataPoint.Count) // Average
+				}
+
+				if dataPoint.Min != nil {
+					metric.StatisticValues.Minimum = *dataPoint.Min
+				}
+
+				if dataPoint.Max != nil {
+					metric.StatisticValues.Maximum = *dataPoint.Max
+				}
+			}
+
+			metrics = append(metrics, metric)
+		}
+
+	case *metricpb.Metric_Summary:
+		for _, dataPoint := range data.Summary.DataPoints {
+			metric := model.Metric{
+				Namespace:    namespace,
+				SubNamespace: subNamespace,
+				Name:         otlpMetric.Name,
+				Unit:         otlpMetric.Unit,
+				Timestamp:    time.Unix(0, int64(dataPoint.TimeUnixNano)),
+				Dimensions:   convertOTLPAttributes(dataPoint.Attributes),
+				Type:         "summary",
+			}
+
+			// Convert summary to statistical values
+			if dataPoint.Count > 0 {
+				metric.StatisticValues = &model.StatisticValues{
+					SampleCount: int(dataPoint.Count),
+					Sum:         dataPoint.Sum,
+				}
+				metric.Value = dataPoint.Sum / float64(dataPoint.Count) // Average
+			}
+
+			metrics = append(metrics, metric)
+		}
+	}
+
+	return metrics
+}
+
+// convertOTLPAttributes converts OTLP KeyValue attributes to GoSight dimensions map
+func convertOTLPAttributes(attributes []*commonpb.KeyValue) map[string]string {
+	dims := make(map[string]string, len(attributes))
+
+	for _, attr := range attributes {
+		if attr.Value == nil {
+			continue
+		}
+
+		var value string
+		switch v := attr.Value.Value.(type) {
+		case *commonpb.AnyValue_StringValue:
+			value = v.StringValue
+		case *commonpb.AnyValue_IntValue:
+			value = string(rune(v.IntValue))
+		case *commonpb.AnyValue_DoubleValue:
+			value = string(rune(int64(v.DoubleValue)))
+		case *commonpb.AnyValue_BoolValue:
+			if v.BoolValue {
+				value = "true"
+			} else {
+				value = "false"
+			}
+		default:
+			continue
+		}
+
+		dims[attr.Key] = value
+	}
+
+	return dims
+}
+
+// convertSeverityToLevel converts OTLP severity numbers to GoSight log levels
+func convertSeverityToLevel(severity logpb.SeverityNumber) string {
+	switch {
+	case severity >= logpb.SeverityNumber_SEVERITY_NUMBER_FATAL:
+		return "critical"
+	case severity >= logpb.SeverityNumber_SEVERITY_NUMBER_ERROR:
+		return "error"
+	case severity >= logpb.SeverityNumber_SEVERITY_NUMBER_WARN:
+		return "warning"
+	case severity >= logpb.SeverityNumber_SEVERITY_NUMBER_INFO:
+		return "info"
+	default:
+		return "debug"
+	}
+}
+
+// convertAttributesToMap converts OTLP attributes to string map
+func convertAttributesToMap(attributes []*commonpb.KeyValue) map[string]string {
+	result := make(map[string]string)
+	for _, attr := range attributes {
+		result[attr.Key] = attr.Value.GetStringValue()
+	}
+	return result
+}
+
+// convertOTLPToModelLogPayloads converts OTLP logs to GoSight model.LogPayload format
+// This function extracts resource attributes and converts OTLP logs to GoSight model format,
+// preserving all metadata and log data for proper processing by GoSight business logic.
+func convertOTLPToModelLogPayloads(req *collogpb.ExportLogsServiceRequest) []model.LogPayload {
+	if req == nil || len(req.ResourceLogs) == 0 {
+		return []model.LogPayload{}
+	}
+
+	var payloads []model.LogPayload
+
+	for _, resourceLogs := range req.ResourceLogs {
+		// Extract resource attributes to build Meta
+		meta := convertOTLPResourceToMeta(resourceLogs.Resource)
+
+		for _, scopeLogs := range resourceLogs.ScopeLogs {
+			var logs []model.LogEntry
+
+			for _, logRecord := range scopeLogs.LogRecords {
+				// Convert OTLP timestamp (nanoseconds) to Go time
+				timestamp := time.Unix(0, int64(logRecord.TimeUnixNano))
+				if timestamp.IsZero() {
+					timestamp = time.Now()
+				}
+
+				// Extract message from body
+				message := ""
+				if logRecord.Body != nil {
+					switch body := logRecord.Body.Value.(type) {
+					case *commonpb.AnyValue_StringValue:
+						message = body.StringValue
+					case *commonpb.AnyValue_IntValue:
+						message = fmt.Sprintf("%d", body.IntValue)
+					case *commonpb.AnyValue_DoubleValue:
+						message = fmt.Sprintf("%.6f", body.DoubleValue)
+					case *commonpb.AnyValue_BoolValue:
+						message = fmt.Sprintf("%t", body.BoolValue)
+					case *commonpb.AnyValue_BytesValue:
+						message = string(body.BytesValue)
+					default:
+						message = logRecord.Body.String()
+					}
+				}
+
+				// Convert severity to level
+				level := convertSeverityToLevel(logRecord.SeverityNumber)
+
+				// Extract attributes as fields and tags
+				fields := make(map[string]string)
+				tags := make(map[string]string)
+
+				// Create LogMeta from attributes
+				logMeta := &model.LogMeta{}
+				var source, category string
+				var pid int32
+
+				for _, attr := range logRecord.Attributes {
+					if attr.Value == nil {
+						continue
+					}
+
+					key := attr.Key
+					value := extractStringFromAnyValue(attr.Value)
+
+					// Map specific attributes to LogMeta fields
+					switch key {
+					case "log.platform", "platform":
+						logMeta.Platform = value
+					case "app.name", "service.name":
+						logMeta.AppName = value
+					case "app.version", "service.version":
+						logMeta.AppVersion = value
+					case "container.id":
+						logMeta.ContainerID = value
+					case "container.name":
+						logMeta.ContainerName = value
+					case "unit", "systemd.unit":
+						logMeta.Unit = value
+					case "service":
+						logMeta.Service = value
+					case "event.id", "event_id":
+						logMeta.EventID = value
+					case "user", "process.owner":
+						logMeta.User = value
+					case "executable", "process.executable":
+						logMeta.Executable = value
+					case "path", "log.file.path":
+						logMeta.Path = value
+					case "source", "log.source":
+						source = value
+					case "category", "log.category":
+						category = value
+					case "pid", "process.pid":
+						if intVal, err := strconv.ParseInt(value, 10, 32); err == nil {
+							pid = int32(intVal)
+						}
+					case "thread.id", "thread_id":
+						if logMeta.Extra == nil {
+							logMeta.Extra = make(map[string]string)
+						}
+						logMeta.Extra["thread_id"] = value
+					case "logger.name":
+						if logMeta.Extra == nil {
+							logMeta.Extra = make(map[string]string)
+						}
+						logMeta.Extra["logger_name"] = value
+					default:
+						// Check if it's a tag (starts with 'tag.' or common tag patterns)
+						if strings.HasPrefix(key, "tag.") ||
+							key == "environment" || key == "deployment" ||
+							key == "region" || key == "zone" {
+							tags[key] = value
+						} else {
+							// Everything else goes to fields
+							fields[key] = value
+						}
+					}
+				}
+
+				// Use scope name as source if not found in attributes
+				if source == "" && scopeLogs.Scope != nil {
+					source = scopeLogs.Scope.Name
+				}
+
+				// Use severity text as category if not found
+				if category == "" {
+					category = logRecord.SeverityText
+				}
+
+				// Create the log entry
+				logEntry := model.LogEntry{
+					Timestamp: timestamp,
+					Level:     level,
+					Message:   message,
+					Source:    source,
+					Category:  category,
+					PID:       int(pid),
+					Fields:    fields,
+					Tags:      tags,
+					Meta:      logMeta,
+				}
+
+				logs = append(logs, logEntry)
+			}
+
+			if len(logs) > 0 {
+				// Create payload with current timestamp if not available
+				timestamp := time.Now()
+				if len(logs) > 0 {
+					timestamp = logs[0].Timestamp
+				}
+
+				payload := model.LogPayload{
+					AgentID:    meta.AgentID,
+					HostID:     meta.HostID,
+					Hostname:   meta.Hostname,
+					EndpointID: meta.EndpointID,
+					Timestamp:  timestamp,
+					Logs:       logs,
+					Meta:       meta,
+				}
+
+				payloads = append(payloads, payload)
+			}
+		}
+	}
+
+	return payloads
+}
+
+// extractStringFromAnyValue safely extracts string value from OTLP AnyValue
+func extractStringFromAnyValue(value *commonpb.AnyValue) string {
+	if value == nil {
+		return ""
+	}
+
+	switch v := value.Value.(type) {
+	case *commonpb.AnyValue_StringValue:
+		return v.StringValue
+	case *commonpb.AnyValue_IntValue:
+		return fmt.Sprintf("%d", v.IntValue)
+	case *commonpb.AnyValue_DoubleValue:
+		return fmt.Sprintf("%.6f", v.DoubleValue)
+	case *commonpb.AnyValue_BoolValue:
+		if v.BoolValue {
+			return "true"
+		}
+		return "false"
+	case *commonpb.AnyValue_BytesValue:
+		return string(v.BytesValue)
+	case *commonpb.AnyValue_ArrayValue:
+		// Convert array to JSON-like string
+		var elements []string
+		for _, item := range v.ArrayValue.Values {
+			elements = append(elements, extractStringFromAnyValue(item))
+		}
+		return "[" + strings.Join(elements, ",") + "]"
+	case *commonpb.AnyValue_KvlistValue:
+		// Convert key-value list to JSON-like string
+		var pairs []string
+		for _, kv := range v.KvlistValue.Values {
+			val := extractStringFromAnyValue(kv.Value)
+			pairs = append(pairs, fmt.Sprintf("%s:%s", kv.Key, val))
+		}
+		return "{" + strings.Join(pairs, ",") + "}"
+	default:
+		return value.String()
 	}
 }
