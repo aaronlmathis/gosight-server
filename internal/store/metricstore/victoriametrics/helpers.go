@@ -231,8 +231,8 @@ func BuildPromLabels(meta *model.Meta) map[string]string {
 		labels["network_interface"] = meta.NetworkInterface
 	}
 
-	// Tags (pre-filtered to avoid duplication)
-	for k, v := range meta.Tags {
+	// Labels (pre-filtered to avoid duplication)
+	for k, v := range meta.Labels {
 		if _, exists := labels[k]; !exists {
 			labels[k] = v
 		}

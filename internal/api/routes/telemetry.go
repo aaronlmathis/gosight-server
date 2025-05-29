@@ -43,7 +43,6 @@ func SetupTelemetryRoutes(router *mux.Router, telemetryHandler *handlers.Telemet
 	// Configure middleware
 	withAuth := gosightauth.AuthMiddleware(telemetryHandler.Sys.Stores.Users)
 
-
 	// Helper function to create secure handler with permission check
 	secure := func(permission string, handler http.Handler) http.Handler {
 		return withAccessLog(withAuth(gosightauth.RequirePermission(permission, handler, telemetryHandler.Sys.Stores.Users)))

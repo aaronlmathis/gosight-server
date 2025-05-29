@@ -12,12 +12,13 @@ Package sys provides the system context for the GoSight application. It contains
 
 - [type BufferModule](<#BufferModule>)
 - [type CacheModule](<#CacheModule>)
+- [type ResourceDiscoverer](<#ResourceDiscoverer>)
 - [type StoreModule](<#StoreModule>)
-  - [func NewStoreModule\(metrics metricstore.MetricStore, logs logstore.LogStore, users userstore.UserStore, data datastore.DataStore, events eventstore.EventStore, rules rulestore.RuleStore, actions \*routestore.RouteStore, alerts alertstore.AlertStore\) \*StoreModule](<#NewStoreModule>)
+  - [func NewStoreModule\(metrics metricstore.MetricStore, logs logstore.LogStore, users userstore.UserStore, data datastore.DataStore, events eventstore.EventStore, rules rulestore.RuleStore, actions \*routestore.RouteStore, alerts alertstore.AlertStore, resources resourcestore.ResourceStore\) \*StoreModule](<#NewStoreModule>)
 - [type SystemContext](<#SystemContext>)
   - [func NewSystemContext\(ctx context.Context, cfg \*config.Config, tracker \*tracker.EndpointTracker, wsHub \*websocket.HubManager, authProviders map\[string\]gosightauth.AuthProvider, stores \*StoreModule, telemetry \*TelemetryModule, caches \*cache.Cache, buffers \*BufferModule, syncMgr \*syncmanager.SyncManager\) \*SystemContext](<#NewSystemContext>)
 - [type TelemetryModule](<#TelemetryModule>)
-  - [func NewTelemetryModule\(index \*metricindex.MetricIndex, meta \*metastore.MetaTracker, evaluator \*rules.Evaluator, alerts \*alerts.Manager, emitter \*events.Emitter, dispatcher \*dispatcher.Dispatcher\) \*TelemetryModule](<#NewTelemetryModule>)
+  - [func NewTelemetryModule\(index \*metricindex.MetricIndex, meta \*metastore.MetaTracker, evaluator \*rules.Evaluator, alerts \*alerts.Manager, emitter \*events.Emitter, dispatcher \*dispatcher.Dispatcher, resourceDiscovery ResourceDiscoverer\) \*TelemetryModule](<#NewTelemetryModule>)
 
 
 <a name="BufferModule"></a>
@@ -47,29 +48,43 @@ type CacheModule struct {
 }
 ```
 
+<a name="ResourceDiscoverer"></a>
+## type [ResourceDiscoverer](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/telemetry.go#L38-L42>)
+
+ResourceDiscoverer defines the interface for resource discovery functionality
+
+```go
+type ResourceDiscoverer interface {
+    ProcessMetricPayload(payload *model.MetricPayload) *model.MetricPayload
+    ProcessLogPayload(payload *model.LogPayload) *model.LogPayload
+    ProcessTracePayload(payload *model.TracePayload) *model.TracePayload
+}
+```
+
 <a name="StoreModule"></a>
-## type [StoreModule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/stores.go#L36-L45>)
+## type [StoreModule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/stores.go#L37-L47>)
 
 StoreModule contains all persistent or semi\-persistent storage components.
 
 ```go
 type StoreModule struct {
-    Metrics metricstore.MetricStore // Time-series metrics (e.g., VictoriaMetrics)
-    Logs    logstore.LogStore       // Structured logs (e.g., journald, /var/log/secure)
-    Users   userstore.UserStore     // User auth, roles, permissions
-    Data    datastore.DataStore     // Hosts, endpoints, agents, etc.
-    Events  eventstore.EventStore   // Event logs, audit, alert events
-    Rules   rulestore.RuleStore     // Alert rules defined by users
-    Actions *routestore.RouteStore  // Routes loaded from alert_routes.yaml
-    Alerts  alertstore.AlertStore   // Alert instances (active, resolved, history)
+    Metrics   metricstore.MetricStore     // Time-series metrics (e.g., VictoriaMetrics)
+    Logs      logstore.LogStore           // Structured logs (e.g., journald, /var/log/secure)
+    Users     userstore.UserStore         // User auth, roles, permissions
+    Data      datastore.DataStore         // Hosts, endpoints, agents, etc.
+    Events    eventstore.EventStore       // Event logs, audit, alert events
+    Rules     rulestore.RuleStore         // Alert rules defined by users
+    Actions   *routestore.RouteStore      // Routes loaded from alert_routes.yaml
+    Alerts    alertstore.AlertStore       // Alert instances (active, resolved, history)
+    Resources resourcestore.ResourceStore // Resource management (e.g., hosts, endpoints)
 }
 ```
 
 <a name="NewStoreModule"></a>
-### func [NewStoreModule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/stores.go#L48-L57>)
+### func [NewStoreModule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/stores.go#L50-L60>)
 
 ```go
-func NewStoreModule(metrics metricstore.MetricStore, logs logstore.LogStore, users userstore.UserStore, data datastore.DataStore, events eventstore.EventStore, rules rulestore.RuleStore, actions *routestore.RouteStore, alerts alertstore.AlertStore) *StoreModule
+func NewStoreModule(metrics metricstore.MetricStore, logs logstore.LogStore, users userstore.UserStore, data datastore.DataStore, events eventstore.EventStore, rules rulestore.RuleStore, actions *routestore.RouteStore, alerts alertstore.AlertStore, resources resourcestore.ResourceStore) *StoreModule
 ```
 
 NewStoreModule creates a new StoreModule with the provided components.
@@ -104,26 +119,27 @@ func NewSystemContext(ctx context.Context, cfg *config.Config, tracker *tracker.
 NewSystemContext creates a new SystemContext with the provided parameters. It initializes the context, configuration, tracker, websocket hub, authentication providers, stores, telemetry, caches, buffers, and synchronization manager. This function is typically called during the initialization phase of the application.
 
 <a name="TelemetryModule"></a>
-## type [TelemetryModule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/telemetry.go#L37-L44>)
+## type [TelemetryModule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/telemetry.go#L45-L53>)
 
 TelemetryModule encapsulates telemetry\-related state and processing.
 
 ```go
 type TelemetryModule struct {
-    Index      *metricindex.MetricIndex // Metric name/dimension catalog
-    Meta       *metastore.MetaTracker   // Tracks source metadata (labels, tags, endpoint info)
-    Evaluator  *rules.Evaluator         // Rule evaluator (metrics → match?)
-    Alerts     *alerts.Manager          // Tracks alert state per rule/endpoint
-    Emitter    *events.Emitter          // Emits events (alerts, system actions)
-    Dispatcher *dispatcher.Dispatcher   // Routes alert events to actions
+    Index             *metricindex.MetricIndex // Metric name/dimension catalog
+    Meta              *metastore.MetaTracker   // Tracks source metadata (labels, tags, endpoint info)
+    Evaluator         *rules.Evaluator         // Rule evaluator (metrics → match?)
+    Alerts            *alerts.Manager          // Tracks alert state per rule/endpoint
+    Emitter           *events.Emitter          // Emits events (alerts, system actions)
+    Dispatcher        *dispatcher.Dispatcher   // Routes alert events to actions
+    ResourceDiscovery ResourceDiscoverer       // Discovers and tracks resources
 }
 ```
 
 <a name="NewTelemetryModule"></a>
-### func [NewTelemetryModule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/telemetry.go#L48-L55>)
+### func [NewTelemetryModule](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/sys/telemetry.go#L57-L65>)
 
 ```go
-func NewTelemetryModule(index *metricindex.MetricIndex, meta *metastore.MetaTracker, evaluator *rules.Evaluator, alerts *alerts.Manager, emitter *events.Emitter, dispatcher *dispatcher.Dispatcher) *TelemetryModule
+func NewTelemetryModule(index *metricindex.MetricIndex, meta *metastore.MetaTracker, evaluator *rules.Evaluator, alerts *alerts.Manager, emitter *events.Emitter, dispatcher *dispatcher.Dispatcher, resourceDiscovery ResourceDiscoverer) *TelemetryModule
 ```
 
 

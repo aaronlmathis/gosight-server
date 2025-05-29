@@ -28,11 +28,13 @@ package inmemory
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/aaronlmathis/gosight-server/internal/store/resourcestore"
 	"github.com/aaronlmathis/gosight-shared/model"
+	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 // ResourceCache provides a comprehensive in-memory caching solution for resource
@@ -129,6 +131,7 @@ func NewResourceCache(store resourcestore.ResourceStore, flushInterval time.Dura
 //
 // The operation performs:
 //   - Resource storage/update in primary index
+//   - Preservation of CreatedAt timestamp for existing resources
 //   - Automatic index maintenance (removal of old, addition of new)
 //   - Dirty tracking for optimized persistence
 //   - Resource update flag management
@@ -139,11 +142,35 @@ func (c *ResourceCache) UpsertResource(resource *model.Resource) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	// Update resource
+	// Check for existing resource
 	existing := c.resources[resource.ID]
+
+	// Preserve CreatedAt timestamp from existing resource
+	if existing != nil && !resource.CreatedAt.IsZero() {
+		// If the new resource has a CreatedAt, preserve it
+		// This handles cases where the resource is being loaded from store
+	} else if existing != nil {
+		// Preserve existing CreatedAt if new resource doesn't have one
+		resource.CreatedAt = existing.CreatedAt
+	} else if resource.CreatedAt.IsZero() {
+		// New resource without CreatedAt - set it now
+		resource.CreatedAt = time.Now()
+	}
+
+	// Set UpdatedAt to current time for any upsert operation
+	resource.UpdatedAt = time.Now()
+
+	// Update resource in cache
 	c.resources[resource.ID] = resource
 	c.dirty[resource.ID] = resource
 	resource.Updated = true
+
+	if existing != nil {
+		utils.Debug("Cache: updated existing resource %s (kind: %s)", resource.ID, resource.Kind)
+	} else {
+		utils.Debug("Cache: added new resource %s (kind: %s)", resource.ID, resource.Kind)
+	}
+	utils.Debug("Cache: resource %s marked as dirty for persistence", resource.ID)
 
 	// Update indexes
 	c.updateIndexes(existing, resource)
@@ -300,8 +327,11 @@ func (c *ResourceCache) flushDirtyResources() {
 	for _, resource := range c.dirty {
 		toFlush = append(toFlush, resource)
 	}
+	dirtyCount := len(c.dirty)
 	c.dirty = make(map[string]*model.Resource)
 	c.mu.Unlock()
+
+	utils.Debug("Cache flush: found %d dirty resources to persist", dirtyCount)
 
 	if len(toFlush) == 0 {
 		return
@@ -310,8 +340,11 @@ func (c *ResourceCache) flushDirtyResources() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	utils.Debug("Cache flush: attempting to persist %d resources to database", len(toFlush))
+
 	// Batch update to database
 	if err := c.store.UpdateBatch(ctx, toFlush); err != nil {
+		utils.Error("Cache flush: failed to persist %d resources to database: %v", len(toFlush), err)
 		// Log error and re-add to dirty list
 		c.mu.Lock()
 		for _, resource := range toFlush {
@@ -319,6 +352,7 @@ func (c *ResourceCache) flushDirtyResources() {
 		}
 		c.mu.Unlock()
 	} else {
+		utils.Info("Cache flush: successfully persisted %d resources to database", len(toFlush))
 		// Mark as clean
 		c.mu.Lock()
 		for _, resource := range toFlush {
@@ -722,4 +756,69 @@ func (c *ResourceCache) removeFromIndexes(resource *model.Resource) {
 			}
 		}
 	}
+}
+
+// WarmCache loads existing resources from the persistent store to populate the cache
+// on startup. This method ensures that the cache is pre-populated with all existing
+// resources from the database, enabling immediate query functionality without waiting
+// for new resource discoveries.
+//
+// The warming process:
+//   - Loads all resources from the store in batches to avoid memory pressure
+//   - Populates all indexes for efficient querying
+//   - Does not mark resources as dirty since they're already persisted
+//   - Handles potential errors gracefully with appropriate logging
+//
+// Parameters:
+//   - ctx: Context for cancellation and timeout control
+//
+// Returns:
+//   - error: Any error encountered during the warming process
+func (c *ResourceCache) WarmCache(ctx context.Context) error {
+	const batchSize = 1000
+	offset := 0
+	totalLoaded := 0
+
+	for {
+		// Load resources in batches to avoid memory pressure
+		resources, err := c.store.List(ctx, nil, batchSize, offset)
+		if err != nil {
+			return fmt.Errorf("failed to load resources from store during cache warming: %w", err)
+		}
+
+		if len(resources) == 0 {
+			break
+		}
+
+		// Add resources to cache without marking as dirty
+		c.mu.Lock()
+		for _, resource := range resources {
+			// Store in primary index
+			c.resources[resource.ID] = resource
+
+			// Add to all indexes
+			c.addToIndexes(resource)
+		}
+		c.mu.Unlock()
+
+		totalLoaded += len(resources)
+		offset += batchSize
+
+		// Check for cancellation
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		// If we got fewer resources than requested, we're done
+		if len(resources) < batchSize {
+			break
+		}
+	}
+
+	// Note: Using fmt.Sprintf to avoid utils dependency for now
+	// utils.Info("Cache warmed with %d resources", totalLoaded)
+
+	return nil
 }

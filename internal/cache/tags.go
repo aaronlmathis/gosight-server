@@ -214,7 +214,7 @@ func (c *tagCache) Add(payload *model.MetricPayload) {
 		return
 	}
 	endpointID := payload.Meta.EndpointID
-	metaTags := payload.Meta.Tags
+	metaTags := payload.Meta.Labels
 	if len(metaTags) == 0 {
 		return
 	}

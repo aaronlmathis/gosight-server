@@ -8,6 +8,17 @@ import "github.com/aaronlmathis/gosight-server/internal/store/datastore/pgsql"
 
 Package pgstore implements the userstore.Store interface using PostgreSQL
 
+Package pgstore provides PostgreSQL storage implementation for GoSight process data.
+
+This file implements process\-specific storage operations including:
+
+- Bulk insertion of process snapshots for efficient batch processing
+- Individual process snapshot and detail insertion
+- Flexible querying with filtering, sorting, and pagination
+- JSON handling for process labels and metadata
+
+The storage model separates process snapshots \(point\-in\-time system state\) from individual process details to optimize for both write performance and query flexibility. Process snapshots contain host metadata and timing information, while process\_info records contain the detailed process data.
+
 ## Index
 
 - [type PGDataStore](<#PGDataStore>)
@@ -160,31 +171,31 @@ func (s *PGDataStore) GetTags(ctx context.Context, endpointID string) (map[strin
 GetTags retrieves all tags for a given endpoint ID.
 
 <a name="PGDataStore.InsertFullProcessPayload"></a>
-### func \(\*PGDataStore\) [InsertFullProcessPayload](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/processes.go#L91>)
+### func \(\*PGDataStore\) [InsertFullProcessPayload](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/processes.go#L110>)
 
 ```go
 func (s *PGDataStore) InsertFullProcessPayload(ctx context.Context, payload *model.ProcessPayload) error
 ```
 
-InsertFullProcessPayload inserts a complete process payload into the database,
+InsertFullProcessPayload inserts a complete process payload into the database. This is a convenience method that combines snapshot creation with process detail insertion in a single operation. It first creates a process snapshot and then inserts all associated process information records.
 
 <a name="PGDataStore.InsertProcessInfos"></a>
-### func \(\*PGDataStore\) [InsertProcessInfos](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/processes.go#L127>)
+### func \(\*PGDataStore\) [InsertProcessInfos](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/processes.go#L152>)
 
 ```go
 func (s *PGDataStore) InsertProcessInfos(ctx context.Context, snapshotID int64, payload *model.ProcessPayload) error
 ```
 
-InsertProcessInfos inserts multiple process information records associated with a snapshot.
+InsertProcessInfos inserts multiple process information records associated with a snapshot. Each process record includes detailed information such as PID, CPU/memory usage, command line, executable path, and custom labels. The insertion is performed within a transaction to ensure data consistency.
 
 <a name="PGDataStore.InsertProcessSnapshot"></a>
-### func \(\*PGDataStore\) [InsertProcessSnapshot](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/processes.go#L100>)
+### func \(\*PGDataStore\) [InsertProcessSnapshot](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/processes.go#L122>)
 
 ```go
 func (s *PGDataStore) InsertProcessSnapshot(ctx context.Context, snap *model.ProcessPayload) (int64, error)
 ```
 
-InsertProcessSnapshot inserts a new process snapshot into the database.
+InsertProcessSnapshot inserts a new process snapshot into the database. A process snapshot represents a point\-in\-time capture of system process state, including metadata about the host, agent, and collection timestamp. Returns the generated snapshot ID for linking associated process details.
 
 <a name="PGDataStore.ListAgents"></a>
 ### func \(\*PGDataStore\) [ListAgents](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/tracker.go#L184>)
@@ -232,13 +243,13 @@ func (s *PGDataStore) ListValues(ctx context.Context, key string) ([]string, err
 ListValues returns all values for a given key
 
 <a name="PGDataStore.QueryProcessInfos"></a>
-### func \(\*PGDataStore\) [QueryProcessInfos](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/processes.go#L173>)
+### func \(\*PGDataStore\) [QueryProcessInfos](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/processes.go#L200>)
 
 ```go
 func (s *PGDataStore) QueryProcessInfos(ctx context.Context, filter *model.ProcessQueryFilter) ([]model.ProcessInfo, error)
 ```
 
-
+QueryProcessInfos retrieves process information based on the provided filter criteria. It supports filtering by endpoint, time range, resource usage thresholds, user, process IDs, and text searches in executable paths and command lines. Results can be sorted by various fields and paginated for large datasets.
 
 <a name="PGDataStore.SetTags"></a>
 ### func \(\*PGDataStore\) [SetTags](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/tags.go#L75>)
@@ -286,12 +297,12 @@ func (s *PGDataStore) UpsertNetworkDevice(ctx context.Context, device *model.Net
 UpsertNetworkDevice inserts a new network device or updates an existing one
 
 <a name="PGDataStore.Write"></a>
-### func \(\*PGDataStore\) [Write](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/processes.go#L36>)
+### func \(\*PGDataStore\) [Write](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/datastore/pgsql/processes.go#L49>)
 
 ```go
 func (s *PGDataStore) Write(ctx context.Context, batches []*model.ProcessPayload) error
 ```
 
-Write fullfills the interface in BufferedDataStore
+Write implements the BufferedDataStore interface for process payloads. It performs bulk insertion of process snapshots for efficient batch processing.
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)

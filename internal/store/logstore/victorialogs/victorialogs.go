@@ -129,7 +129,7 @@ func (v *VictoriaLogsStore) Name() string {
 //	    Level: "error",
 //	    Source: "auth-service",
 //	    Fields: {"user_id": "123", "ip": "192.168.1.1"},
-//	    Tags: {"env": "prod", "service": "auth"}
+//	    Labels: {"env": "prod", "service": "auth"}
 //	}
 //
 //	Becomes VictoriaLogs entry:
@@ -176,8 +176,8 @@ func (v *VictoriaLogsStore) Write(batch []model.LogPayload) error {
 				entry["host_id"] = payload.Meta.HostID
 				entry["hostname"] = payload.Meta.Hostname
 
-				// Add meta tags
-				for k, v := range payload.Meta.Tags {
+				// Add meta labels
+				for k, v := range payload.Meta.Labels {
 					entry[k] = v
 				}
 			}
@@ -229,8 +229,8 @@ func (v *VictoriaLogsStore) Write(batch []model.LogPayload) error {
 				entry["field_"+k] = v
 			}
 
-			// Add tags
-			for k, v := range logEntry.Tags {
+			// Add labels
+			for k, v := range logEntry.Labels {
 				entry["tag_"+k] = v
 			}
 

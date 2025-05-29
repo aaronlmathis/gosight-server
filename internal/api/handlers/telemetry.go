@@ -112,4 +112,3 @@ func (h *TelemetryHandler) HandleTraces(w http.ResponseWriter, r *http.Request) 
 	// For now, just accept traces without storing
 	w.WriteHeader(http.StatusAccepted)
 }
-

@@ -132,7 +132,7 @@ func (h *LogsHandler) HandleLogAPI(w http.ResponseWriter, r *http.Request) {
 // into a model.LogFilter struct. It extracts parameters like start time,
 // end time, cursor, limit, order, endpoint ID, target, level, category,
 // source, contains string, unit, app name, service, event ID, user,
-// container ID, container name, platform, tags, fields, and meta.
+// container ID, container name, platform, Label, fields, and meta.
 func parseLogFilterFromQuery(r *http.Request) model.LogFilter {
 	q := r.URL.Query()
 
@@ -191,7 +191,7 @@ func parseLogFilterFromQuery(r *http.Request) model.LogFilter {
 		ContainerName: q.Get("container_name"),
 		Platform:      q.Get("platform"),
 
-		Tags:   extractPrefixed("tag_"),
+		Labels: extractPrefixed("label_"),
 		Fields: extractPrefixed("field_"),
 		Meta:   extractPrefixed("meta_"),
 	}
@@ -201,7 +201,7 @@ func parseLogFilterFromQuery(r *http.Request) model.LogFilter {
 
 // matchesSearch checks if a log entry matches the search keyword.
 // It checks if the keyword is present in the message, source, category,
-// or any of the meta fields, tags, or fields of the log entry.
+// or any of the meta fields, Logs, or fields of the log entry.
 // The function is case-insensitive and uses strings.Contains to check for matches.
 // It returns true if the log entry matches the search keyword, false otherwise.
 func matchesSearch(log model.LogEntry, keyword string) bool {
@@ -243,8 +243,8 @@ func matchesSearch(log model.LogEntry, keyword string) bool {
 		}
 	}
 
-	// Tags and Fields
-	for k, v := range log.Tags {
+	// Logs and Fields
+	for k, v := range log.Labels {
 		if strings.Contains(strings.ToLower(k), kw) || strings.Contains(strings.ToLower(v), kw) {
 			return true
 		}

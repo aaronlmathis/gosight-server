@@ -84,8 +84,8 @@ func (v *VictoriaStore) QueryInstant(metric string, filters map[string]string) (
 			continue
 		}
 		rows = append(rows, model.MetricRow{
-			Tags:  item.Metric,
-			Value: val,
+			Labels: item.Metric,
+			Value:  val,
 		})
 	}
 	return rows, nil
@@ -245,7 +245,7 @@ func (v *VictoriaStore) QueryMultiInstant(metricNames []string, filters map[stri
 
 		rows = append(rows, model.MetricRow{
 			Value:     val,
-			Tags:      item.Metric,
+			Labels:    item.Metric,
 			Timestamp: timestamp,
 		})
 	}
@@ -345,7 +345,7 @@ func (v *VictoriaStore) QueryMultiRange(metrics []string, start, end time.Time, 
 			rows = append(rows, model.MetricRow{
 				Timestamp: int64(tsRaw * 1000), // convert seconds → ms
 				Value:     valFloat,
-				Tags:      series.Metric,
+				Labels:    series.Metric,
 			})
 		}
 	}

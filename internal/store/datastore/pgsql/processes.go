@@ -19,6 +19,18 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
+// Package pgstore provides PostgreSQL storage implementation for GoSight process data.
+//
+// This file implements process-specific storage operations including:
+//   - Bulk insertion of process snapshots for efficient batch processing
+//   - Individual process snapshot and detail insertion
+//   - Flexible querying with filtering, sorting, and pagination
+//   - JSON handling for process labels and metadata
+//
+// The storage model separates process snapshots (point-in-time system state)
+// from individual process details to optimize for both write performance
+// and query flexibility. Process snapshots contain host metadata and timing
+// information, while process_info records contain the detailed process data.
 package pgstore
 
 import (
@@ -32,7 +44,8 @@ import (
 	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
-// Write fullfills the interface in BufferedDataStore
+// Write implements the BufferedDataStore interface for process payloads.
+// It performs bulk insertion of process snapshots for efficient batch processing.
 func (s *PGDataStore) Write(ctx context.Context, batches []*model.ProcessPayload) error {
 	if len(batches) == 0 {
 		return nil
@@ -40,6 +53,9 @@ func (s *PGDataStore) Write(ctx context.Context, batches []*model.ProcessPayload
 	return s.bulkInsertSnapshots(ctx, batches)
 }
 
+// bulkInsertSnapshots performs efficient bulk insertion of process snapshots into the database.
+// It constructs a single INSERT statement with multiple value sets to minimize database roundtrips.
+// Only process metadata is stored at the snapshot level; individual process details are handled separately.
 func (s *PGDataStore) bulkInsertSnapshots(ctx context.Context, batches []*model.ProcessPayload) error {
 	var (
 		args         []interface{}
@@ -87,7 +103,10 @@ func (s *PGDataStore) bulkInsertSnapshots(ctx context.Context, batches []*model.
 	return nil
 }
 
-// InsertFullProcessPayload inserts a complete process payload into the database,
+// InsertFullProcessPayload inserts a complete process payload into the database.
+// This is a convenience method that combines snapshot creation with process detail insertion
+// in a single operation. It first creates a process snapshot and then inserts all
+// associated process information records.
 func (s *PGDataStore) InsertFullProcessPayload(ctx context.Context, payload *model.ProcessPayload) error {
 	snapshotID, err := s.InsertProcessSnapshot(ctx, payload)
 	if err != nil {
@@ -97,6 +116,9 @@ func (s *PGDataStore) InsertFullProcessPayload(ctx context.Context, payload *mod
 }
 
 // InsertProcessSnapshot inserts a new process snapshot into the database.
+// A process snapshot represents a point-in-time capture of system process state,
+// including metadata about the host, agent, and collection timestamp.
+// Returns the generated snapshot ID for linking associated process details.
 func (s *PGDataStore) InsertProcessSnapshot(ctx context.Context, snap *model.ProcessPayload) (int64, error) {
 	metaJSON, err := json.Marshal(snap.Meta)
 	if err != nil {
@@ -124,6 +146,9 @@ func (s *PGDataStore) InsertProcessSnapshot(ctx context.Context, snap *model.Pro
 }
 
 // InsertProcessInfos inserts multiple process information records associated with a snapshot.
+// Each process record includes detailed information such as PID, CPU/memory usage,
+// command line, executable path, and custom labels. The insertion is performed
+// within a transaction to ensure data consistency.
 func (s *PGDataStore) InsertProcessInfos(ctx context.Context, snapshotID int64, payload *model.ProcessPayload) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -143,7 +168,7 @@ func (s *PGDataStore) InsertProcessInfos(ctx context.Context, snapshotID int64, 
 	defer stmt.Close()
 
 	for _, p := range payload.Processes {
-		tagsJSON, _ := json.Marshal(p.Tags)
+		labelsJSON, _ := json.Marshal(p.Labels)
 		_, err := stmt.ExecContext(ctx,
 			snapshotID,
 			p.PID,
@@ -155,7 +180,7 @@ func (s *PGDataStore) InsertProcessInfos(ctx context.Context, snapshotID int64, 
 			p.MemPercent,
 			p.Threads,
 			p.StartTime,
-			tagsJSON,
+			labelsJSON,
 			// new fields:
 			payload.Timestamp,
 			payload.EndpointID,
@@ -169,7 +194,9 @@ func (s *PGDataStore) InsertProcessInfos(ctx context.Context, snapshotID int64, 
 }
 
 // QueryProcessInfos retrieves process information based on the provided filter criteria.
-
+// It supports filtering by endpoint, time range, resource usage thresholds, user,
+// process IDs, and text searches in executable paths and command lines.
+// Results can be sorted by various fields and paginated for large datasets.
 func (s *PGDataStore) QueryProcessInfos(ctx context.Context, filter *model.ProcessQueryFilter) ([]model.ProcessInfo, error) {
 	var args []interface{}
 	var where []string
@@ -261,25 +288,27 @@ func (s *PGDataStore) QueryProcessInfos(ctx context.Context, filter *model.Proce
 	for rows.Next() {
 		var p model.ProcessInfo
 		var startTime time.Time
-		var tagsData []byte
+		var labelsData []byte
 
 		err := rows.Scan(
 			&p.PID, &p.PPID, &p.User, &p.Executable, &p.Cmdline,
-			&p.CPUPercent, &p.MemPercent, &p.Threads, &startTime, &tagsData,
+			&p.CPUPercent, &p.MemPercent, &p.Threads, &startTime, &labelsData,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan process row: %w", err)
 		}
 		p.StartTime = startTime
-		p.Tags = parseTagsJSON(tagsData)
+		p.Labels = parseLabelsJSON(labelsData)
 		results = append(results, p)
 	}
 
 	return results, nil
 }
 
-// Helper to parse JSONB tags
-func parseTagsJSON(data []byte) map[string]string {
+// parseLabelsJSON is a helper function to parse JSONB labels from the database.
+// It safely unmarshals JSON data into a string map, returning an empty map
+// if parsing fails to prevent data corruption errors from affecting queries.
+func parseLabelsJSON(data []byte) map[string]string {
 	var m map[string]string
 	_ = json.Unmarshal(data, &m)
 	return m

@@ -86,8 +86,8 @@ func InitResourceStore(cfg *config.Config) (resourcestore.ResourceStore, error) 
 
 // InitResourceDiscovery initializes the resource discovery component for the GoSight server.
 // Resource discovery automatically detects, catalogs, and monitors system resources
-// across the infrastructure. It integrates with both the resource cache for fast
-// access and the resource store for persistent storage.
+// across the infrastructure. It integrates with the resource cache for fast
+// access and automatic persistence through the cache's background flushing.
 //
 // The resource discovery system:
 //   - Automatically detects new agents and services
@@ -97,15 +97,14 @@ func InitResourceStore(cfg *config.Config) (resourcestore.ResourceStore, error) 
 //   - Enables dynamic monitoring configuration
 //
 // Parameters:
-//   - resourceCache: Cache component for fast resource access and lookup
-//   - resourceStore: Persistent storage for resource data and metadata
+//   - resourceCache: Cache component for fast resource access and automatic persistence
 //
 // Returns:
 //   - *telemetry.ResourceDiscovery: Initialized resource discovery service
 //   - error: Currently always nil, reserved for future error conditions
-func InitResourceDiscovery(resourceCache cache.ResourceCache, resourceStore resourcestore.ResourceStore) (*telemetry.ResourceDiscovery, error) {
+func InitResourceDiscovery(resourceCache cache.ResourceCache) (*telemetry.ResourceDiscovery, error) {
 	utils.Info("Initializing resource discovery")
 
-	resourceDiscovery := telemetry.NewResourceDiscovery(resourceCache, resourceStore)
+	resourceDiscovery := telemetry.NewResourceDiscovery(resourceCache)
 	return resourceDiscovery, nil
 }

@@ -48,6 +48,7 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 package cache
 
 import (
+	"context"
 	"time"
 
 	"github.com/aaronlmathis/gosight-shared/model"
@@ -134,4 +135,7 @@ type ResourceCache interface {
 	GetKinds() []string
 	Clear()
 	Stop()
+
+	// Cache warming
+	WarmCache(ctx context.Context) error
 }

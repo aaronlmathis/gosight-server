@@ -45,10 +45,9 @@ import (
 //   - POST /tags/{id}/assign - Assign tag to resource (requires gosight:api:tags:assign permission)
 //   - DELETE /tags/{id}/assign - Remove tag from resource (requires gosight:api:tags:assign permission)
 func SetupTagsRoutes(router *mux.Router, tagsHandler *handlers.TagsHandler, withAccessLog func(http.Handler) http.Handler) {
-	
+
 	// Configure middleware
 	withAuth := gosightauth.AuthMiddleware(tagsHandler.Sys.Stores.Users)
-
 
 	// Helper function to create secure handler with permission check
 	secure := func(permission string, handler http.Handler) http.Handler {

@@ -17,8 +17,11 @@ Package pgstore implements the userstore.Store interface using PostgreSQL
   - [func \(s \*PGStore\) Close\(\) error](<#PGStore.Close>)
   - [func \(s \*PGStore\) CreatePermission\(ctx context.Context, p \*usermodel.Permission\) error](<#PGStore.CreatePermission>)
   - [func \(s \*PGStore\) CreateRole\(ctx context.Context, r \*usermodel.Role\) error](<#PGStore.CreateRole>)
+  - [func \(s \*PGStore\) CreateUser\(ctx context.Context, u \*usermodel.User\) error](<#PGStore.CreateUser>)
   - [func \(s \*PGStore\) CreateUserProfile\(ctx context.Context, profile \*usermodel.UserProfile\) error](<#PGStore.CreateUserProfile>)
+  - [func \(s \*PGStore\) DeleteUser\(ctx context.Context, userID string\) error](<#PGStore.DeleteUser>)
   - [func \(s \*PGStore\) DeleteUserSetting\(ctx context.Context, userID, key string\) error](<#PGStore.DeleteUserSetting>)
+  - [func \(s \*PGStore\) GetAllUsersWithPermissions\(ctx context.Context\) \(\[\]\*usermodel.User, error\)](<#PGStore.GetAllUsersWithPermissions>)
   - [func \(s \*PGStore\) GetCompleteUser\(ctx context.Context, userID string\) \(\*usermodel.CompleteUser, error\)](<#PGStore.GetCompleteUser>)
   - [func \(s \*PGStore\) GetUserByEmail\(ctx context.Context, email string\) \(\*usermodel.User, error\)](<#PGStore.GetUserByEmail>)
   - [func \(s \*PGStore\) GetUserByID\(ctx context.Context, ID string\) \(\*usermodel.User, error\)](<#PGStore.GetUserByID>)
@@ -30,6 +33,7 @@ Package pgstore implements the userstore.Store interface using PostgreSQL
   - [func \(s \*PGStore\) GetUserWithPermissions\(ctx context.Context, userID string\) \(\*usermodel.User, error\)](<#PGStore.GetUserWithPermissions>)
   - [func \(s \*PGStore\) SaveUser\(ctx context.Context, u \*usermodel.User\) error](<#PGStore.SaveUser>)
   - [func \(s \*PGStore\) SetUserSetting\(ctx context.Context, userID, key string, value \[\]byte\) error](<#PGStore.SetUserSetting>)
+  - [func \(s \*PGStore\) UpdateUser\(ctx context.Context, u \*usermodel.User\) error](<#PGStore.UpdateUser>)
   - [func \(s \*PGStore\) UpdateUserPassword\(ctx context.Context, userID, passwordHash string\) error](<#PGStore.UpdateUserPassword>)
   - [func \(s \*PGStore\) UpdateUserProfile\(ctx context.Context, profile \*usermodel.UserProfile\) error](<#PGStore.UpdateUserProfile>)
 
@@ -99,6 +103,15 @@ func (s *PGStore) CreateRole(ctx context.Context, r *usermodel.Role) error
 
 
 
+<a name="PGStore.CreateUser"></a>
+### func \(\*PGStore\) [CreateUser](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/userstore/pgstore/pg.go#L389>)
+
+```go
+func (s *PGStore) CreateUser(ctx context.Context, u *usermodel.User) error
+```
+
+CreateUser creates a new user in the database
+
 <a name="PGStore.CreateUserProfile"></a>
 ### func \(\*PGStore\) [CreateUserProfile](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/userstore/pgstore/pg.go#L198>)
 
@@ -108,6 +121,15 @@ func (s *PGStore) CreateUserProfile(ctx context.Context, profile *usermodel.User
 
 
 
+<a name="PGStore.DeleteUser"></a>
+### func \(\*PGStore\) [DeleteUser](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/userstore/pgstore/pg.go#L416>)
+
+```go
+func (s *PGStore) DeleteUser(ctx context.Context, userID string) error
+```
+
+DeleteUser removes a user from the database
+
 <a name="PGStore.DeleteUserSetting"></a>
 ### func \(\*PGStore\) [DeleteUserSetting](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/userstore/pgstore/pg.go#L274>)
 
@@ -116,6 +138,15 @@ func (s *PGStore) DeleteUserSetting(ctx context.Context, userID, key string) err
 ```
 
 
+
+<a name="PGStore.GetAllUsersWithPermissions"></a>
+### func \(\*PGStore\) [GetAllUsersWithPermissions](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/userstore/pgstore/pg.go#L322>)
+
+```go
+func (s *PGStore) GetAllUsersWithPermissions(ctx context.Context) ([]*usermodel.User, error)
+```
+
+GetAllUsersWithPermissions retrieves all users with their roles and permissions
 
 <a name="PGStore.GetCompleteUser"></a>
 ### func \(\*PGStore\) [GetCompleteUser](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/userstore/pgstore/pg.go#L295>)
@@ -215,6 +246,15 @@ func (s *PGStore) SetUserSetting(ctx context.Context, userID, key string, value 
 ```
 
 
+
+<a name="PGStore.UpdateUser"></a>
+### func \(\*PGStore\) [UpdateUser](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/userstore/pgstore/pg.go#L403>)
+
+```go
+func (s *PGStore) UpdateUser(ctx context.Context, u *usermodel.User) error
+```
+
+UpdateUser updates an existing user in the database
 
 <a name="PGStore.UpdateUserPassword"></a>
 ### func \(\*PGStore\) [UpdateUserPassword](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/store/userstore/pgstore/pg.go#L284>)

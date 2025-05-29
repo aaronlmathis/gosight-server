@@ -55,8 +55,8 @@ func MergeDimensionsWithMeta(base map[string]string, meta *model.Meta) map[strin
 	set("version", meta.Version)
 	set("deployment_id", meta.DeploymentID)
 
-	// Tags (custom metadata)
-	for k, v := range meta.Tags {
+	// Labels (system-generated metadata)
+	for k, v := range meta.Labels {
 		if v != "" && out[k] == "" {
 			out[k] = v
 		}

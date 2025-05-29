@@ -26,6 +26,8 @@ package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -47,7 +49,7 @@ var (
 
 // run is the initialization function for the GoSight server.
 // It initializes the server, sets up the gRPC and HTTP servers, and handles graceful shutdown.
-func run() {
+func run(configFlag *string) {
 	// Graceful Shutdown Context
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -64,7 +66,7 @@ func run() {
 	}()
 
 	// Init System Context for Gosight
-	sys, err := bootstrap.InitGoSight(ctx)
+	sys, err := bootstrap.InitGoSight(ctx, configFlag)
 	utils.Must("System Context", err)
 
 	// Start SyncManager for periodic persistence
@@ -145,6 +147,9 @@ func run() {
 
 	// Flush all pending data before shutdown.
 
+	// Stop resource cache to ensure final flush of dirty resources
+	sys.Cache.Resources.Stop()
+
 	// Disconnect from metric store, datastore, and userstore.
 	if err := sys.Stores.Metrics.Close(); err != nil {
 		utils.Warn("Failed to close metric store: %v", err)
@@ -159,6 +164,15 @@ func run() {
 
 // main is the entry point for the GoSight server.
 func main() {
-
-	run()
+	versionFlag := flag.Bool("version", false, "print version information and exit")
+	configFlag := flag.String("config", "", "Path to server config file")
+	flag.Parse()
+	if *versionFlag {
+		fmt.Printf(
+			"GoSight %s (built %s, commit %s)\n",
+			Version, BuildTime, GitCommit,
+		)
+		os.Exit(0)
+	}
+	run(configFlag)
 }

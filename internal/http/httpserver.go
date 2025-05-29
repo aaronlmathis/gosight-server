@@ -27,7 +27,6 @@ package httpserver
 import (
 	"net/http"
 
-	gosighttemplate "github.com/aaronlmathis/gosight-server/internal/http/templates"
 	"github.com/aaronlmathis/gosight-server/internal/sys"
 	"github.com/aaronlmathis/gosight-shared/utils"
 	"github.com/gorilla/mux"
@@ -37,7 +36,6 @@ type HttpServer struct {
 	httpServer *http.Server
 	Router     *mux.Router
 	Sys        *sys.SystemContext
-	Tmpl       *gosighttemplate.GoSightTemplate
 }
 
 // NewServer creates a new HTTP server instance with the provided system context.
@@ -61,13 +59,6 @@ func NewServer(sys *sys.SystemContext) *HttpServer {
 func (s *HttpServer) Start() error {
 
 	s.setupRoutes()
-
-	tmpl, err := gosighttemplate.NewGoSightTemplate(s.Sys.Ctx, s.Sys.Cfg, s.Sys.Stores.Metrics, s.Sys.Tele.Index, s.Sys.Stores.Users)
-	if err != nil {
-		utils.Fatal("template init failed: %v", err)
-	}
-
-	s.Tmpl = tmpl
 
 	utils.Info("HTTPS server running at %s", s.Sys.Cfg.Server.HTTPAddr)
 	if err := http.ListenAndServeTLS(s.Sys.Cfg.Server.HTTPAddr, s.Sys.Cfg.TLS.HttpsCertFile, s.Sys.Cfg.TLS.HttpsKeyFile, s.Router); err != nil {

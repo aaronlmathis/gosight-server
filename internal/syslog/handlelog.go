@@ -55,7 +55,7 @@ func (s *SyslogServer) handleLog(ctx context.Context, raw []byte, srcAddr string
 		Source:    facility,
 		Category:  "network",
 		Fields:    fields,
-		Tags: map[string]string{
+		Labels: map[string]string{
 			"device_id":   deviceID,
 			"device_name": deviceName,
 			"src_ip":      srcAddr,

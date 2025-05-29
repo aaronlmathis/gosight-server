@@ -53,15 +53,15 @@ import (
 
 // APIVersion represents an API version configuration (for compatibility)
 type APIVersion struct {
-	Version    string
-	IsDefault  bool
-	IsEnabled  bool
+	Version   string
+	IsDefault bool
+	IsEnabled bool
 }
 
 // GetSupportedAPIVersionsFromConfig converts config API versions to legacy format
 func GetSupportedAPIVersionsFromConfig(sys *sys.SystemContext) []APIVersion {
 	apiConfig := sys.Cfg.API
-	
+
 	// If no API config is provided, use defaults
 	if len(apiConfig.SupportedVersions) == 0 {
 		return []APIVersion{
@@ -169,20 +169,20 @@ func setupVersionedRoutes(apiRouter *mux.Router, version string, sys *sys.System
 	// Setup routes based on API version
 	switch version {
 	case "v1":
-		setupV1Routes(versionRouter, sys, authHandler, usersHandler, alertsHandler, 
-			endpointsHandler, logsHandler, metricsHandler, commandsHandler, 
+		setupV1Routes(versionRouter, sys, authHandler, usersHandler, alertsHandler,
+			endpointsHandler, logsHandler, metricsHandler, commandsHandler,
 			tagsHandler, labelsHandler, debugHandler, telemetryHandler, withAccessLog)
 	default:
 		// For future versions, we can add more cases here
-		setupV1Routes(versionRouter, sys, authHandler, usersHandler, alertsHandler, 
-			endpointsHandler, logsHandler, metricsHandler, commandsHandler, 
+		setupV1Routes(versionRouter, sys, authHandler, usersHandler, alertsHandler,
+			endpointsHandler, logsHandler, metricsHandler, commandsHandler,
 			tagsHandler, labelsHandler, debugHandler, telemetryHandler, withAccessLog)
 	}
 }
 
 // setupV1Routes configures all routes for API version 1
 func setupV1Routes(
-	router *mux.Router, 
+	router *mux.Router,
 	sys *sys.SystemContext,
 	authHandler *handlers.AuthHandler,
 	usersHandler *handlers.UsersHandler,
@@ -255,14 +255,14 @@ func setupDefaultVersionRedirect(apiRouter *mux.Router, defaultVersion string) {
 			http.Redirect(w, r, "/api/"+defaultVersion+"/", http.StatusMovedPermanently)
 			return
 		}
-		
+
 		// For other paths under /api/ that don't start with a version, redirect
 		if !isVersionedPath(path) {
 			newPath := "/api/" + defaultVersion + path[4:] // Remove "/api" and add version
 			http.Redirect(w, r, newPath, http.StatusMovedPermanently)
 			return
 		}
-		
+
 		// If it's already versioned, let it fall through
 		http.NotFound(w, r)
 	})
@@ -274,7 +274,7 @@ func isVersionedPath(path string) bool {
 	if len(path) < 5 || !strings.HasPrefix(path, "/api/") {
 		return false
 	}
-	
+
 	remainder := path[5:] // Remove "/api/"
 	parts := strings.Split(remainder, "/")
 	if len(parts) > 0 && strings.HasPrefix(parts[0], "v") {

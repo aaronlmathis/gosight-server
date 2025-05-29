@@ -22,6 +22,7 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 package memcache
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -439,4 +440,12 @@ func (m *MemcacheResourceCache) updateListIndex(indexKey, id string, add bool) {
 		Expiration: m.ttl,
 	}
 	m.client.Set(updatedItem)
+}
+
+// WarmCache is a placeholder implementation for Memcache cache warming.
+// TODO: Implement cache warming for Memcache by adding store parameter to constructor
+func (m *MemcacheResourceCache) WarmCache(ctx context.Context) error {
+	// Memcache cache warming would require a store reference
+	// For now, return nil (no-op)
+	return nil
 }

@@ -86,14 +86,14 @@ import (
 // Returns:
 //   - *sys.SystemContext: Fully initialized system with all components ready
 //   - error: If any critical component fails to initialize
-func InitGoSight(ctx context.Context) (*sys.SystemContext, error) {
+func InitGoSight(ctx context.Context, configFlag *string) (*sys.SystemContext, error) {
 
 	// Initialize the GoSight server
 	fmt.Println("Initializing GoSight server...")
 
 	// Load the configuration
 	// Bootstrap config loading (flags -> env -> file)
-	cfg := LoadServerConfig()
+	cfg := LoadServerConfig(configFlag)
 
 	fmt.Printf("About to init logger with level = %s\n", cfg.Logs.LogLevel)
 
@@ -165,7 +165,7 @@ func InitGoSight(ctx context.Context) (*sys.SystemContext, error) {
 	caches, err := InitCaches(ctx, cfg, resourceStore)
 	utils.Must("Caches", err)
 	// Initialize resource discovery
-	resourceDiscovery, err := InitResourceDiscovery(caches.Resources, resourceStore)
+	resourceDiscovery, err := InitResourceDiscovery(caches.Resources)
 	utils.Must("Resource discovery", err)
 
 	// Init metric store

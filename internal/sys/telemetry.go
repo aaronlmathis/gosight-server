@@ -36,9 +36,9 @@ import (
 
 // ResourceDiscoverer defines the interface for resource discovery functionality
 type ResourceDiscoverer interface {
-	ProcessMetricPayload(payload *model.MetricPayload)
-	ProcessLogPayload(payload *model.LogPayload)
-	ProcessTracePayload(payload *model.TracePayload)
+	ProcessMetricPayload(payload *model.MetricPayload) *model.MetricPayload
+	ProcessLogPayload(payload *model.LogPayload) *model.LogPayload
+	ProcessTracePayload(payload *model.TracePayload) *model.TracePayload
 }
 
 // TelemetryModule encapsulates telemetry-related state and processing.

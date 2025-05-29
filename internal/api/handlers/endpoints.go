@@ -38,6 +38,7 @@ type EndpointFilter struct {
 	IP          string
 	OS          string
 	Arch        string
+	Labels      map[string]string
 	Tags        map[string]string
 	LastSeenMin time.Duration
 	LastSeenMax time.Duration
@@ -375,6 +376,7 @@ func (h *EndpointsHandler) parseEndpointFilters(r *http.Request) EndpointFilter 
 		IP:          q.Get("ip"),
 		OS:          q.Get("os"),
 		Arch:        q.Get("arch"),
+		Labels:      utils.ParseTagString(q.Get("labels")),
 		Tags:        utils.ParseTagString(q.Get("tags")),
 		LastSeenMin: h.parseDuration(q.Get("lastSeenMin")),
 		LastSeenMax: h.parseDuration(q.Get("lastSeenMax")),
@@ -423,9 +425,10 @@ func (h *EndpointsHandler) filterAgents(list []*model.Agent, filter EndpointFilt
 		if filter.Arch != "" && a.Arch != filter.Arch {
 			continue
 		}
-		if !utils.MatchAllTags(filter.Tags, a.Labels) {
+		if !utils.MatchAllLabels(filter.Labels, a.Labels) {
 			continue
 		}
+
 		age := now.Sub(a.LastSeen)
 		if filter.LastSeenMin > 0 && age < filter.LastSeenMin {
 			continue
@@ -457,7 +460,7 @@ func (h *EndpointsHandler) filterContainers(list []*model.Container, filter Endp
 		if filter.HostID != "" && c.HostID != filter.HostID {
 			continue
 		}
-		if !utils.MatchAllTags(filter.Tags, c.Labels) {
+		if !utils.MatchAllLabels(filter.Labels, c.Labels) {
 			continue
 		}
 		age := now.Sub(c.LastSeen)

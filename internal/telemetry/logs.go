@@ -23,13 +23,11 @@ package telemetry
 
 import (
 	"context"
-	"io"
 	"time"
 
 	"github.com/aaronlmathis/gosight-server/internal/events"
 	"github.com/aaronlmathis/gosight-server/internal/sys"
 	"github.com/aaronlmathis/gosight-shared/model"
-	pb "github.com/aaronlmathis/gosight-shared/proto"
 	"github.com/aaronlmathis/gosight-shared/utils"
 	"github.com/google/uuid"
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
@@ -49,62 +47,6 @@ func NewLogsHandler(sys *sys.SystemContext) *LogsHandler {
 	}
 }
 
-func (h *LogsHandler) SubmitStream(stream pb.LogService_SubmitStreamServer) error {
-	utils.Info("Log SubmitStream started...")
-
-	for {
-		pbPayload, err := stream.Recv()
-		if err == io.EOF {
-			utils.Info("Log stream closed cleanly by client.")
-			return nil
-		}
-		if err != nil {
-			utils.Error("Log stream receive error: %v", err)
-			return err
-		}
-		SafeHandlePayload(func() {
-			converted := ConvertToModelLogPayload(pbPayload)
-
-			// Tag enrichment from in-memory cache
-			if converted.Meta != nil && converted.Meta.EndpointID != "" {
-				tags := h.Sys.Cache.Tags.GetFlattenedTagsForEndpoint(converted.Meta.EndpointID)
-				if len(tags) > 0 {
-					if converted.Meta.Tags == nil {
-						converted.Meta.Tags = make(map[string]string)
-					}
-					for k, v := range tags {
-						if _, exists := converted.Meta.Tags[k]; !exists {
-							converted.Meta.Tags[k] = v
-						}
-					}
-				}
-			}
-			// Evaluate severity level of logs and act accordingly
-			h.EvaluateSeverityLevel(&converted)
-
-			// Check rulesrunner
-			h.Sys.Tele.Evaluator.EvaluateLogs(h.Sys.Ctx, converted.Logs, converted.Meta)
-
-			// Broadcast to hub.LogHub Websocket
-			h.Sys.WSHub.Logs.Broadcast(converted)
-
-			// Write to BufferedLog store, fallback to writing to logstore directly.
-			if h.Sys.Buffers == nil || h.Sys.Buffers.Metrics == nil {
-				utils.Warn("[stream] Logs buffer not configured — writing directly to store")
-				// Fall back to writing directly to store
-				if err := h.Sys.Stores.Logs.Write([]model.LogPayload{converted}); err != nil {
-					utils.Warn("Failed to write logs directly to store: %v", err)
-				}
-			} else {
-				if err := h.Sys.Buffers.Logs.WriteAny(converted); err != nil {
-					utils.Warn("Failed to buffer LogPayload: %v", err)
-				}
-			}
-
-		})
-	}
-}
-
 // Export implements the OTLP LogsService Export method (unary, not streaming)
 func (h *LogsHandler) Export(ctx context.Context, req *collogpb.ExportLogsServiceRequest) (*collogpb.ExportLogsServiceResponse, error) {
 	if req == nil {
@@ -119,19 +61,10 @@ func (h *LogsHandler) Export(ctx context.Context, req *collogpb.ExportLogsServic
 	// Process each converted payload (preserving existing business logic)
 	for _, converted := range logPayloads {
 		SafeHandlePayload(func() {
-			// Tag enrichment from in-memory cache (PRESERVED)
-			if converted.Meta != nil && converted.Meta.EndpointID != "" {
-				tags := h.Sys.Cache.Tags.GetFlattenedTagsForEndpoint(converted.Meta.EndpointID)
-				if len(tags) > 0 {
-					if converted.Meta.Tags == nil {
-						converted.Meta.Tags = make(map[string]string)
-					}
-					for k, v := range tags {
-						if _, exists := converted.Meta.Tags[k]; !exists {
-							converted.Meta.Tags[k] = v
-						}
-					}
-				}
+			// Resource discovery and payload enrichment
+			enrichedPayload := h.Sys.Tele.ResourceDiscovery.ProcessLogPayload(&converted)
+			if enrichedPayload != nil {
+				converted = *enrichedPayload
 			}
 
 			// Evaluate severity level of logs and act accordingly (PRESERVED)

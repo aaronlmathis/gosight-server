@@ -63,7 +63,7 @@ func buildPrometheusFormatFromWrapped(logs []*model.StoredLog) string {
 				labels[k] = v
 			}
 		}
-		for k, v := range log.Tags {
+		for k, v := range log.Labels {
 			add(sanitizeLabelKey(k), v)
 		}
 
@@ -107,7 +107,7 @@ func buildPrometheusFormatFromWrapped(logs []*model.StoredLog) string {
 }
 
 // formatLabelMap prepares potential labels for Prometheus scraping.
-// It combines payload.Meta tags and log fields/tags into a single map.
+// It combines payload.Meta labels and log fields/labels into a single map.
 // It converts the labels map to a string in the format: key1="value1",key2="value2",...
 // It escapes values properly to ensure they are valid Prometheus label values.
 
@@ -212,7 +212,7 @@ func BuildPromLabels(meta *model.Meta) map[string]string {
 		labels["container_image_name"] = meta.ContainerImageName
 	}
 
-	for k, v := range meta.Tags {
+	for k, v := range meta.Labels {
 		labels[k] = v
 	}
 

@@ -400,7 +400,7 @@ func (c *metricCache) GetAllTagKeys() []string {
 	tagKeySet := make(map[string]struct{})
 
 	for _, meta := range c.EndpointMeta {
-		for k := range meta.Tags {
+		for k := range meta.Labels {
 			tagKeySet[k] = struct{}{}
 		}
 	}
@@ -422,7 +422,7 @@ func (c *metricCache) GetAllTagValuesForKey(key string) []string {
 	valueSet := make(map[string]struct{})
 
 	for _, meta := range c.EndpointMeta {
-		if val, ok := meta.Tags[key]; ok {
+		if val, ok := meta.Labels[key]; ok {
 			valueSet[val] = struct{}{}
 		}
 	}
@@ -614,8 +614,8 @@ func AddMetaFieldsToLabels(meta *model.Meta, labels map[string]StringSet) {
 	add("mac_address", meta.MACAddress)
 	add("network_interface", meta.NetworkInterface)
 
-	// Custom tags
-	for k, v := range meta.Tags {
+	// Custom labels
+	for k, v := range meta.Labels {
 		if _, exists := labels[k]; !exists {
 			labels[k] = StringSet{}
 		}

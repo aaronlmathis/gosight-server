@@ -25,20 +25,22 @@ You should have received a copy of the GNU General Public License along with GoS
 - [func InitAlertStore\(cfg \*config.Config\) \(alertstore.AlertStore, error\)](<#InitAlertStore>)
 - [func InitAuth\(cfg \*config.Config, userStore userstore.UserStore\) \(map\[string\]gosightauth.AuthProvider, error\)](<#InitAuth>)
 - [func InitBufferEngine\(ctx context.Context, cfg \*config.BufferEngineConfig, stores \*sys.StoreModule\) \*sys.BufferModule](<#InitBufferEngine>)
-- [func InitCaches\(ctx context.Context, dataStore datastore.DataStore\) \(\*cache.Cache, error\)](<#InitCaches>)
+- [func InitCaches\(ctx context.Context, cfg \*config.Config, resourceStore resourcestore.ResourceStore\) \(\*cache.Cache, error\)](<#InitCaches>)
 - [func InitDataStore\(cfg \*config.Config\) \(datastore.DataStore, error\)](<#InitDataStore>)
 - [func InitEventStore\(cfg \*config.Config\) \(eventstore.EventStore, error\)](<#InitEventStore>)
-- [func InitGoSight\(ctx context.Context\) \(\*sys.SystemContext, error\)](<#InitGoSight>)
+- [func InitGoSight\(ctx context.Context, configFlag \*string\) \(\*sys.SystemContext, error\)](<#InitGoSight>)
 - [func InitLogStore\(ctx context.Context, cfg \*config.Config, logCache cache.LogCache\) \(logstore.LogStore, error\)](<#InitLogStore>)
 - [func InitMetaStore\(\) \*metastore.MetaTracker](<#InitMetaStore>)
 - [func InitMetricIndex\(\) \(\*metricindex.MetricIndex, error\)](<#InitMetricIndex>)
 - [func InitMetricStore\(ctx context.Context, cfg \*config.Config, metricCache cache.MetricCache\) \(metricstore.MetricStore, error\)](<#InitMetricStore>)
+- [func InitResourceDiscovery\(resourceCache cache.ResourceCache\) \(\*telemetry.ResourceDiscovery, error\)](<#InitResourceDiscovery>)
+- [func InitResourceStore\(cfg \*config.Config\) \(resourcestore.ResourceStore, error\)](<#InitResourceStore>)
 - [func InitRouteStore\(cfg \*config.Config\) \(\*routestore.RouteStore, error\)](<#InitRouteStore>)
 - [func InitRuleStore\(cfg \*config.Config\) \(rulestore.RuleStore, error\)](<#InitRuleStore>)
 - [func InitTracker\(ctx context.Context, dataStore datastore.DataStore, emitter \*events.Emitter\) \*tracker.EndpointTracker](<#InitTracker>)
 - [func InitUserStore\(cfg \*config.Config\) \(userstore.UserStore, error\)](<#InitUserStore>)
 - [func InitWebSocketHub\(ctx context.Context, metaStore \*metastore.MetaTracker\) \*websocket.HubManager](<#InitWebSocketHub>)
-- [func LoadServerConfig\(\) \*config.Config](<#LoadServerConfig>)
+- [func LoadServerConfig\(configFlag \*string\) \*config.Config](<#LoadServerConfig>)
 
 
 <a name="InitAlertStore"></a>
@@ -51,145 +53,533 @@ func InitAlertStore(cfg *config.Config) (alertstore.AlertStore, error)
 InitAlertStore initializes the alert store for the GoSight server. The alert store is responsible for storing and retrieving alert instances.
 
 <a name="InitAuth"></a>
-## func [InitAuth](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/auth.go#L34>)
+## func [InitAuth](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/auth.go#L65>)
 
 ```go
 func InitAuth(cfg *config.Config, userStore userstore.UserStore) (map[string]gosightauth.AuthProvider, error)
 ```
 
-InitAuth initializes the authentication providers for the GoSight server.
+InitAuth initializes the complete authentication system for the GoSight server. This function sets up cryptographic secrets, multi\-factor authentication, and all configured authentication providers to enable secure user access.
+
+The initialization process includes:
+
+1. JWT Secret Setup:
+
+- Decodes and validates the base64\-encoded JWT signing secret
+- Ensures the secret meets minimum security requirements \(32\+ bytes\)
+- Stores the secret for session token generation and validation
+
+2. MFA Secret Setup:
+
+- Initializes the multi\-factor authentication encryption key
+- Enables TOTP \(Time\-based One\-Time Password\) functionality
+- Provides secure storage for MFA device registrations
+
+3. Authentication Provider Configuration:
+
+- Builds provider instances based on server configuration
+- Configures OAuth settings for external providers \(Google, GitHub, etc.\)
+- Sets up local authentication with password hashing
+- Validates all provider configurations
+
+The function performs critical security validations and will fail if secrets are malformed or insufficient for production security requirements.
+
+Parameters:
+
+- cfg: Server configuration containing authentication settings and secrets
+- userStore: User storage interface for authentication data persistence
+
+Returns:
+
+- map\[string\]gosightauth.AuthProvider: Configured authentication providers by name
+- error: If secret initialization or provider configuration fails
 
 <a name="InitBufferEngine"></a>
-## func [InitBufferEngine](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/bufferedengine.go#L36>)
+## func [InitBufferEngine](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/bufferedengine.go#L60>)
 
 ```go
 func InitBufferEngine(ctx context.Context, cfg *config.BufferEngineConfig, stores *sys.StoreModule) *sys.BufferModule
 ```
 
-InitBufferEngine initializes buffered stores and the central buffer engine. It wraps existing backend stores with buffering and returns the sys.BuffersModule wrapped buffers.
+InitBufferEngine initializes the buffered storage system for the GoSight server. The buffer engine provides high\-performance data ingestion by buffering writes to backend storage systems, reducing latency and improving throughput for high\-volume data streams like metrics, logs, and events.
+
+Key features:
+
+- Configurable buffering for different data types \(metrics, logs, data, alerts\)
+- Independent flush intervals and buffer sizes per data type
+- Worker\-based parallel processing for optimal performance
+- Graceful degradation when backends are unavailable
+- Memory management and overflow protection
+
+The function creates buffered wrappers around existing storage backends based on configuration settings. Each buffer type can be independently enabled/disabled and configured with specific parameters:
+
+- Buffer size: Maximum items to buffer before forcing a flush
+- Flush interval: Time\-based automatic flushing
+- Workers: Parallel processing threads for the buffer engine
+
+Parameters:
+
+- ctx: Context for buffer engine lifecycle management
+- cfg: Buffer engine configuration with per\-type settings
+- stores: Backend storage modules to wrap with buffering
+
+Returns:
+
+- \*sys.BufferModule: Container with all configured buffered stores
 
 <a name="InitCaches"></a>
-## func [InitCaches](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/caches.go#L33>)
+## func [InitCaches](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/caches.go#L55>)
 
 ```go
-func InitCaches(ctx context.Context, dataStore datastore.DataStore) (*cache.Cache, error)
+func InitCaches(ctx context.Context, cfg *config.Config, resourceStore resourcestore.ResourceStore) (*cache.Cache, error)
 ```
 
-InitCaches initializes caches for the system context.
+InitCaches initializes all caching components for the GoSight system. This function sets up various cache types including metric cache, tag cache, process cache, log cache, and resource cache based on the configuration.
+
+The caches improve system performance by storing frequently accessed data in memory, reducing the need for expensive database queries. Different cache types serve specific purposes:
+
+- Metric Cache: Stores metric metadata and time\-series data
+- Tag Cache: Caches resource tags for fast filtering and search
+- Process Cache: Stores process information for monitoring
+- Log Cache: Buffers log entries for efficient processing
+- Resource Cache: Caches resource metadata and relationships
+
+Parameters:
+
+- ctx: Context for the initialization process
+- cfg: Configuration containing cache settings and engine type
+- resourceStore: Resource store for cache population and refresh
+
+Returns:
+
+- \*cache.Cache: Initialized cache container with all cache types
+- error: If cache initialization fails for any component
 
 <a name="InitDataStore"></a>
-## func [InitDataStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/datastore.go#L38>)
+## func [InitDataStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/datastore.go#L52>)
 
 ```go
 func InitDataStore(cfg *config.Config) (datastore.DataStore, error)
 ```
 
-InitDataStore initializes the data store for the GoSight server. The data store is responsible for storing and retrieving data instances. It supports different types of data stores, such as PostgreSQL.
+InitDataStore initializes the data store component for the GoSight server. The data store provides persistent storage for various data types including metrics, logs, and system data. It abstracts the underlying storage engine to allow different implementations while maintaining a consistent interface.
+
+Currently supported engines:
+
+- postgres: PostgreSQL database backend for relational data storage
+
+The function establishes a database connection, tests connectivity, and returns a configured data store instance ready for use by the application.
+
+Parameters:
+
+- cfg: Configuration containing data store settings including engine type and DSN
+
+Returns:
+
+- datastore.DataStore: Initialized data store interface implementation
+- error: If database connection fails or unsupported engine is specified
 
 <a name="InitEventStore"></a>
-## func [InitEventStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/eventstore.go#L35>)
+## func [InitEventStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/eventstore.go#L53>)
 
 ```go
 func InitEventStore(cfg *config.Config) (eventstore.EventStore, error)
 ```
 
-InitEventStore initializes the event store for the GoSight server.
+InitEventStore initializes the event store component for the GoSight server. The event store provides persistent storage and retrieval of system events, audit logs, and operational activities. Events are critical for monitoring, debugging, and maintaining system observability.
+
+Supported storage engines:
+
+- json: File\-based JSON storage for development and small deployments
+- postgres: PostgreSQL database backend for production environments
+
+The JSON backend stores events in local files and is suitable for testing or single\-node deployments. The PostgreSQL backend provides ACID compliance, concurrent access, and better performance for production workloads.
+
+Parameters:
+
+- cfg: Configuration containing event store settings including engine type and connection details
+
+Returns:
+
+- eventstore.EventStore: Initialized event store interface implementation
+- error: If storage initialization fails or unsupported engine is specified
 
 <a name="InitGoSight"></a>
-## func [InitGoSight](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/init.go#L45>)
+## func [InitGoSight](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/init.go#L89>)
 
 ```go
-func InitGoSight(ctx context.Context) (*sys.SystemContext, error)
+func InitGoSight(ctx context.Context, configFlag *string) (*sys.SystemContext, error)
 ```
 
-initGoSight initializes the GoSight server by setting up various components such as logging, metric index, log store, metric store, data store, agent tracker, meta tracker, websocket hub, user store, event store, rule store, emitter/alert manager, evaluator, and authentication providers. It loads these components into a SystemContext and returns an error if any of the components fail to initialize.
+InitGoSight performs comprehensive initialization of the GoSight monitoring server. This is the main bootstrap function that orchestrates the startup of all system components in the correct order, handling dependencies and error conditions.
+
+The initialization process follows a carefully ordered sequence:
+
+1. Configuration Loading:
+
+- Command line flags, environment variables, and config files
+- Logging system with multiple output streams
+
+2. Core Storage Systems:
+
+- Metric index for fast metric lookup
+- Data store for persistent system data
+- Event store for audit logs and system events
+- Alert store for alert instances and history
+- Rule store for monitoring rules and conditions
+- Route store for routing configurations
+- User store for authentication and authorization
+- Resource store for system resource inventory
+
+3. Caching Layer:
+
+- Multi\-tier caching system for improved performance
+- Cache warming and synchronization
+
+4. Real\-time Components:
+
+- WebSocket hub for real\-time client communication
+- Event emitter for system\-wide event distribution
+- Alert manager for alert processing and notifications
+- Rule evaluator for continuous monitoring
+
+5. System Tracking:
+
+- Endpoint tracker for agent and service monitoring
+- Resource discovery for automatic inventory management
+- Metadata tracker for system topology
+
+6. Integration Modules:
+
+- Authentication providers \(local, OAuth, MFA\)
+- Buffer engine for high\-performance data ingestion
+- Sync manager for cache consistency
+
+The function uses utils.Must\(\) for critical components that must succeed for the server to operate correctly. Any initialization failure results in immediate shutdown with a descriptive error message.
+
+Parameters:
+
+- ctx: Context for server lifecycle management and graceful shutdown
+
+Returns:
+
+- \*sys.SystemContext: Fully initialized system with all components ready
+- error: If any critical component fails to initialize
 
 <a name="InitLogStore"></a>
-## func [InitLogStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/logstore.go#L36>)
+## func [InitLogStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/logstore.go#L57>)
 
 ```go
 func InitLogStore(ctx context.Context, cfg *config.Config, logCache cache.LogCache) (logstore.LogStore, error)
 ```
 
-InitLogStore initializes the log store for the GoSight agent. The log store is responsible for storing and retrieving logs.
+InitLogStore initializes the log store component for the GoSight server. The log store provides high\-performance storage and retrieval for application logs, system logs, and other structured log data. It serves as the primary backend for log aggregation, search, and analysis capabilities.
+
+The log store supports multiple storage engines optimized for different use cases and deployment scenarios:
+
+- elasticsearch: Full\-text search and analytics
+- victorialogs: High\-performance log storage with LogsQL
+- file: Simple file\-based storage for development
+- postgres: Database storage for structured logs
+
+The function integrates with the log cache for improved query performance and delegates engine\-specific initialization to the logstore package.
+
+Parameters:
+
+- ctx: Context for initialization and cancellation
+- cfg: Configuration containing log store settings and engine selection
+- logCache: Cache component for improved log query performance
+
+Returns:
+
+- logstore.LogStore: Initialized log store interface implementation
+- error: If log store initialization fails for the specified engine
 
 <a name="InitMetaStore"></a>
-## func [InitMetaStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/metricstore.go#L61>)
+## func [InitMetaStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/metricstore.go#L100>)
 
 ```go
 func InitMetaStore() *metastore.MetaTracker
 ```
 
-InitMetaStore initializes the meta store for the GoSight agent. The meta store is responsible for storing and retrieving metadata.
+InitMetaStore initializes the metadata tracking component for the GoSight server. The meta store \(MetaTracker\) maintains metadata about system resources, including agents, endpoints, services, and their relationships. This metadata is essential for resource discovery, monitoring, and system topology mapping.
+
+The MetaTracker provides:
+
+- Resource registration and discovery
+- Metadata caching and indexing
+- Resource relationship tracking
+- System topology maintenance
+
+Returns:
+
+- \*metastore.MetaTracker: Initialized metadata tracker for resource management
 
 <a name="InitMetricIndex"></a>
-## func [InitMetricIndex](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/metricstore.go#L37>)
+## func [InitMetricIndex](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/metricstore.go#L45>)
 
 ```go
 func InitMetricIndex() (*metricindex.MetricIndex, error)
 ```
 
-InitMetricIndex initializes the metric index for the GoSight agent.
+InitMetricIndex initializes the metric index component for the GoSight server. The metric index provides fast lookup and organization of metric metadata, enabling efficient metric discovery, search, and retrieval operations. It maintains an in\-memory index of metric names, labels, and relationships for optimal query performance.
+
+Returns:
+
+- \*metricindex.MetricIndex: Initialized metric index for fast metric lookups
+- error: Currently always nil, reserved for future error conditions
 
 <a name="InitMetricStore"></a>
-## func [InitMetricStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/metricstore.go#L46>)
+## func [InitMetricStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/metricstore.go#L74>)
 
 ```go
 func InitMetricStore(ctx context.Context, cfg *config.Config, metricCache cache.MetricCache) (metricstore.MetricStore, error)
 ```
 
-InitMetricStore initializes the metric store for the GoSight agent. The metric store is responsible for storing and retrieving metrics.
+InitMetricStore initializes the metric store component for the GoSight server. The metric store provides persistent storage for time\-series metric data, supporting various storage engines optimized for different deployment scenarios and performance requirements.
+
+Supported engines include:
+
+- victoriametrics: High\-performance time\-series database
+- prometheus: Compatible with Prometheus remote storage
+- influxdb: InfluxDB time\-series database
+- memory: In\-memory storage for testing and development
+
+The metric store integrates with the metric cache to provide fast access to frequently queried metrics and reduce load on the underlying storage.
+
+Parameters:
+
+- ctx: Context for initialization and cancellation
+- cfg: Configuration containing metric store settings and engine selection
+- metricCache: Cache component for improved metric query performance
+
+Returns:
+
+- metricstore.MetricStore: Initialized metric store interface implementation
+- error: If metric store initialization fails for the specified engine
+
+<a name="InitResourceDiscovery"></a>
+## func [InitResourceDiscovery](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/resource.go#L105>)
+
+```go
+func InitResourceDiscovery(resourceCache cache.ResourceCache) (*telemetry.ResourceDiscovery, error)
+```
+
+InitResourceDiscovery initializes the resource discovery component for the GoSight server. Resource discovery automatically detects, catalogs, and monitors system resources across the infrastructure. It integrates with the resource cache for fast access and automatic persistence through the cache's background flushing.
+
+The resource discovery system:
+
+- Automatically detects new agents and services
+- Maintains an up\-to\-date inventory of system resources
+- Tracks resource health and availability
+- Provides resource topology and relationship mapping
+- Enables dynamic monitoring configuration
+
+Parameters:
+
+- resourceCache: Cache component for fast resource access and automatic persistence
+
+Returns:
+
+- \*telemetry.ResourceDiscovery: Initialized resource discovery service
+- error: Currently always nil, reserved for future error conditions
+
+<a name="InitResourceStore"></a>
+## func [InitResourceStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/resource.go#L60>)
+
+```go
+func InitResourceStore(cfg *config.Config) (resourcestore.ResourceStore, error)
+```
+
+InitResourceStore initializes the resource store component for the GoSight server. The resource store provides persistent storage for system resources including agents, endpoints, services, containers, and their metadata. It serves as the central repository for resource information used throughout the monitoring system.
+
+Resources stored include:
+
+- Agent information and registration data
+- Service endpoints and health status
+- Container and process metadata
+- Resource tags and labels
+- Resource relationships and dependencies
+
+Currently supported storage engines:
+
+- postgres: PostgreSQL database backend for production deployments
+
+The function establishes a database connection, validates connectivity, and returns a configured resource store ready for use.
+
+Parameters:
+
+- cfg: Configuration containing resource store settings including engine type and DSN
+
+Returns:
+
+- resourcestore.ResourceStore: Initialized resource store interface implementation
+- error: If database connection fails or unsupported engine is specified
 
 <a name="InitRouteStore"></a>
-## func [InitRouteStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/routestore.go#L30>)
+## func [InitRouteStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/routestore.go#L50>)
 
 ```go
 func InitRouteStore(cfg *config.Config) (*routestore.RouteStore, error)
 ```
 
-InitMetricIndex initializes the metric index for the GoSight agent.
+InitRouteStore initializes the route store component for the GoSight server. The route store manages routing configurations for data flow, load balancing, and service mesh integration. It stores and retrieves routing rules that determine how requests and data are directed throughout the system.
+
+Route store capabilities:
+
+- Service routing and load balancing rules
+- Data pipeline routing configurations
+- Traffic routing and failover rules
+- Service mesh integration settings
+- Dynamic routing rule updates
+
+The route store uses file\-based storage for routing configurations, allowing for easy management and version control of routing rules.
+
+Parameters:
+
+- cfg: Configuration containing route store settings including file path
+
+Returns:
+
+- \*routestore.RouteStore: Initialized route store for routing management
+- error: If route store initialization or file access fails
 
 <a name="InitRuleStore"></a>
-## func [InitRuleStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/rulestore.go#L32>)
+## func [InitRuleStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/rulestore.go#L57>)
 
 ```go
 func InitRuleStore(cfg *config.Config) (rulestore.RuleStore, error)
 ```
 
-InitRuleStore initializes the rule store based on the configuration.
+InitRuleStore initializes the rule store component for the GoSight server. The rule store manages alerting rules, evaluation criteria, and monitoring configurations. It provides persistent storage for rules that define when alerts should be triggered based on metric thresholds, log patterns, or system conditions.
+
+Rule types supported:
+
+- Metric\-based alerting rules with thresholds and conditions
+- Log\-based rules for pattern matching and anomaly detection
+- Composite rules combining multiple data sources
+- Scheduled evaluation rules with time\-based triggers
+- Resource\-specific rules for targeted monitoring
+
+Currently supported storage engines:
+
+- yaml: File\-based YAML storage for human\-readable rule definitions
+- memory: In\-memory storage for testing and development \(commented out\)
+
+The YAML engine allows for easy rule management, version control, and collaborative rule development through standard file\-based workflows.
+
+Parameters:
+
+- cfg: Configuration containing rule store settings including engine type and file path
+
+Returns:
+
+- rulestore.RuleStore: Initialized rule store interface implementation
+- error: If rule store initialization fails or unsupported engine is specified
 
 <a name="InitTracker"></a>
-## func [InitTracker](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/tracker.go#L34>)
+## func [InitTracker](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/tracker.go#L56>)
 
 ```go
 func InitTracker(ctx context.Context, dataStore datastore.DataStore, emitter *events.Emitter) *tracker.EndpointTracker
 ```
 
-InitEndpointTracker initializes the unified endpoint tracker. Tracks both agents and containers, and emits lifecycle events.
+InitTracker initializes the unified endpoint tracker for the GoSight server. The endpoint tracker monitors and manages the lifecycle of all system endpoints including agents, containers, and services. It provides real\-time tracking of endpoint status, health, and availability while emitting lifecycle events for system monitoring and alerting.
+
+Key responsibilities:
+
+- Tracking agent registration and heartbeats
+- Monitoring container lifecycle events
+- Detecting endpoint failures and recoveries
+- Emitting lifecycle events for monitoring
+- Maintaining endpoint metadata and status
+- Providing endpoint discovery and inventory
+
+The tracker integrates with the event emitter to publish endpoint changes and uses the data store for persistent tracking state.
+
+Parameters:
+
+- ctx: Context for tracker operations and lifecycle management
+- dataStore: Persistent storage for tracking state and endpoint data
+- emitter: Event emitter for publishing endpoint lifecycle events
+
+Returns:
+
+- \*tracker.EndpointTracker: Initialized endpoint tracker ready for monitoring
 
 <a name="InitUserStore"></a>
-## func [InitUserStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/userstore.go#L38>)
+## func [InitUserStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/userstore.go#L60>)
 
 ```go
 func InitUserStore(cfg *config.Config) (userstore.UserStore, error)
 ```
 
-InitUserStore initializes the user store for the GoSight server. The user store is responsible for storing and retrieving user and permission data. It supports different storage engines, such as PostgreSQL.
+InitUserStore initializes the user store component for the GoSight server. The user store provides persistent storage for user accounts, authentication data, roles, permissions, and access control information. It serves as the foundation for the authentication and authorization system.
+
+User data managed includes:
+
+- User accounts and profiles
+- Password hashes and authentication credentials
+- User roles and role assignments
+- Permissions and access control rules
+- Multi\-factor authentication settings
+- Session and security information
+
+Currently supported storage engines:
+
+- postgres: PostgreSQL database backend for production deployments
+
+The function establishes a secure database connection, validates connectivity, and returns a configured user store ready for authentication operations.
+
+Parameters:
+
+- cfg: Configuration containing user store settings including engine type and DSN
+
+Returns:
+
+- userstore.UserStore: Initialized user store interface implementation
+- error: If database connection fails or unsupported engine is specified
 
 <a name="InitWebSocketHub"></a>
-## func [InitWebSocketHub](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/websocket.go#L35>)
+## func [InitWebSocketHub](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/websocket.go#L58>)
 
 ```go
 func InitWebSocketHub(ctx context.Context, metaStore *metastore.MetaTracker) *websocket.HubManager
 ```
 
-InitWebSocketHub initializes the WebSocket hub for the GoSight agent. The WebSocket hub is responsible for managing WebSocket connections and broadcasting messages to connected clients.
+InitWebSocketHub initializes the WebSocket hub manager for the GoSight server. The WebSocket hub provides real\-time communication between the server and web clients, enabling live updates for monitoring dashboards, alerts, logs, and system events.
+
+The hub manager coordinates multiple specialized WebSocket hubs:
+
+- Alert Hub: Real\-time alert notifications and status updates
+- Log Hub: Live log streaming and search results
+- Event Hub: System events and audit log streaming
+- Metric Hub: Real\-time metric data and dashboard updates
+
+Key features:
+
+- Multi\-hub architecture for organized data streaming
+- Client connection management and authentication
+- Message broadcasting and targeted delivery
+- Connection lifecycle management
+- Integration with metadata tracking for resource\-aware streaming
+
+The function creates the hub manager, starts all individual hubs in separate goroutines, and returns the manager for integration with HTTP handlers.
+
+Parameters:
+
+- ctx: Context for hub lifecycle management and graceful shutdown
+- metaStore: Metadata tracker for resource\-aware message routing
+
+Returns:
+
+- \*websocket.HubManager: Initialized WebSocket hub manager with all hubs running
 
 <a name="LoadServerConfig"></a>
-## func [LoadServerConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/config.go#L40>)
+## func [LoadServerConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bootstrap/config.go#L39>)
 
 ```go
-func LoadServerConfig() *config.Config
+func LoadServerConfig(configFlag *string) *config.Config
 ```
 
 LoadServerConfig loads the server configuration from a file, environment variables, and command line flags. It applies the following order of precedence: 1. Command line flags 2. Environment variables 3. Default configuration file 4. Hardcoded defaults The function returns a pointer to the loaded configuration.

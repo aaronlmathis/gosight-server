@@ -9,6 +9,7 @@ import (
 
 	"github.com/aaronlmathis/gosight-server/internal/store/resourcestore"
 	"github.com/aaronlmathis/gosight-shared/model"
+	"github.com/aaronlmathis/gosight-shared/utils"
 	"github.com/lib/pq"
 )
 
@@ -81,7 +82,7 @@ func (s *PGResourceStore) CreateBatch(ctx context.Context, resources []*model.Re
 	}
 	defer tx.Rollback()
 
-	// Prepare batch insert for main resource records
+	// Prepare batch upsert for main resource records
 	query := `
         INSERT INTO resources (
             id, kind, name, display_name, group_name, parent_id,
@@ -112,20 +113,57 @@ func (s *PGResourceStore) CreateBatch(ctx context.Context, resources []*model.Re
 	}
 
 	query += strings.Join(placeholders, ", ")
+	query += ` ON CONFLICT (id) DO UPDATE SET
+        kind = EXCLUDED.kind,
+        name = EXCLUDED.name,
+        display_name = EXCLUDED.display_name,
+        group_name = EXCLUDED.group_name,
+        parent_id = EXCLUDED.parent_id,
+        status = EXCLUDED.status,
+        last_seen = EXCLUDED.last_seen,
+        location = EXCLUDED.location,
+        environment = EXCLUDED.environment,
+        owner = EXCLUDED.owner,
+        platform = EXCLUDED.platform,
+        runtime = EXCLUDED.runtime,
+        version = EXCLUDED.version,
+        os = EXCLUDED.os,
+        arch = EXCLUDED.arch,
+        ip_address = EXCLUDED.ip_address,
+        resource_type = EXCLUDED.resource_type,
+        cluster = EXCLUDED.cluster,
+        namespace = EXCLUDED.namespace,
+        updated_at = CURRENT_TIMESTAMP`
 	_, err = tx.ExecContext(ctx, query, values...)
 	if err != nil {
+		utils.Error("PGResourceStore: UpdateBatch failed to upsert resources: %v", err)
 		return err
 	}
+	utils.Debug("PGResourceStore: UpdateBatch successfully upserted %d resources", len(resources))
 
-	// Insert labels, tags, and annotations for each resource
-	for _, resource := range resources {
+	// Delete and re-insert labels, tags, and annotations for each resource
+	for i, resource := range resources {
+		utils.Debug("PGResourceStore: updating resource %d/%d: %s (kind: %s)", i+1, len(resources), resource.ID, resource.Kind)
+
+		// Delete existing key-value pairs
+		for _, table := range []string{"resource_labels", "resource_tags", "resource_annotations"} {
+			_, err = tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s WHERE resource_id = $1", table), resource.ID)
+			if err != nil {
+				utils.Error("PGResourceStore: UpdateBatch failed to delete from %s for resource %s: %v", table, resource.ID, err)
+				return err
+			}
+		}
+
 		if err := s.insertKeyValues(ctx, tx, "resource_labels", resource.ID, resource.Labels); err != nil {
+			utils.Error("PGResourceStore: UpdateBatch failed to insert labels for resource %s: %v", resource.ID, err)
 			return err
 		}
 		if err := s.insertKeyValues(ctx, tx, "resource_tags", resource.ID, resource.Tags); err != nil {
+			utils.Error("PGResourceStore: UpdateBatch failed to insert tags for resource %s: %v", resource.ID, err)
 			return err
 		}
 		if err := s.insertKeyValues(ctx, tx, "resource_annotations", resource.ID, resource.Annotations); err != nil {
+			utils.Error("PGResourceStore: UpdateBatch failed to insert annotations for resource %s: %v", resource.ID, err)
 			return err
 		}
 	}
@@ -230,55 +268,99 @@ func (s *PGResourceStore) UpdateBatch(ctx context.Context, resources []*model.Re
 		return nil
 	}
 
+	utils.Debug("PGResourceStore: UpdateBatch called with %d resources", len(resources))
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
+		utils.Error("PGResourceStore: UpdateBatch failed to begin transaction: %v", err)
 		return err
 	}
 	defer tx.Rollback()
 
-	// Update each resource individually for simplicity
-	for _, resource := range resources {
+	// First, upsert all main resource records
+	for i, resource := range resources {
+		utils.Debug("PGResourceStore: upserting resource %d/%d: %s (kind: %s)", i+1, len(resources), resource.ID, resource.Kind)
+
 		query := `
-            UPDATE resources SET
-                kind = $2, name = $3, display_name = $4, group_name = $5, parent_id = $6,
-                status = $7, last_seen = $8, location = $9, environment = $10,
-                owner = $11, platform = $12, runtime = $13, version = $14, os = $15,
-                arch = $16, ip_address = $17, resource_type = $18, cluster = $19,
-                namespace = $20, updated_at = now()
-            WHERE id = $1`
+            INSERT INTO resources (
+                id, kind, name, display_name, group_name, parent_id,
+                status, last_seen, first_seen, created_at, updated_at,
+                location, environment, owner, platform, runtime, version,
+                os, arch, ip_address, resource_type, cluster, namespace
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23
+            ) ON CONFLICT (id) DO UPDATE SET
+                kind = EXCLUDED.kind,
+                name = EXCLUDED.name,
+                display_name = EXCLUDED.display_name,
+                group_name = EXCLUDED.group_name,
+                parent_id = EXCLUDED.parent_id,
+                status = EXCLUDED.status,
+                last_seen = EXCLUDED.last_seen,
+                location = EXCLUDED.location,
+                environment = EXCLUDED.environment,
+                owner = EXCLUDED.owner,
+                platform = EXCLUDED.platform,
+                runtime = EXCLUDED.runtime,
+                version = EXCLUDED.version,
+                os = EXCLUDED.os,
+                arch = EXCLUDED.arch,
+                ip_address = EXCLUDED.ip_address,
+                resource_type = EXCLUDED.resource_type,
+                cluster = EXCLUDED.cluster,
+                namespace = EXCLUDED.namespace,
+                updated_at = CURRENT_TIMESTAMP`
 
 		_, err = tx.ExecContext(ctx, query,
 			resource.ID, resource.Kind, resource.Name, resource.DisplayName,
 			resource.Group, nullString(resource.ParentID), resource.Status,
-			resource.LastSeen, resource.Location, resource.Environment,
-			resource.Owner, resource.Platform, resource.Runtime, resource.Version,
+			resource.LastSeen, resource.FirstSeen, resource.CreatedAt, time.Now(),
+			resource.Location, resource.Environment, resource.Owner,
+			resource.Platform, resource.Runtime, resource.Version,
 			resource.OS, resource.Arch, resource.IPAddress, resource.ResourceType,
 			resource.Cluster, resource.Namespace,
 		)
 		if err != nil {
-			return err
-		}
-
-		// Delete and re-insert key-value pairs
-		for _, table := range []string{"resource_labels", "resource_tags", "resource_annotations"} {
-			_, err = tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s WHERE resource_id = $1", table), resource.ID)
-			if err != nil {
-				return err
-			}
-		}
-
-		if err := s.insertKeyValues(ctx, tx, "resource_labels", resource.ID, resource.Labels); err != nil {
-			return err
-		}
-		if err := s.insertKeyValues(ctx, tx, "resource_tags", resource.ID, resource.Tags); err != nil {
-			return err
-		}
-		if err := s.insertKeyValues(ctx, tx, "resource_annotations", resource.ID, resource.Annotations); err != nil {
+			utils.Error("PGResourceStore: UpdateBatch failed to upsert resource %s: %v", resource.ID, err)
 			return err
 		}
 	}
 
-	return tx.Commit()
+	// Now handle key-value pairs for all resources
+	for i, resource := range resources {
+		utils.Debug("PGResourceStore: updating key-value pairs for resource %d/%d: %s", i+1, len(resources), resource.ID)
+
+		// Delete existing key-value pairs
+		for _, table := range []string{"resource_labels", "resource_tags", "resource_annotations"} {
+			_, err = tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s WHERE resource_id = $1", table), resource.ID)
+			if err != nil {
+				utils.Error("PGResourceStore: UpdateBatch failed to delete from %s for resource %s: %v", table, resource.ID, err)
+				return err
+			}
+		}
+
+		// Insert new key-value pairs
+		if err := s.insertKeyValues(ctx, tx, "resource_labels", resource.ID, resource.Labels); err != nil {
+			utils.Error("PGResourceStore: UpdateBatch failed to insert labels for resource %s: %v", resource.ID, err)
+			return err
+		}
+		if err := s.insertKeyValues(ctx, tx, "resource_tags", resource.ID, resource.Tags); err != nil {
+			utils.Error("PGResourceStore: UpdateBatch failed to insert tags for resource %s: %v", resource.ID, err)
+			return err
+		}
+		if err := s.insertKeyValues(ctx, tx, "resource_annotations", resource.ID, resource.Annotations); err != nil {
+			utils.Error("PGResourceStore: UpdateBatch failed to insert annotations for resource %s: %v", resource.ID, err)
+			return err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		utils.Error("PGResourceStore: UpdateBatch failed to commit transaction: %v", err)
+		return err
+	}
+
+	utils.Info("PGResourceStore: UpdateBatch successfully updated %d resources", len(resources))
+	return nil
 }
 
 func (s *PGResourceStore) List(ctx context.Context, filter *model.ResourceFilter, limit, offset int) ([]*model.Resource, error) {
@@ -661,6 +743,7 @@ func (s *PGResourceStore) insertKeyValues(ctx context.Context, tx *sql.Tx, table
 	}
 
 	query += strings.Join(placeholders, ", ")
+	query += " ON CONFLICT (resource_id, key) DO UPDATE SET value = EXCLUDED.value"
 	_, err := tx.ExecContext(ctx, query, values...)
 	return err
 }
@@ -755,7 +838,7 @@ func (s *PGResourceStore) Search(ctx context.Context, query *model.ResourceSearc
 
 	// Add ordering and limits
 	sqlQuery += " ORDER BY created_at DESC"
-	
+
 	if query.Limit > 0 {
 		argCounter++
 		sqlQuery += fmt.Sprintf(" LIMIT $%d", argCounter)

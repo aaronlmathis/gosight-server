@@ -8,13 +8,16 @@ import "github.com/aaronlmathis/gosight-server/internal/usermodel"
 
 ## Index
 
+- [type AdminPasswordChangeRequest](<#AdminPasswordChangeRequest>)
 - [type CompleteUser](<#CompleteUser>)
+- [type CreateUserRequest](<#CreateUserRequest>)
 - [type NotificationPreferences](<#NotificationPreferences>)
 - [type PasswordChangeRequest](<#PasswordChangeRequest>)
 - [type Permission](<#Permission>)
 - [type ProfileUpdateRequest](<#ProfileUpdateRequest>)
 - [type Role](<#Role>)
 - [type SafeUser](<#SafeUser>)
+- [type UpdateUserRequest](<#UpdateUserRequest>)
 - [type User](<#User>)
 - [type UserPreferencesRequest](<#UserPreferencesRequest>)
 - [type UserProfile](<#UserProfile>)
@@ -22,8 +25,19 @@ import "github.com/aaronlmathis/gosight-server/internal/usermodel"
 - [type UserSettings](<#UserSettings>)
 
 
+<a name="AdminPasswordChangeRequest"></a>
+## type [AdminPasswordChangeRequest](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L118-L120>)
+
+AdminPasswordChangeRequest represents the request payload for admin password changes
+
+```go
+type AdminPasswordChangeRequest struct {
+    NewPassword string `json:"new_password"`
+}
+```
+
 <a name="CompleteUser"></a>
-## type [CompleteUser](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L80-L84>)
+## type [CompleteUser](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L81-L85>)
 
 CompleteUser represents a user with their profile and settings
 
@@ -35,8 +49,23 @@ type CompleteUser struct {
 }
 ```
 
+<a name="CreateUserRequest"></a>
+## type [CreateUserRequest](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L101-L107>)
+
+CreateUserRequest represents the request payload for creating a new user
+
+```go
+type CreateUserRequest struct {
+    Username  string `json:"username"`
+    Email     string `json:"email"`
+    FirstName string `json:"first_name"`
+    LastName  string `json:"last_name"`
+    Password  string `json:"password"`
+}
+```
+
 <a name="NotificationPreferences"></a>
-## type [NotificationPreferences](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L73-L77>)
+## type [NotificationPreferences](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L74-L78>)
 
 NotificationPreferences represents detailed notification settings
 
@@ -49,7 +78,7 @@ type NotificationPreferences struct {
 ```
 
 <a name="PasswordChangeRequest"></a>
-## type [PasswordChangeRequest](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L59-L63>)
+## type [PasswordChangeRequest](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L60-L64>)
 
 PasswordChangeRequest represents the request payload for password changes
 
@@ -62,7 +91,7 @@ type PasswordChangeRequest struct {
 ```
 
 <a name="Permission"></a>
-## type [Permission](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L93-L97>)
+## type [Permission](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L94-L98>)
 
 
 
@@ -75,7 +104,7 @@ type Permission struct {
 ```
 
 <a name="ProfileUpdateRequest"></a>
-## type [ProfileUpdateRequest](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L53-L56>)
+## type [ProfileUpdateRequest](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L54-L57>)
 
 ProfileUpdateRequest represents the request payload for profile updates
 
@@ -87,7 +116,7 @@ type ProfileUpdateRequest struct {
 ```
 
 <a name="Role"></a>
-## type [Role](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L86-L91>)
+## type [Role](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L87-L92>)
 
 
 
@@ -101,7 +130,7 @@ type Role struct {
 ```
 
 <a name="SafeUser"></a>
-## type [SafeUser](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L26-L31>)
+## type [SafeUser](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L27-L32>)
 
 
 
@@ -114,8 +143,22 @@ type SafeUser struct {
 }
 ```
 
+<a name="UpdateUserRequest"></a>
+## type [UpdateUserRequest](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L110-L115>)
+
+UpdateUserRequest represents the request payload for updating a user
+
+```go
+type UpdateUserRequest struct {
+    Username  string `json:"username"`
+    Email     string `json:"email"`
+    FirstName string `json:"first_name"`
+    LastName  string `json:"last_name"`
+}
+```
+
 <a name="User"></a>
-## type [User](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L8-L25>)
+## type [User](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L8-L26>)
 
 
 
@@ -135,13 +178,14 @@ type User struct {
     SSOID         string
     Roles         []Role
     CreatedAt     time.Time
+    UpdatedAt     time.Time
     LastLogin     time.Time
     Scopes        map[string][]string
 }
 ```
 
 <a name="UserPreferencesRequest"></a>
-## type [UserPreferencesRequest](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L66-L70>)
+## type [UserPreferencesRequest](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L67-L71>)
 
 UserPreferencesRequest represents the request payload for user preferences
 
@@ -154,7 +198,7 @@ type UserPreferencesRequest struct {
 ```
 
 <a name="UserProfile"></a>
-## type [UserProfile](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L34-L40>)
+## type [UserProfile](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L35-L41>)
 
 UserProfile represents the user\_profiles table
 
@@ -169,7 +213,7 @@ type UserProfile struct {
 ```
 
 <a name="UserSetting"></a>
-## type [UserSetting](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L43-L47>)
+## type [UserSetting](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L44-L48>)
 
 UserSetting represents a single setting from the user\_settings table
 
@@ -182,7 +226,7 @@ type UserSetting struct {
 ```
 
 <a name="UserSettings"></a>
-## type [UserSettings](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L50>)
+## type [UserSettings](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/usermodel/user.go#L51>)
 
 UserSettings represents a collection of user settings
 

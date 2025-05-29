@@ -84,9 +84,9 @@ func ConvertProtoProcessPayload(pb *proto.ProcessPayload) model.ProcessPayload {
 
 	processes := make([]model.ProcessInfo, 0, len(pb.Processes))
 	for _, p := range pb.Processes {
-		tags := make(map[string]string, len(p.Tags))
-		for k, v := range p.Tags {
-			tags[k] = v
+		labels := make(map[string]string, len(p.Labels))
+		for k, v := range p.Labels {
+			labels[k] = v
 		}
 
 		processes = append(processes, model.ProcessInfo{
@@ -99,7 +99,7 @@ func ConvertProtoProcessPayload(pb *proto.ProcessPayload) model.ProcessPayload {
 			MemPercent: p.MemPercent,
 			Threads:    int(p.Threads),
 			StartTime:  p.StartTime.AsTime(),
-			Tags:       tags,
+			Labels:     labels,
 		})
 	}
 
@@ -111,59 +111,6 @@ func ConvertProtoProcessPayload(pb *proto.ProcessPayload) model.ProcessPayload {
 		Timestamp:  pb.Timestamp.AsTime(),
 		Processes:  processes,
 		Meta:       convertProtoMetaToModelMeta(pb.Meta),
-	}
-}
-
-// ConvertToModelLogPayload converts a protobuf LogPayload to a model.LogPayload.
-func ConvertToModelLogPayload(pbPayload *proto.LogPayload) model.LogPayload {
-
-	var logs []model.LogEntry
-	for _, l := range pbPayload.Logs {
-		var meta *model.LogMeta
-		if l.Meta != nil {
-			meta = &model.LogMeta{
-				Platform:      l.Meta.Platform,
-				AppName:       l.Meta.AppName,
-				AppVersion:    l.Meta.AppVersion,
-				ContainerID:   l.Meta.ContainerId,
-				ContainerName: l.Meta.ContainerName,
-				Unit:          l.Meta.Unit,
-				Service:       l.Meta.Service,
-				EventID:       l.Meta.EventId,
-				User:          l.Meta.User,
-				Executable:    l.Meta.Executable,
-				Path:          l.Meta.Path,
-				Extra:         l.Meta.Extra,
-			}
-		}
-
-		log := model.LogEntry{
-			Timestamp: l.Timestamp.AsTime(),
-			Level:     l.Level,
-			Message:   l.Message,
-			Source:    l.Source,
-			Category:  l.Category,
-			PID:       int(l.Pid),
-			Fields:    l.Fields,
-			Tags:      l.Tags,
-			Meta:      meta,
-		}
-		logs = append(logs, log)
-	}
-
-	var meta *model.Meta
-	if pbPayload.Meta != nil {
-		meta = convertProtoMetaToModelMeta(pbPayload.Meta)
-	}
-
-	return model.LogPayload{
-		AgentID:    pbPayload.AgentId,
-		HostID:     pbPayload.HostId,
-		Hostname:   pbPayload.Hostname,
-		EndpointID: pbPayload.EndpointId,
-		Timestamp:  pbPayload.Timestamp.AsTime(),
-		Logs:       logs,
-		Meta:       meta,
 	}
 }
 
@@ -218,7 +165,7 @@ func convertProtoMetaToModelMeta(pbMeta *proto.Meta) *model.Meta {
 		PrivateIP:            pbMeta.PrivateIp,
 		MACAddress:           pbMeta.MacAddress,
 		NetworkInterface:     pbMeta.NetworkInterface,
-		Tags:                 pbMeta.Tags,
+		Labels:               pbMeta.Labels,
 	}
 }
 
@@ -277,7 +224,7 @@ func convertOTLPResourceToMeta(resource *resourcepb.Resource) *model.Meta {
 	}
 
 	meta := &model.Meta{
-		Tags: make(map[string]string),
+		Labels: make(map[string]string),
 	}
 
 	// Process resource attributes
@@ -360,8 +307,8 @@ func convertOTLPResourceToMeta(resource *resourcepb.Resource) *model.Meta {
 		case "k8s.node.name":
 			meta.NodeName = value
 		default:
-			// Store unknown attributes as tags
-			meta.Tags[key] = value
+			// Store unknown attributes as labels
+			meta.Labels[key] = value
 		}
 	}
 
@@ -603,9 +550,9 @@ func convertOTLPToModelLogPayloads(req *collogpb.ExportLogsServiceRequest) []mod
 				// Convert severity to level
 				level := convertSeverityToLevel(logRecord.SeverityNumber)
 
-				// Extract attributes as fields and tags
+				// Extract attributes as fields and labels
 				fields := make(map[string]string)
-				tags := make(map[string]string)
+				labels := make(map[string]string)
 
 				// Create LogMeta from attributes
 				logMeta := &model.LogMeta{}
@@ -667,7 +614,7 @@ func convertOTLPToModelLogPayloads(req *collogpb.ExportLogsServiceRequest) []mod
 						if strings.HasPrefix(key, "tag.") ||
 							key == "environment" || key == "deployment" ||
 							key == "region" || key == "zone" {
-							tags[key] = value
+							labels[key] = value
 						} else {
 							// Everything else goes to fields
 							fields[key] = value
@@ -694,7 +641,7 @@ func convertOTLPToModelLogPayloads(req *collogpb.ExportLogsServiceRequest) []mod
 					Category:  category,
 					PID:       int(pid),
 					Fields:    fields,
-					Tags:      tags,
+					Labels:    labels,
 					Meta:      logMeta,
 				}
 

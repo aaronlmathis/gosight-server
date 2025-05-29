@@ -66,7 +66,7 @@ type vlLogEntry map[string]interface{}
 //	    Start: time.Now().Add(-1 * time.Hour),
 //	    End: time.Now(),
 //	    Limit: 100,
-//	    Tags: map[string]string{"service": "auth"},
+//	    Labels: map[string]string{"service": "auth"},
 //	    Contains: "login failed",
 //	}
 //	logs, err := store.GetLogs(filter)
@@ -239,7 +239,7 @@ func (v *VictoriaLogsStore) buildLogsQLQuery(filter model.LogFilter) string {
 	}
 
 	// Add tag filters
-	for k, v := range filter.Tags {
+	for k, v := range filter.Labels {
 		conditions = append(conditions, fmt.Sprintf("tag_%s:%q", k, v))
 	}
 
@@ -269,7 +269,7 @@ func (v *VictoriaLogsStore) buildLogsQLQuery(filter model.LogFilter) string {
 
 // convertVLEntryToLogEntry converts a VictoriaLogs response entry to GoSight's LogEntry format.
 // This function handles the reverse mapping from VictoriaLogs' flat field structure
-// back to GoSight's structured log entry with separate fields, tags, and metadata.
+// back to GoSight's structured log entry with separate fields, labels, and metadata.
 //
 // Conversion Process:
 //  1. Parse timestamp from _time field
@@ -308,7 +308,7 @@ func (v *VictoriaLogsStore) convertVLEntryToLogEntry(vlEntry vlLogEntry) (*model
 		Timestamp: timestamp,
 		Message:   message,
 		Fields:    make(map[string]string),
-		Tags:      make(map[string]string),
+		Labels:    make(map[string]string),
 	}
 
 	// Helper function to safely convert interface{} to string
@@ -342,7 +342,7 @@ func (v *VictoriaLogsStore) convertVLEntryToLogEntry(vlEntry vlLogEntry) (*model
 			if strings.HasPrefix(k, "field_") {
 				logEntry.Fields[strings.TrimPrefix(k, "field_")] = toString(v)
 			} else if strings.HasPrefix(k, "tag_") {
-				logEntry.Tags[strings.TrimPrefix(k, "tag_")] = toString(v)
+				logEntry.Labels[strings.TrimPrefix(k, "tag_")] = toString(v)
 			} else if strings.HasPrefix(k, "meta_") {
 				// Initialize Meta if needed
 				if logEntry.Meta == nil {
@@ -383,7 +383,7 @@ func (v *VictoriaLogsStore) convertVLEntryToLogEntry(vlEntry vlLogEntry) (*model
 					logEntry.Meta.Path = toString(v)
 				default:
 					// Add as tag for other fields
-					logEntry.Tags[k] = toString(v)
+					logEntry.Labels[k] = toString(v)
 				}
 			}
 		}

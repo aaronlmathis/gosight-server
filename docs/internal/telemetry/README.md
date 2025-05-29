@@ -9,14 +9,22 @@ import "github.com/aaronlmathis/gosight-server/internal/telemetry"
 ## Index
 
 - [func ConvertProtoProcessPayload\(pb \*proto.ProcessPayload\) model.ProcessPayload](<#ConvertProtoProcessPayload>)
-- [func ConvertToModelLogPayload\(pbPayload \*proto.LogPayload\) model.LogPayload](<#ConvertToModelLogPayload>)
 - [func ConvertToModelPayload\(pbPayload \*proto.MetricPayload\) model.MetricPayload](<#ConvertToModelPayload>)
 - [func MergeDimensionsWithMeta\(base map\[string\]string, meta \*model.Meta\) map\[string\]string](<#MergeDimensionsWithMeta>)
 - [func SafeHandlePayload\(handler func\(\)\)](<#SafeHandlePayload>)
 - [type LogsHandler](<#LogsHandler>)
   - [func NewLogsHandler\(sys \*sys.SystemContext\) \*LogsHandler](<#NewLogsHandler>)
   - [func \(h \*LogsHandler\) EvaluateSeverityLevel\(logPayload \*model.LogPayload\)](<#LogsHandler.EvaluateSeverityLevel>)
-  - [func \(h \*LogsHandler\) SubmitStream\(stream pb.LogService\_SubmitStreamServer\) error](<#LogsHandler.SubmitStream>)
+  - [func \(h \*LogsHandler\) Export\(ctx context.Context, req \*collogpb.ExportLogsServiceRequest\) \(\*collogpb.ExportLogsServiceResponse, error\)](<#LogsHandler.Export>)
+- [type MetricsHandler](<#MetricsHandler>)
+  - [func NewMetricsHandler\(sys \*sys.SystemContext\) \*MetricsHandler](<#NewMetricsHandler>)
+  - [func \(h \*MetricsHandler\) Export\(ctx context.Context, req \*colmetricpb.ExportMetricsServiceRequest\) \(\*colmetricpb.ExportMetricsServiceResponse, error\)](<#MetricsHandler.Export>)
+- [type ResourceDiscovery](<#ResourceDiscovery>)
+  - [func NewResourceDiscovery\(cache resourcecache.ResourceCache\) \*ResourceDiscovery](<#NewResourceDiscovery>)
+  - [func \(rd \*ResourceDiscovery\) ProcessLogPayload\(payload \*model.LogPayload\) \*model.LogPayload](<#ResourceDiscovery.ProcessLogPayload>)
+  - [func \(rd \*ResourceDiscovery\) ProcessMetricPayload\(payload \*model.MetricPayload\) \*model.MetricPayload](<#ResourceDiscovery.ProcessMetricPayload>)
+  - [func \(rd \*ResourceDiscovery\) ProcessProcessPayload\(payload \*model.ProcessPayload\) \*model.ProcessPayload](<#ResourceDiscovery.ProcessProcessPayload>)
+  - [func \(rd \*ResourceDiscovery\) ProcessTracePayload\(payload \*model.TracePayload\) \*model.TracePayload](<#ResourceDiscovery.ProcessTracePayload>)
 - [type StreamHandler](<#StreamHandler>)
   - [func NewStreamHandler\(sys \*sys.SystemContext\) \*StreamHandler](<#NewStreamHandler>)
   - [func \(h \*StreamHandler\) EnqueueCommandToAgent\(ctx context.Context, agentID string, commandType, command string, args \[\]string\) error](<#StreamHandler.EnqueueCommandToAgent>)
@@ -24,7 +32,7 @@ import "github.com/aaronlmathis/gosight-server/internal/telemetry"
 
 
 <a name="ConvertProtoProcessPayload"></a>
-## func [ConvertProtoProcessPayload](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/convert.go#L72>)
+## func [ConvertProtoProcessPayload](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/convert.go#L83>)
 
 ```go
 func ConvertProtoProcessPayload(pb *proto.ProcessPayload) model.ProcessPayload
@@ -32,17 +40,8 @@ func ConvertProtoProcessPayload(pb *proto.ProcessPayload) model.ProcessPayload
 
 ConvertProtoProcessPayload converts a protobuf ProcessPayload to a model.ProcessPayload.
 
-<a name="ConvertToModelLogPayload"></a>
-## func [ConvertToModelLogPayload](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/convert.go#L107>)
-
-```go
-func ConvertToModelLogPayload(pbPayload *proto.LogPayload) model.LogPayload
-```
-
-ConvertToModelLogPayload converts a protobuf LogPayload to a model.LogPayload.
-
 <a name="ConvertToModelPayload"></a>
-## func [ConvertToModelPayload](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/convert.go#L30>)
+## func [ConvertToModelPayload](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/convert.go#L41>)
 
 ```go
 func ConvertToModelPayload(pbPayload *proto.MetricPayload) model.MetricPayload
@@ -51,7 +50,7 @@ func ConvertToModelPayload(pbPayload *proto.MetricPayload) model.MetricPayload
 ConvertToModelPayload converts a protobuf MetricPayload to a model.MetricPayload.
 
 <a name="MergeDimensionsWithMeta"></a>
-## func [MergeDimensionsWithMeta](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/helpers.go#L6>)
+## func [MergeDimensionsWithMeta](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/helpers.go#L8>)
 
 ```go
 func MergeDimensionsWithMeta(base map[string]string, meta *model.Meta) map[string]string
@@ -69,19 +68,19 @@ func SafeHandlePayload(handler func())
 SafeHandlePayload wraps a handler function to recover from any panics that occur during its execution.
 
 <a name="LogsHandler"></a>
-## type [LogsHandler](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/logs.go#L36-L39>)
+## type [LogsHandler](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/logs.go#L38-L41>)
 
 
 
 ```go
 type LogsHandler struct {
     Sys *sys.SystemContext
-    pb.UnimplementedLogServiceServer
+    collogpb.UnimplementedLogsServiceServer
 }
 ```
 
 <a name="NewLogsHandler"></a>
-### func [NewLogsHandler](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/logs.go#L41>)
+### func [NewLogsHandler](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/logs.go#L43>)
 
 ```go
 func NewLogsHandler(sys *sys.SystemContext) *LogsHandler
@@ -90,19 +89,109 @@ func NewLogsHandler(sys *sys.SystemContext) *LogsHandler
 
 
 <a name="LogsHandler.EvaluateSeverityLevel"></a>
-### func \(\*LogsHandler\) [EvaluateSeverityLevel](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/logs.go#L106>)
+### func \(\*LogsHandler\) [EvaluateSeverityLevel](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/logs.go#L101>)
 
 ```go
 func (h *LogsHandler) EvaluateSeverityLevel(logPayload *model.LogPayload)
 ```
 
-EvaluateSeverityLevel evaluates the severity level of logs based on thresholds defined in the system. Based on that severity, different actions can be taken such as generating events that can trigger alerts.
+EvaluateSeverityLevel evaluates the severity level of logs based on thresholds defined in the system. Based on that severity, different actions can be taken such as generating events that can trigger alerts. \(COMPLETELY PRESERVED \- no changes needed\)
 
-<a name="LogsHandler.SubmitStream"></a>
-### func \(\*LogsHandler\) [SubmitStream](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/logs.go#L48>)
+<a name="LogsHandler.Export"></a>
+### func \(\*LogsHandler\) [Export](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/logs.go#L51>)
 
 ```go
-func (h *LogsHandler) SubmitStream(stream pb.LogService_SubmitStreamServer) error
+func (h *LogsHandler) Export(ctx context.Context, req *collogpb.ExportLogsServiceRequest) (*collogpb.ExportLogsServiceResponse, error)
+```
+
+Export implements the OTLP LogsService Export method \(unary, not streaming\)
+
+<a name="MetricsHandler"></a>
+## type [MetricsHandler](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/metrics.go#L46-L49>)
+
+MetricsHandler implements the OTLP MetricsService for processing metric telemetry data. This handler receives OTLP metrics via unary gRPC calls, converts them to GoSight's internal model format, and processes them through the complete telemetry pipeline. It handles tag enrichment, rule evaluation, agent tracking, broadcasting to WebSocket clients, buffering/storage, metric indexing, and caching.
+
+```go
+type MetricsHandler struct {
+    Sys *sys.SystemContext
+    colmetricpb.UnimplementedMetricsServiceServer
+}
+```
+
+<a name="NewMetricsHandler"></a>
+### func [NewMetricsHandler](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/metrics.go#L55>)
+
+```go
+func NewMetricsHandler(sys *sys.SystemContext) *MetricsHandler
+```
+
+NewMetricsHandler creates a new OTLP metrics handler with the provided system context. The handler initializes with access to the complete GoSight system including stores, buffers, caches, WebSocket hubs, rule evaluators, and metric indexing systems. It logs the initialization with details about the configured metric store type.
+
+<a name="MetricsHandler.Export"></a>
+### func \(\*MetricsHandler\) [Export](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/metrics.go#L78>)
+
+```go
+func (h *MetricsHandler) Export(ctx context.Context, req *colmetricpb.ExportMetricsServiceRequest) (*colmetricpb.ExportMetricsServiceResponse, error)
+```
+
+Export implements the OTLP MetricsService Export method for receiving metric telemetry. This method handles incoming OTLP ExportMetricsServiceRequest messages, converts them to GoSight's internal MetricPayload format, and processes them through the complete telemetry pipeline. The processing includes:
+
+\- Tag enrichment from endpoint\-specific tag cache \- Rule evaluation for alerting and event generation \- Agent and container information tracking \- Real\-time broadcasting to WebSocket clients \- Buffered storage with fallback to direct store writes \- Metric indexing for search and discovery \- In\-memory caching for performance optimization
+
+The method returns an OTLP\-compliant success response or an error status if the request is invalid or processing fails. All processing is wrapped in SafeHandlePayload to ensure robust error handling and prevent service disruption.
+
+<a name="ResourceDiscovery"></a>
+## type [ResourceDiscovery](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/resource_discovery.go#L17-L19>)
+
+
+
+```go
+type ResourceDiscovery struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewResourceDiscovery"></a>
+### func [NewResourceDiscovery](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/resource_discovery.go#L21>)
+
+```go
+func NewResourceDiscovery(cache resourcecache.ResourceCache) *ResourceDiscovery
+```
+
+
+
+<a name="ResourceDiscovery.ProcessLogPayload"></a>
+### func \(\*ResourceDiscovery\) [ProcessLogPayload](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/resource_discovery.go#L62>)
+
+```go
+func (rd *ResourceDiscovery) ProcessLogPayload(payload *model.LogPayload) *model.LogPayload
+```
+
+
+
+<a name="ResourceDiscovery.ProcessMetricPayload"></a>
+### func \(\*ResourceDiscovery\) [ProcessMetricPayload](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/resource_discovery.go#L27>)
+
+```go
+func (rd *ResourceDiscovery) ProcessMetricPayload(payload *model.MetricPayload) *model.MetricPayload
+```
+
+
+
+<a name="ResourceDiscovery.ProcessProcessPayload"></a>
+### func \(\*ResourceDiscovery\) [ProcessProcessPayload](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/resource_discovery.go#L131>)
+
+```go
+func (rd *ResourceDiscovery) ProcessProcessPayload(payload *model.ProcessPayload) *model.ProcessPayload
+```
+
+
+
+<a name="ResourceDiscovery.ProcessTracePayload"></a>
+### func \(\*ResourceDiscovery\) [ProcessTracePayload](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/resource_discovery.go#L96>)
+
+```go
+func (rd *ResourceDiscovery) ProcessTracePayload(payload *model.TracePayload) *model.TracePayload
 ```
 
 
@@ -138,12 +227,12 @@ func (h *StreamHandler) EnqueueCommandToAgent(ctx context.Context, agentID strin
 
 
 <a name="StreamHandler.Stream"></a>
-### func \(\*StreamHandler\) [Stream](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/streams.go#L51>)
+### func \(\*StreamHandler\) [Stream](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/telemetry/streams.go#L52>)
 
 ```go
 func (h *StreamHandler) Stream(stream pb.StreamService_StreamServer) error
 ```
 
-
+Stream implements the gRPC StreamService\_StreamServer method
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)

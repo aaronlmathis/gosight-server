@@ -92,5 +92,10 @@ func InitCaches(ctx context.Context, cfg *config.Config, resourceStore resources
 		return nil, fmt.Errorf("unsupported cache provider: %s", cfg.Cache.Engine)
 	}
 
+	// Warm the resource cache with existing data from store
+	if err := caches.Resources.WarmCache(ctx); err != nil {
+		return nil, fmt.Errorf("failed to warm resource cache: %w", err)
+	}
+
 	return caches, nil
 }

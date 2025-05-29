@@ -82,24 +82,15 @@ func (h *MetricsHandler) Export(ctx context.Context, req *colmetricpb.ExportMetr
 
 	// Convert OTLP request to model.MetricPayload(s) using comprehensive conversion
 	metricPayloads := convertOTLPToModelMetricPayloads(req)
-	utils.Info("OTLP metrics export received with %d resource metrics", len(metricPayloads))
+	//utils.Info("OTLP metrics export received with %d resource metrics", len(metricPayloads))
 	// Process each converted payload using existing business logic
 	for _, converted := range metricPayloads {
-		utils.Debug("Processing converted MetricPayload with %d metrics", len(converted.Metrics))
+		//utils.Debug("Processing converted MetricPayload with %d metrics", len(converted.Metrics))
 		SafeHandlePayload(func() {
-			// Tag enrichment from in-memory cache
-			if converted.Meta != nil && converted.Meta.EndpointID != "" {
-				tags := h.Sys.Cache.Tags.GetFlattenedTagsForEndpoint(converted.Meta.EndpointID)
-				if len(tags) > 0 {
-					if converted.Meta.Tags == nil {
-						converted.Meta.Tags = make(map[string]string)
-					}
-					for k, v := range tags {
-						if _, exists := converted.Meta.Tags[k]; !exists {
-							converted.Meta.Tags[k] = v
-						}
-					}
-				}
+			// Resource discovery and payload enrichment
+			enrichedPayload := h.Sys.Tele.ResourceDiscovery.ProcessMetricPayload(&converted)
+			if enrichedPayload != nil {
+				converted = *enrichedPayload
 			}
 
 			// Evaluate rules
@@ -127,16 +118,7 @@ func (h *MetricsHandler) Export(ctx context.Context, req *colmetricpb.ExportMetr
 				}
 			}
 
-			// Metric indexing
-			if converted.Meta != nil && converted.Meta.EndpointID != "" {
-				h.Sys.Tele.Meta.Set(converted.Meta.EndpointID, *converted.Meta)
-			}
-			for _, m := range converted.Metrics {
-				merged := MergeDimensionsWithMeta(m.Dimensions, converted.Meta)
-				h.Sys.Tele.Index.Add(m.Namespace, m.SubNamespace, m.Name, merged)
-			}
-
-			// Add to cache
+			// Add to Metric cache
 			h.Sys.Cache.Metrics.Add(&converted)
 		})
 	}

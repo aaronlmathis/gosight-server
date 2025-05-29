@@ -116,7 +116,7 @@ func (m *Manager) HandleState(ctx context.Context, rule model.AlertRule, meta *m
 			LastValue:  value,
 			Level:      rule.Level,
 			Message:    rule.Message,
-			Labels:     utils.SafeCopyTags(meta),
+			Labels:     utils.SafeCopyLabels(meta),
 		}
 
 		event := model.EventEntry{
@@ -127,7 +127,7 @@ func (m *Manager) HandleState(ctx context.Context, rule model.AlertRule, meta *m
 			Source:    rule.Scope.Namespace + "." + rule.Scope.SubNamespace + "." + rule.Scope.Metric,
 			Scope:     scope,
 			Target:    target,
-			Meta:      utils.SafeCopyTags(meta),
+			Meta:      utils.SafeCopyLabels(meta),
 		}
 		event.Meta["rule_id"] = rule.ID
 
@@ -186,7 +186,7 @@ func (m *Manager) HandleLogState(ctx context.Context, rule model.AlertRule, meta
 			LastValue:  0,
 			Level:      rule.Level,
 			Message:    rule.Message + ": " + log.Message,
-			Labels:     utils.SafeCopyTags(meta),
+			Labels:     utils.SafeCopyLabels(meta),
 		}
 
 		event := model.EventEntry{
@@ -197,7 +197,7 @@ func (m *Manager) HandleLogState(ctx context.Context, rule model.AlertRule, meta
 			Source:    log.Source,
 			Scope:     "endpoint",
 			Target:    meta.EndpointID,
-			Meta:      utils.SafeCopyTags(meta),
+			Meta:      utils.SafeCopyLabels(meta),
 		}
 		event.Meta["rule_id"] = rule.ID
 
@@ -233,7 +233,7 @@ func (m *Manager) emitAlertFiringEvent(ctx context.Context, rule model.AlertRule
 		Source:    rule.Scope.Namespace + "." + rule.Scope.SubNamespace + "." + rule.Scope.Metric,
 		Scope:     scope,
 		Target:    target,
-		Meta:      utils.SafeCopyTags(meta),
+		Meta:      utils.SafeCopyLabels(meta),
 	}
 	event.Meta["rule_id"] = rule.ID
 	m.emitter.Emit(ctx, event)
@@ -254,7 +254,7 @@ func (m *Manager) emitAlertResolvedEvent(ctx context.Context, rule model.AlertRu
 		Source:    rule.Scope.Namespace + "." + rule.Scope.SubNamespace + "." + rule.Scope.Metric,
 		Scope:     scope,
 		Target:    target,
-		Meta:      utils.SafeCopyTags(meta),
+		Meta:      utils.SafeCopyLabels(meta),
 	}
 	event.Meta["rule_id"] = rule.ID
 	m.emitter.Emit(ctx, event)
@@ -274,7 +274,7 @@ func (m *Manager) emitLogAlertFiringEvent(ctx context.Context, rule model.AlertR
 		Source:    log.Source,
 		Scope:     "endpoint",
 		Target:    meta.EndpointID,
-		Meta:      utils.SafeCopyTags(meta),
+		Meta:      utils.SafeCopyLabels(meta),
 	}
 	event.Meta["rule_id"] = rule.ID
 	m.emitter.Emit(ctx, event)
@@ -320,7 +320,7 @@ func (m *Manager) dispatchFiringEvent(ctx context.Context, rule model.AlertRule,
 		Source:    rule.Scope.Namespace + "." + rule.Scope.SubNamespace + "." + rule.Scope.Metric,
 		Scope:     scope,
 		Target:    target,
-		Meta:      utils.SafeCopyTags(meta),
+		Meta:      utils.SafeCopyLabels(meta),
 	})
 }
 
@@ -338,6 +338,6 @@ func (m *Manager) dispatchResolvedEvent(ctx context.Context, rule model.AlertRul
 		Source:    rule.Scope.Namespace + "." + rule.Scope.SubNamespace + "." + rule.Scope.Metric,
 		Scope:     scope,
 		Target:    target,
-		Meta:      utils.SafeCopyTags(meta),
+		Meta:      utils.SafeCopyLabels(meta),
 	})
 }

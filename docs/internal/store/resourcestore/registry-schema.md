@@ -79,40 +79,57 @@ type Resource struct {
 
 ```sql
 CREATE TABLE resources (
-    id           UUID PRIMARY KEY,
-    kind         TEXT NOT NULL,
-    name         TEXT NOT NULL,
-    group_name   TEXT,
-    parent_id    UUID REFERENCES resources(id),
-    status       TEXT NOT NULL DEFAULT 'Offline',
-    last_seen    TIMESTAMPTZ NOT NULL,
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+    id             UUID PRIMARY KEY,
+    kind           TEXT NOT NULL,
+    name           TEXT NOT NULL,
+    display_name   TEXT,
+    group_name     TEXT,
+    parent_id      UUID REFERENCES resources(id),
+
+    status         TEXT NOT NULL DEFAULT 'unknown',
+    last_seen      TIMESTAMPTZ NOT NULL,
+    first_seen     TIMESTAMPTZ NOT NULL,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    location       TEXT,
+    environment    TEXT,
+    owner          TEXT,
+    platform       TEXT,
+    runtime        TEXT,
+    version        TEXT,
+    os             TEXT,
+    arch           TEXT,
+    ip_address     TEXT,
+
+    resource_type  TEXT,
+    cluster        TEXT,
+    namespace      TEXT
 );
-```
 
-### Table: `resource_labels`
-
-```sql
+-- Labels and tags as key-value stores
 CREATE TABLE resource_labels (
     resource_id UUID REFERENCES resources(id) ON DELETE CASCADE,
     key         TEXT NOT NULL,
     value       TEXT NOT NULL,
     PRIMARY KEY (resource_id, key)
 );
-```
 
-### Table: `resource_tags`
-
-```sql
 CREATE TABLE resource_tags (
     resource_id UUID REFERENCES resources(id) ON DELETE CASCADE,
     key         TEXT NOT NULL,
     value       TEXT NOT NULL,
     PRIMARY KEY (resource_id, key)
 );
-```
 
+-- Optional annotations
+CREATE TABLE resource_annotations (
+    resource_id UUID REFERENCES resources(id) ON DELETE CASCADE,
+    key         TEXT NOT NULL,
+    value       TEXT NOT NULL,
+    PRIMARY KEY (resource_id, key)
+);
+```
 ### Indexes
 
 ```sql

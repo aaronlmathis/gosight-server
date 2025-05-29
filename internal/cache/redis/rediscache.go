@@ -273,17 +273,17 @@ func (r *RedisResourceCache) GetKinds() []string {
 	if err != nil {
 		return []string{}
 	}
-	
+
 	kinds := make([]string, 0, len(keys))
 	prefixLen := len(fmt.Sprintf("%s:index:kind:", r.prefix))
-	
+
 	for _, key := range keys {
 		if len(key) > prefixLen {
 			kind := key[prefixLen:]
 			kinds = append(kinds, kind)
 		}
 	}
-	
+
 	return kinds
 }
 
@@ -395,4 +395,12 @@ func (r *RedisResourceCache) removeIndexes(resource *model.Resource) {
 		parentKey := r.parentIndexKey(resource.ParentID)
 		r.client.SRem(ctx, parentKey, resource.ID)
 	}
+}
+
+// WarmCache is a placeholder implementation for Redis cache warming.
+// TODO: Implement cache warming for Redis by adding store parameter to constructor
+func (r *RedisResourceCache) WarmCache(ctx context.Context) error {
+	// Redis cache warming would require a store reference
+	// For now, return nil (no-op)
+	return nil
 }

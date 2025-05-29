@@ -22,7 +22,6 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 package bootstrap
 
 import (
-	"flag"
 	"log"
 	"os"
 	"path/filepath"
@@ -37,23 +36,10 @@ import (
 // 3. Default configuration file
 // 4. Hardcoded defaults
 // The function returns a pointer to the loaded configuration.
-func LoadServerConfig() *config.Config {
-	// CLI flags
-	configFlag := flag.String("config", "", "Path to server config file")
-	grpcFlag := flag.String("grpc", "", "Overrid gRPC servere listen address")
-	httpFlag := flag.String("http", "", "Overrid http servere listen address")
-	envFlag := flag.String("env", "", "Environment (dev / test / prod)")
-	logLevelFlag := flag.String("log-level", "", "Log level (debug, info, warn, error)")
-	appLogFileFlag := flag.String("applog", "", "Path to log file")
-	errorLogFileFlag := flag.String("errorlog", "", "Path to log file")
-	flag.Parse()
+func LoadServerConfig(configFlag *string) *config.Config {
 
 	// Resolve config path
-	configPath := resolvePath(*configFlag, "GOSIGHT_SERVER_CONFIG", "config.yaml")
-
-	if err := config.EnsureDefaultConfig(configPath); err != nil {
-		log.Fatalf("Could not create default config: %v", err)
-	}
+	configPath := resolvePath(*configFlag, "GOSIGHT_SERVER_CONFIG", "./config/config.yaml")
 
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
@@ -62,25 +48,6 @@ func LoadServerConfig() *config.Config {
 
 	config.ApplyEnvOverrides(cfg)
 
-	// Apply CLI flag overrides (highest priority)
-	if *grpcFlag != "" {
-		cfg.Server.GRPCAddr = *grpcFlag
-	}
-	if *httpFlag != "" {
-		cfg.Server.HTTPAddr = *httpFlag
-	}
-	if *envFlag != "" {
-		cfg.Server.Environment = *envFlag
-	}
-	if *logLevelFlag != "" {
-		cfg.Logs.LogLevel = *logLevelFlag
-	}
-	if *appLogFileFlag != "" {
-		cfg.Logs.AppLogFile = *appLogFileFlag
-	}
-	if *errorLogFileFlag != "" {
-		cfg.Logs.AppLogFile = *errorLogFileFlag
-	}
 	return cfg
 }
 

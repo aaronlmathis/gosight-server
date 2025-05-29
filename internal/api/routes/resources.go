@@ -54,7 +54,6 @@ func SetupResourceRoutes(router *mux.Router, sys *sys.SystemContext, withAccessL
 	// Configure middleware
 	withAuth := gosightauth.AuthMiddleware(sys.Stores.Users)
 
-
 	// Helper function to create secure handler with permission check
 	secure := func(permission string, handler http.Handler) http.Handler {
 		return withAccessLog(withAuth(gosightauth.RequirePermission(permission, handler, sys.Stores.Users)))

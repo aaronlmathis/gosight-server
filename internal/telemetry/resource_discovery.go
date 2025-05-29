@@ -10,26 +10,23 @@ import (
 	"time"
 
 	"github.com/aaronlmathis/gosight-server/internal/cache/resourcecache"
-	"github.com/aaronlmathis/gosight-server/internal/store/resourcestore"
 	"github.com/aaronlmathis/gosight-shared/model"
 	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
 type ResourceDiscovery struct {
 	cache resourcecache.ResourceCache
-	store resourcestore.ResourceStore
 }
 
-func NewResourceDiscovery(cache resourcecache.ResourceCache, store resourcestore.ResourceStore) *ResourceDiscovery {
+func NewResourceDiscovery(cache resourcecache.ResourceCache) *ResourceDiscovery {
 	return &ResourceDiscovery{
 		cache: cache,
-		store: store,
 	}
 }
 
-func (rd *ResourceDiscovery) ProcessMetricPayload(payload *model.MetricPayload) {
+func (rd *ResourceDiscovery) ProcessMetricPayload(payload *model.MetricPayload) *model.MetricPayload {
 	if payload == nil || payload.Meta == nil {
-		return
+		return payload
 	}
 
 	// Extract resource information from metric metadata
@@ -37,27 +34,34 @@ func (rd *ResourceDiscovery) ProcessMetricPayload(payload *model.MetricPayload) 
 	resource, err := rd.extractResourceFromMeta(ctx, payload.Meta)
 	if err != nil {
 		utils.Error("Failed to extract resource from metric payload: %v", err)
-		return
+		return payload
 	}
 
 	if resource != nil {
 		resource.LastSeen = time.Now()
 		if err := rd.upsertResource(ctx, resource); err != nil {
 			utils.Error("Failed to upsert resource: %v", err)
-			return
+			return payload
 		}
 
-		// Enrich the payload with ResourceID
+		// Enrich the payload with ResourceID and resource data from cache
 		if payload.Meta == nil {
 			payload.Meta = &model.Meta{}
 		}
 		payload.Meta.ResourceID = resource.ID
+
+		// Enrich payload with existing resource data from cache
+		if cachedResource, exists := rd.cache.GetResource(resource.ID); exists {
+			rd.enrichPayloadFromResource(payload, cachedResource)
+		}
 	}
+
+	return payload
 }
 
-func (rd *ResourceDiscovery) ProcessLogPayload(payload *model.LogPayload) {
+func (rd *ResourceDiscovery) ProcessLogPayload(payload *model.LogPayload) *model.LogPayload {
 	if payload == nil || payload.Meta == nil {
-		return
+		return payload
 	}
 
 	// Extract resource information from log metadata
@@ -65,14 +69,13 @@ func (rd *ResourceDiscovery) ProcessLogPayload(payload *model.LogPayload) {
 	resource, err := rd.extractResourceFromMeta(ctx, payload.Meta)
 	if err != nil {
 		utils.Error("Failed to extract resource from log payload: %v", err)
-		return
+		return payload
 	}
-
 	if resource != nil {
 		resource.LastSeen = time.Now()
 		if err := rd.upsertResource(ctx, resource); err != nil {
 			utils.Error("Failed to upsert resource: %v", err)
-			return
+			return payload
 		}
 
 		// Enrich the payload with ResourceID
@@ -80,12 +83,19 @@ func (rd *ResourceDiscovery) ProcessLogPayload(payload *model.LogPayload) {
 			payload.Meta = &model.Meta{}
 		}
 		payload.Meta.ResourceID = resource.ID
+
+		// Enrich payload with existing resource data from cache
+		if cachedResource, exists := rd.cache.GetResource(resource.ID); exists {
+			rd.enrichLogPayloadFromResource(payload, cachedResource)
+		}
 	}
+
+	return payload
 }
 
-func (rd *ResourceDiscovery) ProcessTracePayload(payload *model.TracePayload) {
+func (rd *ResourceDiscovery) ProcessTracePayload(payload *model.TracePayload) *model.TracePayload {
 	if payload == nil || payload.Meta == nil {
-		return
+		return payload
 	}
 
 	// Extract resource information from trace metadata
@@ -93,14 +103,14 @@ func (rd *ResourceDiscovery) ProcessTracePayload(payload *model.TracePayload) {
 	resource, err := rd.extractResourceFromMeta(ctx, payload.Meta)
 	if err != nil {
 		utils.Error("Failed to extract resource from trace payload: %v", err)
-		return
+		return payload
 	}
 
 	if resource != nil {
 		resource.LastSeen = time.Now()
 		if err := rd.upsertResource(ctx, resource); err != nil {
 			utils.Error("Failed to upsert resource: %v", err)
-			return
+			return payload
 		}
 
 		// Enrich the payload with ResourceID
@@ -108,12 +118,19 @@ func (rd *ResourceDiscovery) ProcessTracePayload(payload *model.TracePayload) {
 			payload.Meta = &model.Meta{}
 		}
 		payload.Meta.ResourceID = resource.ID
+
+		// Enrich payload with existing resource data from cache
+		if cachedResource, exists := rd.cache.GetResource(resource.ID); exists {
+			rd.enrichTracePayloadFromResource(payload, cachedResource)
+		}
 	}
+
+	return payload
 }
 
-func (rd *ResourceDiscovery) ProcessProcessPayload(payload *model.ProcessPayload) {
+func (rd *ResourceDiscovery) ProcessProcessPayload(payload *model.ProcessPayload) *model.ProcessPayload {
 	if payload == nil || payload.Meta == nil {
-		return
+		return payload
 	}
 
 	// Extract resource information from process metadata
@@ -121,14 +138,14 @@ func (rd *ResourceDiscovery) ProcessProcessPayload(payload *model.ProcessPayload
 	resource, err := rd.extractResourceFromMeta(ctx, payload.Meta)
 	if err != nil {
 		utils.Error("Failed to extract resource from process payload: %v", err)
-		return
+		return payload
 	}
 
 	if resource != nil {
 		resource.LastSeen = time.Now()
 		if err := rd.upsertResource(ctx, resource); err != nil {
 			utils.Error("Failed to upsert resource: %v", err)
-			return
+			return payload
 		}
 
 		// Enrich the payload with ResourceID
@@ -136,7 +153,14 @@ func (rd *ResourceDiscovery) ProcessProcessPayload(payload *model.ProcessPayload
 			payload.Meta = &model.Meta{}
 		}
 		payload.Meta.ResourceID = resource.ID
+
+		// Enrich payload with existing resource data from cache
+		if cachedResource, exists := rd.cache.GetResource(resource.ID); exists {
+			rd.enrichProcessPayloadFromResource(payload, cachedResource)
+		}
 	}
+
+	return payload
 }
 
 func (rd *ResourceDiscovery) extractResourceFromMeta(ctx context.Context, meta *model.Meta) (*model.Resource, error) {
@@ -155,20 +179,10 @@ func (rd *ResourceDiscovery) extractResourceFromMeta(ctx context.Context, meta *
 	labels := rd.buildResourceLabels(meta, kind)
 	resourceID := rd.generateResourceID(kind, labels)
 
-	// Check if resource already exists in cache first
+	// Check if resource already exists in cache
 	if existing, exists := rd.cache.GetResource(resourceID); exists {
 		// Update last seen and any changed metadata
 		rd.updateExistingResource(existing, meta)
-		return existing, nil
-	}
-
-	// Check in store if not in cache
-	existing, err := rd.store.Get(ctx, resourceID)
-	if err == nil && existing != nil {
-		// Update last seen and any changed metadata
-		rd.updateExistingResource(existing, meta)
-		// Add back to cache
-		rd.cache.UpsertResource(existing)
 		return existing, nil
 	}
 
@@ -226,25 +240,10 @@ func (rd *ResourceDiscovery) determineKind(meta *model.Meta) string {
 	return model.ResourceKindApp
 }
 
-// upsertResource handles creating or updating a resource in both store and cache
+// upsertResource handles creating or updating a resource using cache-only approach.
+// The ResourceCache automatically handles persistence through background flushing.
 func (rd *ResourceDiscovery) upsertResource(ctx context.Context, resource *model.Resource) error {
-	// Check if resource exists in store
-	existing, err := rd.store.Get(ctx, resource.ID)
-	if err == nil && existing != nil {
-		// Update existing resource
-		resource.CreatedAt = existing.CreatedAt // Preserve creation time
-		resource.UpdatedAt = time.Now()
-		if err := rd.store.Update(ctx, resource); err != nil {
-			return fmt.Errorf("failed to update resource in store: %w", err)
-		}
-	} else {
-		// Create new resource
-		if err := rd.store.Create(ctx, resource); err != nil {
-			return fmt.Errorf("failed to create resource in store: %w", err)
-		}
-	}
-
-	// Update cache
+	// Use cache-only approach - ResourceCache handles persistence automatically
 	rd.cache.UpsertResource(resource)
 	return nil
 }
@@ -418,14 +417,45 @@ func (rd *ResourceDiscovery) populateResourceFromMeta(resource *model.Resource, 
 		}
 	}
 
-	// Add custom tags if present
-	if meta.Tags != nil {
-		if resource.Tags == nil {
-			resource.Tags = make(map[string]string)
+	// Classify meta.Labels into proper Labels vs Tags based on their origin/purpose
+	if meta.Labels != nil {
+		// System-generated metadata that should be Labels (not user-editable)
+		systemLabels := []string{
+			"namespace", "subnamespace", "job", "instance", "agent_start_time",
+			"container_id", "device_id", "runtime", "source", "type",
 		}
-		for k, v := range meta.Tags {
-			resource.Tags[k] = v
+
+		labelCount := 0
+		tagCount := 0
+
+		// User/operational metadata that should remain as Tags
+		for k, v := range meta.Labels {
+			isSystemLabel := false
+			for _, sysLabel := range systemLabels {
+				if k == sysLabel {
+					isSystemLabel = true
+					break
+				}
+			}
+
+			if isSystemLabel {
+				// Add to Labels (system-generated, immutable)
+				if resource.Labels == nil {
+					resource.Labels = make(map[string]string)
+				}
+				resource.Labels[k] = v
+				labelCount++
+			} else {
+				// Add to Tags (user-defined, mutable)
+				if resource.Tags == nil {
+					resource.Tags = make(map[string]string)
+				}
+				resource.Tags[k] = v
+				tagCount++
+			}
 		}
+
+		utils.Debug("Resource %s: classified meta.Labels - %d -> Labels, %d -> Tags", resource.ID, labelCount, tagCount)
 	}
 }
 
@@ -499,12 +529,6 @@ func (rd *ResourceDiscovery) determineRuntime(meta *model.Meta) string {
 func (rd *ResourceDiscovery) ensureParentResource(ctx context.Context, meta *model.Meta, parentID string) error {
 	// Check if parent already exists in cache
 	if _, exists := rd.cache.GetResource(parentID); exists {
-		return nil
-	}
-
-	// Check if parent already exists in store
-	if existing, err := rd.store.Get(ctx, parentID); err == nil && existing != nil {
-		rd.cache.UpsertResource(existing)
 		return nil
 	}
 
@@ -675,7 +699,7 @@ func (rd *ResourceDiscovery) buildResourceLabels(meta *model.Meta, kind string) 
 		if meta.Hostname != "" {
 			labels["hostname"] = meta.Hostname
 		}
-		if deviceID := meta.Tags["device_id"]; deviceID != "" {
+		if deviceID := meta.Labels["device_id"]; deviceID != "" {
 			labels["device_id"] = deviceID
 		} else if meta.MACAddress != "" {
 			labels["mac_address"] = meta.MACAddress
@@ -685,4 +709,182 @@ func (rd *ResourceDiscovery) buildResourceLabels(meta *model.Meta, kind string) 
 	}
 
 	return labels
+}
+
+// enrichPayloadFromResource enriches a metric payload's metadata with information
+// from a cached resource. This merges resource tags and labels into the payload
+// metadata to provide comprehensive context for telemetry processing.
+func (rd *ResourceDiscovery) enrichPayloadFromResource(payload *model.MetricPayload, resource *model.Resource) {
+	if payload == nil || payload.Meta == nil || resource == nil {
+		return
+	}
+
+	// Merge resource tags into payload meta tags (user-defined, mutable)
+	if resource.Tags != nil {
+		if payload.Meta.Tags == nil {
+			payload.Meta.Tags = make(map[string]string)
+		}
+		utils.Debug("Enriching payload with resource tags: %v", resource.Tags)
+		// Add resource tags to payload, but don't override existing ones
+		for key, value := range resource.Tags {
+			if _, exists := payload.Meta.Tags[key]; !exists {
+				payload.Meta.Tags[key] = value
+			}
+		}
+	}
+
+	// Merge resource labels into payload meta labels (system-generated, immutable)
+	if resource.Labels != nil {
+		if payload.Meta.Labels == nil {
+			payload.Meta.Labels = make(map[string]string)
+		}
+		utils.Debug("Enriching payload with resource labels: %v", resource.Labels)
+		// Add resource labels to payload, but don't override existing ones
+		for key, value := range resource.Labels {
+			if _, exists := payload.Meta.Labels[key]; !exists {
+				payload.Meta.Labels[key] = value
+			}
+		}
+	}
+
+	// Optionally enrich with some resource metadata if not already present
+	if payload.Meta.Environment == "" && resource.Environment != "" {
+		payload.Meta.Environment = resource.Environment
+	}
+
+	if payload.Meta.Version == "" && resource.Version != "" {
+		payload.Meta.Version = resource.Version
+	}
+}
+
+// enrichLogPayloadFromResource enriches a log payload's metadata with information
+// from a cached resource. This merges resource tags and labels into the payload
+// metadata to provide comprehensive context for log processing.
+func (rd *ResourceDiscovery) enrichLogPayloadFromResource(payload *model.LogPayload, resource *model.Resource) {
+	if payload == nil || payload.Meta == nil || resource == nil {
+		return
+	}
+
+	// Merge resource tags into payload meta tags (user-defined, mutable)
+	if resource.Tags != nil {
+		if payload.Meta.Tags == nil {
+			payload.Meta.Tags = make(map[string]string)
+		}
+		// Add resource tags to payload, but don't override existing ones
+		for key, value := range resource.Tags {
+			if _, exists := payload.Meta.Tags[key]; !exists {
+				payload.Meta.Tags[key] = value
+			}
+		}
+	}
+
+	// Merge resource labels into payload meta labels (system-generated, immutable)
+	if resource.Labels != nil {
+		if payload.Meta.Labels == nil {
+			payload.Meta.Labels = make(map[string]string)
+		}
+		// Add resource labels to payload, but don't override existing ones
+		for key, value := range resource.Labels {
+			if _, exists := payload.Meta.Labels[key]; !exists {
+				payload.Meta.Labels[key] = value
+			}
+		}
+	}
+
+	// Optionally enrich with some resource metadata if not already present
+	if payload.Meta.Environment == "" && resource.Environment != "" {
+		payload.Meta.Environment = resource.Environment
+	}
+
+	if payload.Meta.Version == "" && resource.Version != "" {
+		payload.Meta.Version = resource.Version
+	}
+}
+
+// enrichTracePayloadFromResource enriches a trace payload's metadata with information
+// from a cached resource. This merges resource tags and labels into the payload
+// metadata to provide comprehensive context for trace processing.
+func (rd *ResourceDiscovery) enrichTracePayloadFromResource(payload *model.TracePayload, resource *model.Resource) {
+	if payload == nil || payload.Meta == nil || resource == nil {
+		return
+	}
+
+	// Merge resource tags into payload meta tags (user-defined, mutable)
+	if resource.Tags != nil {
+		if payload.Meta.Tags == nil {
+			payload.Meta.Tags = make(map[string]string)
+		}
+		// Add resource tags to payload, but don't override existing ones
+		for key, value := range resource.Tags {
+			if _, exists := payload.Meta.Tags[key]; !exists {
+				payload.Meta.Tags[key] = value
+			}
+		}
+	}
+
+	// Merge resource labels into payload meta labels (system-generated, immutable)
+	if resource.Labels != nil {
+		if payload.Meta.Labels == nil {
+			payload.Meta.Labels = make(map[string]string)
+		}
+		// Add resource labels to payload, but don't override existing ones
+		for key, value := range resource.Labels {
+			if _, exists := payload.Meta.Labels[key]; !exists {
+				payload.Meta.Labels[key] = value
+			}
+		}
+	}
+
+	// Optionally enrich with some resource metadata if not already present
+	if payload.Meta.Environment == "" && resource.Environment != "" {
+		payload.Meta.Environment = resource.Environment
+	}
+
+	if payload.Meta.Version == "" && resource.Version != "" {
+		payload.Meta.Version = resource.Version
+	}
+}
+
+// enrichProcessPayloadFromResource enriches a process payload's metadata with information
+// from a cached resource. This merges resource tags and labels into the payload
+// metadata to provide comprehensive context for process monitoring.
+func (rd *ResourceDiscovery) enrichProcessPayloadFromResource(payload *model.ProcessPayload, resource *model.Resource) {
+	if payload == nil || payload.Meta == nil || resource == nil {
+		return
+	}
+
+	// Merge resource tags into payload meta tags (user-defined, mutable)
+	if resource.Tags != nil {
+		if payload.Meta.Tags == nil {
+			payload.Meta.Tags = make(map[string]string)
+		}
+		// Add resource tags to payload, but don't override existing ones
+		for key, value := range resource.Tags {
+			if _, exists := payload.Meta.Tags[key]; !exists {
+				payload.Meta.Tags[key] = value
+			}
+		}
+	}
+
+	// Merge resource labels into payload meta labels (system-generated, immutable)
+	if resource.Labels != nil {
+		if payload.Meta.Labels == nil {
+			payload.Meta.Labels = make(map[string]string)
+		}
+		// Add resource labels to payload, but don't override existing ones
+		for key, value := range resource.Labels {
+			if _, exists := payload.Meta.Labels[key]; !exists {
+				payload.Meta.Labels[key] = value
+			}
+		}
+	}
+
+	// Optionally enrich with some resource metadata if not already present
+	if payload.Meta.Environment == "" && resource.Environment != "" {
+		payload.Meta.Environment = resource.Environment
+	}
+
+	if payload.Meta.Version == "" && resource.Version != "" {
+		payload.Meta.Version = resource.Version
+	}
 }
