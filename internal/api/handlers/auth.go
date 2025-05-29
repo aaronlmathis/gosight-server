@@ -123,17 +123,23 @@ func (h *AuthHandler) HandleAPILogin(w http.ResponseWriter, r *http.Request) {
 
 	// Check if user has MFA enabled
 	if user.TOTPSecret != "" {
-		// For API login with MFA, we return a special response indicating MFA is required
-		// The frontend should then call the MFA verification endpoint
-		gosightauth.SavePendingMFA(user.ID, w)
+		// Check if user has a valid "remember MFA" cookie
+		if gosightauth.CheckRememberMFA(r, user.ID) {
+			// User has valid remember MFA cookie, skip MFA verification
+			// Continue with normal login flow below
+		} else {
+			// For API login with MFA, we return a special response indicating MFA is required
+			// The frontend should then call the MFA verification endpoint
+			gosightauth.SavePendingMFA(user.ID, w)
 
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"success":      false,
-			"mfa_required": true,
-			"message":      "MFA verification required",
-		})
-		return
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success":      false,
+				"mfa_required": true,
+				"message":      "MFA verification required",
+			})
+			return
+		}
 	}
 
 	// Generate JWT token for successful login without MFA

@@ -151,9 +151,10 @@ func setupVersionedRoutes(apiRouter *mux.Router, version string, sys *sys.System
 	versionRouter := apiRouter.PathPrefix("/" + version).Subrouter()
 
 	// Initialize handlers with system context
-	// Initialize handlers with system context
 	authHandler := &handlers.AuthHandler{Sys: sys}
 	usersHandler := &handlers.UsersHandler{Sys: sys}
+	rolesHandler := &handlers.RoleHandler{Sys: sys}
+	permissionsHandler := &handlers.PermissionHandler{Sys: sys}
 	alertsHandler := &handlers.AlertsHandler{Sys: sys}
 	endpointsHandler := &handlers.EndpointsHandler{Sys: sys}
 	//agentsHandler := &handlers.AgentsHandler{Sys: sys}
@@ -169,12 +170,12 @@ func setupVersionedRoutes(apiRouter *mux.Router, version string, sys *sys.System
 	// Setup routes based on API version
 	switch version {
 	case "v1":
-		setupV1Routes(versionRouter, sys, authHandler, usersHandler, alertsHandler,
+		setupV1Routes(versionRouter, sys, authHandler, usersHandler, rolesHandler, permissionsHandler, alertsHandler,
 			endpointsHandler, logsHandler, metricsHandler, commandsHandler,
 			tagsHandler, labelsHandler, debugHandler, telemetryHandler, withAccessLog)
 	default:
 		// For future versions, we can add more cases here
-		setupV1Routes(versionRouter, sys, authHandler, usersHandler, alertsHandler,
+		setupV1Routes(versionRouter, sys, authHandler, usersHandler, rolesHandler, permissionsHandler, alertsHandler,
 			endpointsHandler, logsHandler, metricsHandler, commandsHandler,
 			tagsHandler, labelsHandler, debugHandler, telemetryHandler, withAccessLog)
 	}
@@ -186,6 +187,8 @@ func setupV1Routes(
 	sys *sys.SystemContext,
 	authHandler *handlers.AuthHandler,
 	usersHandler *handlers.UsersHandler,
+	rolesHandler *handlers.RoleHandler,
+	permissionsHandler *handlers.PermissionHandler,
 	alertsHandler *handlers.AlertsHandler,
 	endpointsHandler *handlers.EndpointsHandler,
 	logsHandler *handlers.LogsHandler,
@@ -202,6 +205,12 @@ func setupV1Routes(
 
 	// Setup user management routes
 	SetupUserRoutes(router, usersHandler, withAccessLog)
+
+	// Setup role management routes
+	SetupRoleRoutes(router, rolesHandler, withAccessLog)
+
+	// Setup permission management routes
+	SetupPermissionRoutes(router, permissionsHandler, withAccessLog)
 
 	// Setup file upload and management routes
 	SetupFileRoutes(router, sys, withAccessLog)

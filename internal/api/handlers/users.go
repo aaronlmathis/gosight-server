@@ -1404,3 +1404,62 @@ func ensureUploadsDir() error {
 
 	return nil
 }
+
+// AssignRoleRequest represents the request body for assigning roles to a user
+type AssignRoleRequest struct {
+	RoleIDs []uuid.UUID `json:"role_ids"`
+}
+
+// GetUserRoles returns all roles assigned to a user
+func (h *UsersHandler) GetUserRoles(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	ctx := r.Context()
+	roles, err := h.Sys.Stores.Users.GetUserRoles(ctx, userID.String())
+	if err != nil {
+		http.Error(w, "Failed to fetch user roles", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(roles)
+}
+
+// AssignRolesToUser assigns roles to a user
+func (h *UsersHandler) AssignRolesToUser(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	var req AssignRoleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	ctx := r.Context()
+
+	// Convert UUIDs to strings
+	roleIDs := make([]string, len(req.RoleIDs))
+	for i, roleID := range req.RoleIDs {
+		roleIDs[i] = roleID.String()
+	}
+
+	// Use the UserStore method to assign roles
+	err = h.Sys.Stores.Users.AssignRolesToUser(ctx, userID.String(), roleIDs)
+	if err != nil {
+		utils.Error("Failed to assign roles to user %s: %v", userID, err)
+		http.Error(w, "Failed to assign roles", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}

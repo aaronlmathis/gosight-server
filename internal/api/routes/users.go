@@ -64,32 +64,6 @@ func SetupUserRoutes(router *mux.Router, usersHandler *handlers.UsersHandler, wi
 		secure("gosight:api:users:create", http.HandlerFunc(usersHandler.HandleAPIUserCreate))).
 		Methods("POST")
 
-	router.Handle("/users/{id}",
-		secure("gosight:api:users:view", http.HandlerFunc(usersHandler.HandleAPIUser))).
-		Methods("GET")
-
-	router.Handle("/users/{id}",
-		secure("gosight:api:users:update", http.HandlerFunc(usersHandler.HandleAPIUserUpdate))).
-		Methods("PUT")
-
-	router.Handle("/users/{id}",
-		secure("gosight:api:users:delete", http.HandlerFunc(usersHandler.HandleAPIUserDelete))).
-		Methods("DELETE")
-
-	// User password management
-	router.Handle("/users/{id}/password",
-		secure("gosight:api:users:password", http.HandlerFunc(usersHandler.HandleAPIUserPasswordChange))).
-		Methods("POST")
-
-	// User settings management
-	router.Handle("/users/{id}/settings",
-		secure("gosight:api:users:settings:view", http.HandlerFunc(usersHandler.HandleAPIUserSettings))).
-		Methods("GET")
-
-	router.Handle("/users/{id}/settings",
-		secure("gosight:api:users:settings:update", http.HandlerFunc(usersHandler.HandleAPIUserSettingsUpdate))).
-		Methods("PUT")
-
 	// User profile management (for current user)
 	router.Handle("/users/profile",
 		secure("gosight:api:users:profile:update", http.HandlerFunc(usersHandler.HandleUpdateUserProfile))).
@@ -125,5 +99,30 @@ func SetupUserRoutes(router *mux.Router, usersHandler *handlers.UsersHandler, wi
 
 	router.Handle("/users/preferences",
 		secure("gosight:api:users:preferences:update", http.HandlerFunc(usersHandler.HandleUpdateUserPreferences))).
+		Methods("PUT")
+	router.Handle("/users/{id}",
+		secure("gosight:api:users:view", http.HandlerFunc(usersHandler.HandleAPIUser))).
+		Methods("GET")
+
+	router.Handle("/users/{id}",
+		secure("gosight:api:users:update", http.HandlerFunc(usersHandler.HandleAPIUserUpdate))).
+		Methods("PUT")
+
+	router.Handle("/users/{id}",
+		secure("gosight:api:users:delete", http.HandlerFunc(usersHandler.HandleAPIUserDelete))).
+		Methods("DELETE")
+
+	// User password management
+	router.Handle("/users/{id}/password",
+		secure("gosight:api:users:password", http.HandlerFunc(usersHandler.HandleAPIUserPasswordChange))).
+		Methods("POST")
+
+	// User settings management
+	router.Handle("/users/{id}/settings",
+		secure("gosight:api:users:settings:view", http.HandlerFunc(usersHandler.HandleAPIUserSettings))).
+		Methods("GET")
+
+	router.Handle("/users/{id}/settings",
+		secure("gosight:api:users:settings:update", http.HandlerFunc(usersHandler.HandleAPIUserSettingsUpdate))).
 		Methods("PUT")
 }

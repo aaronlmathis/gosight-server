@@ -1,13 +1,13 @@
-# 🔐 Security Policy
+# Security Policy
 
 ## Supported Versions
 
 We are currently in **active development** and do not yet offer long-term support or versioned releases. Security-related patches are prioritized and released as soon as possible in the `main` branch.
 
 | Version | Supported? |
-|---------|------------|
-| `main`  | ✅ Yes      |
-| `<0.x`  | ❌ No       |
+| ------- | ---------- |
+| `main`  | Yes        |
+| `<0.x`  | No         |
 
 ---
 
@@ -15,7 +15,7 @@ We are currently in **active development** and do not yet offer long-term suppor
 
 If you discover a security vulnerability in GoSight, **please report it responsibly**.
 
-### 📫 Contact
+### Contact
 
 - Email: [aaron@gosight.dev](mailto:aaron@gosight.dev)
 - GitHub Issues: [Open a private security advisory](https://github.com/aaronlmathis/gosight/security/advisories)
