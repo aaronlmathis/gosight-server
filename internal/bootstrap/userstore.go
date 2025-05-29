@@ -32,9 +32,31 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// InitUserStore initializes the user store for the GoSight server.
-// The user store is responsible for storing and retrieving user and permission data.
-// It supports different storage engines, such as PostgreSQL.
+// InitUserStore initializes the user store component for the GoSight server.
+// The user store provides persistent storage for user accounts, authentication data,
+// roles, permissions, and access control information. It serves as the foundation
+// for the authentication and authorization system.
+//
+// User data managed includes:
+//   - User accounts and profiles
+//   - Password hashes and authentication credentials
+//   - User roles and role assignments
+//   - Permissions and access control rules
+//   - Multi-factor authentication settings
+//   - Session and security information
+//
+// Currently supported storage engines:
+//   - postgres: PostgreSQL database backend for production deployments
+//
+// The function establishes a secure database connection, validates connectivity,
+// and returns a configured user store ready for authentication operations.
+//
+// Parameters:
+//   - cfg: Configuration containing user store settings including engine type and DSN
+//
+// Returns:
+//   - userstore.UserStore: Initialized user store interface implementation
+//   - error: If database connection fails or unsupported engine is specified
 func InitUserStore(cfg *config.Config) (userstore.UserStore, error) {
 	userStoreEngine := cfg.UserStore.Engine
 

@@ -144,7 +144,7 @@ func BuildLogEventMeta(log *model.LogEntry, payload *model.LogPayload) map[strin
 		add("network_interface", payload.Meta.NetworkInterface)
 
 		// Tags (custom)
-		for k, v := range payload.Meta.Tags {
+		for k, v := range payload.Meta.Labels {
 			if v != "" {
 				meta[k] = v
 			}

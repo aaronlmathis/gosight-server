@@ -219,7 +219,7 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
 
 	// Utilities
 	{
-		type: 'quick-links',
+		type: 'quick_links',
 		name: 'Quick Links',
 		description: 'Customizable navigation shortcuts',
 		icon: 'external-link',

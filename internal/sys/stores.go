@@ -27,6 +27,7 @@ import (
 	"github.com/aaronlmathis/gosight-server/internal/store/eventstore"
 	"github.com/aaronlmathis/gosight-server/internal/store/logstore"
 	"github.com/aaronlmathis/gosight-server/internal/store/metricstore"
+	"github.com/aaronlmathis/gosight-server/internal/store/resourcestore"
 	"github.com/aaronlmathis/gosight-server/internal/store/routestore"
 	"github.com/aaronlmathis/gosight-server/internal/store/rulestore"
 	"github.com/aaronlmathis/gosight-server/internal/store/userstore"
@@ -34,14 +35,15 @@ import (
 
 // StoreModule contains all persistent or semi-persistent storage components.
 type StoreModule struct {
-	Metrics metricstore.MetricStore // Time-series metrics (e.g., VictoriaMetrics)
-	Logs    logstore.LogStore       // Structured logs (e.g., journald, /var/log/secure)
-	Users   userstore.UserStore     // User auth, roles, permissions
-	Data    datastore.DataStore     // Hosts, endpoints, agents, etc.
-	Events  eventstore.EventStore   // Event logs, audit, alert events
-	Rules   rulestore.RuleStore     // Alert rules defined by users
-	Actions *routestore.RouteStore  // Routes loaded from alert_routes.yaml
-	Alerts  alertstore.AlertStore   // Alert instances (active, resolved, history)
+	Metrics   metricstore.MetricStore     // Time-series metrics (e.g., VictoriaMetrics)
+	Logs      logstore.LogStore           // Structured logs (e.g., journald, /var/log/secure)
+	Users     userstore.UserStore         // User auth, roles, permissions
+	Data      datastore.DataStore         // Hosts, endpoints, agents, etc.
+	Events    eventstore.EventStore       // Event logs, audit, alert events
+	Rules     rulestore.RuleStore         // Alert rules defined by users
+	Actions   *routestore.RouteStore      // Routes loaded from alert_routes.yaml
+	Alerts    alertstore.AlertStore       // Alert instances (active, resolved, history)
+	Resources resourcestore.ResourceStore // Resource management (e.g., hosts, endpoints)
 }
 
 // NewStoreModule creates a new StoreModule with the provided components.
@@ -54,15 +56,17 @@ func NewStoreModule(
 	rules rulestore.RuleStore,
 	actions *routestore.RouteStore,
 	alerts alertstore.AlertStore,
+	resources resourcestore.ResourceStore,
 ) *StoreModule {
 	return &StoreModule{
-		Metrics: metrics,
-		Logs:    logs,
-		Users:   users,
-		Data:    data,
-		Events:  events,
-		Rules:   rules,
-		Actions: actions,
-		Alerts:  alerts,
+		Metrics:   metrics,
+		Logs:      logs,
+		Users:     users,
+		Data:      data,
+		Events:    events,
+		Rules:     rules,
+		Actions:   actions,
+		Alerts:    alerts,
+		Resources: resources,
 	}
 }

@@ -48,8 +48,8 @@ func NewStreamHandler(sys *sys.SystemContext) *StreamHandler {
 	}
 }
 
+// Stream implements the gRPC StreamService_StreamServer method
 func (h *StreamHandler) Stream(stream pb.StreamService_StreamServer) error {
-	var registered bool
 	var agentID string
 
 	go func() {
@@ -116,98 +116,6 @@ func (h *StreamHandler) Stream(stream pb.StreamService_StreamServer) error {
 						//utils.Debug("Stored ProcessPayload from agent %s", converted.EndpointID)
 					}
 				}
-
-			})
-		case *pb.StreamPayload_Metric:
-			// Handle MetricWrapper
-			SafeHandlePayload(func() {
-				var metricPayload pb.MetricPayload
-				if err := proto.Unmarshal(v.Metric.RawPayload, &metricPayload); err != nil {
-					utils.Error("Failed to unmarshal MetricPayload: %v", err)
-					return
-				}
-
-				converted := ConvertToModelPayload(&metricPayload)
-
-				//utils.Debug("Received MetricPayload from agent %s: %s", converted.EndpointID, converted.Meta.AgentID)
-
-				// Register agent session
-				if !registered && converted.Meta != nil && converted.Meta.AgentID != "" {
-					agentID = converted.AgentID
-					h.Sys.Tracker.RegisterAgentSession(agentID, stream)
-					//utils.Info("Registered live session for agent %s (%s)", converted.Meta.Hostname, agentID)
-					registered = true
-				}
-
-				// Tag enrichment from in-memory cache
-				if converted.Meta != nil && converted.Meta.EndpointID != "" {
-					tags := h.Sys.Cache.Tags.GetFlattenedTagsForEndpoint(converted.Meta.EndpointID)
-					if len(tags) > 0 {
-						if converted.Meta.Tags == nil {
-							converted.Meta.Tags = make(map[string]string)
-						}
-						for k, v := range tags {
-							if _, exists := converted.Meta.Tags[k]; !exists {
-								converted.Meta.Tags[k] = v
-							}
-						}
-					}
-				}
-				/*
-
-					if converted.Meta != nil && converted.Meta.EndpointID != "" {
-						tags, err := h.Sys.Stores.Data.GetTags(stream.Context(), converted.Meta.EndpointID)
-						if err == nil {
-							if converted.Meta.Tags == nil {
-								converted.Meta.Tags = make(map[string]string)
-							}
-							for k, v := range tags {
-								if _, exists := converted.Meta.Tags[k]; !exists {
-									converted.Meta.Tags[k] = v
-								}
-							}
-						}
-					}
-				*/
-				// Evaluate rules
-				h.Sys.Tele.Evaluator.EvaluateMetric(h.Sys.Ctx, converted.Metrics, converted.Meta)
-
-				// Update agent/container info
-				h.Sys.Tracker.UpdateAgent(converted.Meta)
-				if converted.Meta.ContainerID != "" {
-					h.Sys.Tracker.UpdateContainer(converted.Meta)
-				}
-
-				// Broadcast + store metrics
-				h.Sys.WSHub.Metrics.Broadcast(converted)
-
-				if h.Sys.Buffers == nil || h.Sys.Buffers.Metrics == nil {
-					utils.Warn("[stream] Metrics buffer not configured — writing directly to store")
-					// Fall back to writing directly to store
-					err := h.Sys.Stores.Metrics.Write([]model.MetricPayload{converted})
-					if err != nil {
-						utils.Warn("Failed to store MetricPayload: %v", err)
-					}
-				} else {
-					err := h.Sys.Buffers.Metrics.WriteAny(converted)
-					if err != nil {
-						utils.Warn("Failed to buffer MetricPayload: %v", err)
-					}
-				}
-
-				// TODO - Need to merge meta + dimensions before sending to metric store, that way it can be done once and sent to both metric index and metric store.
-				// This is a temporary fix.
-				if converted.Meta != nil && converted.Meta.EndpointID != "" {
-					h.Sys.Tele.Meta.Set(converted.Meta.EndpointID, *converted.Meta)
-				}
-				for _, m := range converted.Metrics {
-					merged := MergeDimensionsWithMeta(m.Dimensions, converted.Meta)
-					h.Sys.Tele.Index.Add(m.Namespace, m.SubNamespace, m.Name, merged)
-
-				}
-
-				// Add MetricPayload to MetricCache
-				h.Sys.Cache.Metrics.Add(&converted)
 
 			})
 

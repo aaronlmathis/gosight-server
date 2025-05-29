@@ -317,3 +317,103 @@ func (s *PGStore) GetCompleteUser(ctx context.Context, userID string) (*usermode
 		Settings: settings,
 	}, nil
 }
+
+// GetAllUsersWithPermissions retrieves all users with their roles and permissions
+func (s *PGStore) GetAllUsersWithPermissions(ctx context.Context) ([]*usermodel.User, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, username, first_name, last_name, email, created_at, updated_at, last_login
+		FROM users ORDER BY created_at DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []*usermodel.User
+	for rows.Next() {
+		u := &usermodel.User{Roles: []usermodel.Role{}}
+		err := rows.Scan(&u.ID, &u.Username, &u.FirstName, &u.LastName, &u.Email, &u.CreatedAt, &u.UpdatedAt, &u.LastLogin)
+		if err != nil {
+			return nil, err
+		}
+
+		// Get roles for this user
+		roleRows, err := s.db.QueryContext(ctx, `
+			SELECT r.id, r.name, r.description
+			FROM roles r
+			JOIN user_roles ur ON ur.role_id = r.id
+			WHERE ur.user_id = $1
+		`, u.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		for roleRows.Next() {
+			var role usermodel.Role
+			if err := roleRows.Scan(&role.ID, &role.Name, &role.Description); err != nil {
+				roleRows.Close()
+				return nil, err
+			}
+
+			// Get permissions for this role
+			permRows, err := s.db.QueryContext(ctx, `
+				SELECT p.id, p.name, p.description
+				FROM permissions p
+				JOIN role_permissions rp ON rp.permission_id = p.id
+				WHERE rp.role_id = $1
+			`, role.ID)
+			if err != nil {
+				roleRows.Close()
+				return nil, err
+			}
+
+			for permRows.Next() {
+				var perm usermodel.Permission
+				if err := permRows.Scan(&perm.ID, &perm.Name, &perm.Description); err != nil {
+					permRows.Close()
+					roleRows.Close()
+					return nil, err
+				}
+				role.Permissions = append(role.Permissions, perm)
+			}
+			permRows.Close()
+			u.Roles = append(u.Roles, role)
+		}
+		roleRows.Close()
+		users = append(users, u)
+	}
+	return users, nil
+}
+
+// CreateUser creates a new user in the database
+func (s *PGStore) CreateUser(ctx context.Context, u *usermodel.User) error {
+	u.CreatedAt = time.Now()
+	u.UpdatedAt = u.CreatedAt
+
+	err := s.db.QueryRowContext(ctx, `
+		INSERT INTO users (username, first_name, last_name, email, password_hash, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id
+	`, u.Username, u.FirstName, u.LastName, u.Email, u.PasswordHash, u.CreatedAt, u.UpdatedAt).Scan(&u.ID)
+
+	return err
+}
+
+// UpdateUser updates an existing user in the database
+func (s *PGStore) UpdateUser(ctx context.Context, u *usermodel.User) error {
+	u.UpdatedAt = time.Now()
+
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE users
+		SET username = $2, first_name = $3, last_name = $4, email = $5, updated_at = $6
+		WHERE id = $1
+	`, u.ID, u.Username, u.FirstName, u.LastName, u.Email, u.UpdatedAt)
+
+	return err
+}
+
+// DeleteUser removes a user from the database
+func (s *PGStore) DeleteUser(ctx context.Context, userID string) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, userID)
+	return err
+}

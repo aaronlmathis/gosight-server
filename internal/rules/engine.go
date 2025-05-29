@@ -241,7 +241,7 @@ func ruleMatchLabels(match model.MatchCriteria, meta *model.Meta) bool {
 	}
 
 	for k, v := range match.Labels {
-		if meta.Tags[k] != v {
+		if meta.Labels[k] != v {
 			return false
 		}
 	}

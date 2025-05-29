@@ -7,6 +7,7 @@
 - [metastore](./metastore/README.md)
 - [metricindex](./metricindex/README.md)
 - [metricstore](./metricstore/README.md)
+- [resourcestore](./resourcestore/README.md)
 - [routestore](./routestore/README.md)
 - [rulestore](./rulestore/README.md)
 - [userstore](./userstore/README.md)

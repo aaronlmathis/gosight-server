@@ -31,7 +31,25 @@ import (
 	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
-// InitEventStore initializes the event store for the GoSight server.
+// InitEventStore initializes the event store component for the GoSight server.
+// The event store provides persistent storage and retrieval of system events,
+// audit logs, and operational activities. Events are critical for monitoring,
+// debugging, and maintaining system observability.
+//
+// Supported storage engines:
+//   - json: File-based JSON storage for development and small deployments
+//   - postgres: PostgreSQL database backend for production environments
+//
+// The JSON backend stores events in local files and is suitable for testing
+// or single-node deployments. The PostgreSQL backend provides ACID compliance,
+// concurrent access, and better performance for production workloads.
+//
+// Parameters:
+//   - cfg: Configuration containing event store settings including engine type and connection details
+//
+// Returns:
+//   - eventstore.EventStore: Initialized event store interface implementation
+//   - error: If storage initialization fails or unsupported engine is specified
 func InitEventStore(cfg *config.Config) (eventstore.EventStore, error) {
 	utils.Info("Initializing user store type: %s", cfg.EventStore.Engine)
 

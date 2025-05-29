@@ -1,4 +1,24 @@
-// session.go: Handles signed cookies or token generation/validation.
+/*
+SPDX-License-Identifier: GPL-3.0-or-later
+
+Copyright (C) 2025 Aaron Mathis aaron.mathis@gmail.com
+
+This file is part of GoSight.
+
+GoSight is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+GoSight is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with GoSight. If not, see https://www.gnu.org/licenses/.
+*/
+
 package gosightauth
 
 import (
@@ -15,6 +35,18 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// RequirePermission is a middleware that ensures the authenticated user has a specific permission.
+// If the user lacks the required permission, it returns 403 Forbidden for API requests
+// or redirects to /unauthorized for web requests. The middleware can refresh permissions
+// from the database if they're missing from the context.
+//
+// Parameters:
+//   - required: The permission name that the user must have
+//   - next: The next HTTP handler to call if permission check passes
+//   - userStore: User store for refreshing permissions from database
+//
+// Returns:
+//   - http.Handler: Middleware handler that enforces the permission requirement
 func RequirePermission(required string, next http.Handler, userStore userstore.UserStore) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -55,6 +87,16 @@ func RequirePermission(required string, next http.Handler, userStore userstore.U
 	})
 }
 
+// RequireAnyPermissionWithStore creates a middleware that requires any one of the specified permissions.
+// This is useful for endpoints that can be accessed by users with different permission levels.
+// Returns a middleware function that can be used with gorilla/mux router.
+//
+// Parameters:
+//   - store: User store for refreshing permissions from database
+//   - required: Variable number of permission names, user needs at least one
+//
+// Returns:
+//   - func(http.Handler) http.Handler: Middleware factory function
 func RequireAnyPermissionWithStore(store userstore.UserStore, required ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -88,6 +130,19 @@ func RequireAnyPermissionWithStore(store userstore.UserStore, required ...string
 	}
 }
 
+// AuthMiddleware validates JWT tokens and injects user context into requests.
+// This middleware:
+// 1. Extracts session tokens from cookies or Authorization headers
+// 2. Validates JWT tokens and extracts claims
+// 3. Refreshes user roles/permissions if they're stale (>10 minutes old)
+// 4. Injects user ID, roles, permissions, and trace ID into request context
+// 5. Redirects unauthenticated users to login or returns 401 for API requests
+//
+// Parameters:
+//   - userStore: User store for refreshing user data from database
+//
+// Returns:
+//   - mux.MiddlewareFunc: Middleware function compatible with gorilla/mux
 func AuthMiddleware(userStore userstore.UserStore) mux.MiddlewareFunc {
 	//utils.Debug("AuthMiddleware: Injecting user context")
 	return func(next http.Handler) http.Handler {
@@ -162,6 +217,22 @@ func AuthMiddleware(userStore userstore.UserStore) mux.MiddlewareFunc {
 	}
 }
 
+// AccessLogMiddleware provides structured access logging for HTTP requests.
+// This middleware captures comprehensive request information including:
+// - Request timing and duration
+// - HTTP method, path, and status code
+// - User identification and permissions
+// - Trace ID for request correlation
+// - User agent and IP address
+//
+// The middleware ensures every request has a trace ID for debugging and monitoring.
+// Log entries are formatted as JSON for easy parsing by log aggregation systems.
+//
+// Parameters:
+//   - next: The next HTTP handler in the chain
+//
+// Returns:
+//   - http.Handler: Middleware handler that logs request details
 func AccessLogMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -212,17 +283,30 @@ func AccessLogMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+// statusRecorder wraps http.ResponseWriter to capture the HTTP status code.
+// This is used by AccessLogMiddleware to log response status codes since
+// the standard ResponseWriter doesn't provide access to the status after writing.
 type statusRecorder struct {
 	http.ResponseWriter
 	status int
 }
 
+// WriteHeader captures the status code before delegating to the wrapped ResponseWriter.
+// This allows the middleware to log the actual HTTP status code returned by handlers.
 func (r *statusRecorder) WriteHeader(code int) {
 	r.status = code
 	r.ResponseWriter.WriteHeader(code)
 }
 
-// isAPIRequest checks if the request is for an API endpoint.
+// isAPIRequest determines if an HTTP request is targeting an API endpoint.
+// Used by authentication middleware to decide between JSON error responses
+// (for API requests) and HTML redirects (for web requests).
+//
+// Parameters:
+//   - r: HTTP request to check
+//
+// Returns:
+//   - bool: true if the request path starts with "/api/", false otherwise
 func isAPIRequest(r *http.Request) bool {
 	return strings.HasPrefix(r.URL.Path, "/api/")
 }

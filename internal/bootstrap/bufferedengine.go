@@ -31,8 +31,32 @@ import (
 	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
-// InitBufferEngine initializes buffered stores and the central buffer engine.
-// It wraps existing backend stores with buffering and returns the sys.BuffersModule wrapped buffers.
+// InitBufferEngine initializes the buffered storage system for the GoSight server.
+// The buffer engine provides high-performance data ingestion by buffering writes
+// to backend storage systems, reducing latency and improving throughput for
+// high-volume data streams like metrics, logs, and events.
+//
+// Key features:
+//   - Configurable buffering for different data types (metrics, logs, data, alerts)
+//   - Independent flush intervals and buffer sizes per data type
+//   - Worker-based parallel processing for optimal performance
+//   - Graceful degradation when backends are unavailable
+//   - Memory management and overflow protection
+//
+// The function creates buffered wrappers around existing storage backends based on
+// configuration settings. Each buffer type can be independently enabled/disabled
+// and configured with specific parameters:
+//   - Buffer size: Maximum items to buffer before forcing a flush
+//   - Flush interval: Time-based automatic flushing
+//   - Workers: Parallel processing threads for the buffer engine
+//
+// Parameters:
+//   - ctx: Context for buffer engine lifecycle management
+//   - cfg: Buffer engine configuration with per-type settings
+//   - stores: Backend storage modules to wrap with buffering
+//
+// Returns:
+//   - *sys.BufferModule: Container with all configured buffered stores
 func InitBufferEngine(ctx context.Context, cfg *config.BufferEngineConfig, stores *sys.StoreModule) *sys.BufferModule {
 	interval := cfg.FlushInterval
 	if interval == 0 {

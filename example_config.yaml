@@ -1,0 +1,731 @@
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Copyright (C) 2025 Aaron Mathis aaron.mathis@gmail.com
+#
+# This file is part of GoSight.
+#
+# GoSight is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# GoSight is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GoSight. If not, see https://www.gnu.org/licenses/.
+#
+
+# GoSight Server Configuration Example
+# ====================================
+# This configuration file provides a comprehensive example of all GoSight server settings.
+# It demonstrates realistic values suitable for development, testing, and production environments.
+# 
+# Configuration sections:
+# - Server: Basic server networking and runtime settings
+# - Web: Web interface and static content configuration  
+# - TLS: SSL/TLS certificate and security settings
+# - Storage: Database and storage engine configurations
+# - Authentication: OAuth providers and JWT settings
+# - Caching: In-memory and distributed cache settings
+# - Buffering: Data batching and performance optimization
+# - Monitoring: OpenTelemetry and observability settings
+# - Logging: Log file locations and verbosity levels
+# - API: Version management and routing configuration
+
+# =============================================================================
+# SERVER CONFIGURATION
+# =============================================================================
+# Core server networking, runtime, and environment settings
+server:
+  # gRPC server listen address for agent connections and API calls
+  # Format: "host:port" or ":port" to bind to all interfaces
+  grpc_addr: ":4317"
+  
+  # HTTP server listen address for web interface and REST API
+  # Port 443 is standard for HTTPS, use 80 for HTTP or custom ports
+  http_addr: ":443"
+  
+  # Deployment environment identifier (affects logging, debug features)
+  # Values: "production", "staging", "development", "test"
+  environment: "development"
+  
+  # Interval for periodic resource synchronization and cleanup tasks
+  # Format: duration string (e.g., "30s", "5m", "1h")
+  sync_interval: "1m"
+
+# =============================================================================
+# WEB INTERFACE CONFIGURATION  
+# =============================================================================
+# Settings for the web-based dashboard and user interface
+# Settings for the web-based dashboard and user interface
+web:
+  # Directory containing static web assets (CSS, JS, images)
+  # Relative paths are resolved from the server binary location
+  static_dir: "web"
+  
+  # Directory containing HTML templates for server-side rendering
+  # Templates include dashboard, login, and configuration pages
+  template_dir: "web/templates"
+  
+  # Default page title shown in browser tabs and bookmarks
+  # Used when specific pages don't override the title
+  default_title: "GoSight - Infrastructure Monitoring"
+  
+  # List of enabled authentication providers for user login
+  # Supported: "local", "google", "github", "aws", "azure"
+  # "local" enables username/password authentication
+  auth_providers:
+    - "local"
+    - "google"
+    - "github"
+    - "aws"
+    - "azure"
+
+# =============================================================================
+# TLS/SSL CONFIGURATION
+# =============================================================================  
+# Certificate and encryption settings for secure communications
+tls:
+  # HTTPS certificate file path for web interface encryption
+  # Should contain the full certificate chain in PEM format
+  https_cert_file: "/etc/gosight/certs/server-cert.pem"
+  
+  # HTTPS private key file path corresponding to the certificate
+  # Must be in PEM format and match the certificate
+  https_key_file: "/etc/gosight/certs/server-key.pem"
+  
+  # gRPC server certificate file for secure agent communications
+  # Can be the same as HTTPS cert or a separate certificate
+  cert_file: "/etc/gosight/certs/grpc-server.crt"
+  
+  # gRPC server private key file for secure communications
+  # Must match the gRPC certificate file
+  key_file: "/etc/gosight/certs/grpc-server.key"
+  
+  # Client Certificate Authority file for mutual TLS (mTLS)
+  # Leave empty to disable client certificate validation
+  # When set, requires agents to present valid certificates
+  client_ca_file: ""  # "/etc/gosight/certs/client-ca.crt"
+
+# =============================================================================
+# OPENTELEMETRY CONFIGURATION
+# =============================================================================
+# Settings for distributed tracing, metrics, and observability
+opentelemetry:
+  # Enable OpenTelemetry Protocol (OTLP) receivers for telemetry ingestion
+  # When disabled, GoSight will not accept external OTLP data
+  enabled: true
+  
+  # HTTP OTLP receiver configuration for REST-based telemetry ingestion
+  # Compatible with most observability tools and cloud providers
+  http:
+    # Enable HTTP OTLP receiver (port 4318 is the OTLP/HTTP standard)
+    enabled: true
+    # Listen address for HTTP OTLP receiver
+    # Use "0.0.0.0:4318" to accept connections from all interfaces
+    addr: "0.0.0.0:4318"
+  
+  # gRPC OTLP receiver configuration for high-performance telemetry ingestion
+  # Preferred for high-volume environments due to better performance
+  grpc:
+    # Enable gRPC OTLP receiver (port 4317 is the OTLP/gRPC standard)
+    enabled: false
+    # Listen address for gRPC OTLP receiver
+    addr: "0.0.0.0:4317"
+
+# =============================================================================
+# DEBUG AND DEVELOPMENT CONFIGURATION
+# =============================================================================
+# Settings for debugging, development, and troubleshooting
+debug:
+  # Enable debug mode with additional logging and diagnostic features
+  # Should be disabled in production for security and performance
+  enabled: true
+  
+  # Enable gRPC reflection for development and debugging tools
+  # Allows tools like grpcurl and Postman to introspect the API
+  # SECURITY WARNING: Disable in production to prevent API discovery
+  enable_reflection: true
+
+# =============================================================================
+# SYSLOG COLLECTION CONFIGURATION
+# =============================================================================
+# Settings for receiving and processing syslog messages from network devices
+# Settings for receiving and processing syslog messages from network devices
+syslog_collection:
+  # Enable TCP syslog receiver for reliable message delivery
+  # TCP provides guaranteed delivery but may be slower than UDP
+  tcp_enabled: true
+  
+  # Enable UDP syslog receiver for high-performance message ingestion
+  # UDP is faster but may lose messages under high load
+  udp_enabled: true
+  
+  # TCP port for syslog message reception (514 is the standard syslog port)
+  # Ports below 1024 require root privileges or capabilities
+  tcp_port: 514
+  
+  # UDP port for syslog message reception
+  udp_port: 514
+  
+  # Buffer size for TCP connections in bytes
+  # Larger buffers improve performance but use more memory
+  tcp_buffer_size: 8192
+  
+  # Buffer size for UDP packets in bytes
+  # Should accommodate the largest expected syslog message
+  udp_buffer_size: 8192
+  
+  # Maximum concurrent TCP connections allowed
+  # Prevents resource exhaustion from connection floods
+  max_connections: 1000
+  
+  # Default rate limit per IP address (messages per second)
+  # Prevents abuse and DoS attacks via syslog flooding
+  default_ip_limit: 100
+
+# =============================================================================
+# STORAGE ENGINE CONFIGURATIONS
+# =============================================================================
+# Database and storage backend settings for different data types
+
+# Metrics storage configuration (time-series data)
+metricstore:
+  # Storage engine for metrics data
+  # Options: "victoriametrics", "prometheus", "influxdb", "memory"
+  engine: "victoriametrics"
+  
+  # URL for the metrics storage backend
+  # VictoriaMetrics default port is 8428
+  url: "http://localhost:8428"
+  
+  # Number of worker goroutines for processing metrics
+  # More workers improve throughput but use more resources
+  workers: 4
+  
+  # Queue size for buffering metrics before processing
+  # Larger queues handle traffic spikes better
+  queue_size: 10000
+  
+  # Number of metrics to batch together for storage operations
+  # Larger batches improve efficiency but increase latency
+  batch_size: 1000
+  
+  # Timeout in milliseconds before flushing incomplete batches
+  # Lower values reduce latency, higher values improve efficiency
+  batch_timeout: 5000
+  
+  # Number of retry attempts for failed storage operations
+  # Helps handle temporary network or storage issues
+  batch_retry: 3
+  
+  # Interval in milliseconds between retry attempts
+  # Exponential backoff is often used in practice
+  batch_interval: 1000
+
+# Log storage configuration (structured and unstructured logs)
+logstore:
+  # Storage engine for log data
+  # Options: "victorialogs", "elasticsearch", "loki", "file", "postgres"
+  engine: "victorialogs"
+  
+  # URL for the log storage backend
+  # VictoriaLogs default port is 9428
+  url: "http://localhost:9428"
+  
+  # Optional table name for database storage engines
+  table: "logs"
+  
+  # Directory path for file-based log storage
+  dir: "/var/lib/gosight/logs"
+  
+  # Number of worker goroutines for processing logs
+  workers: 2
+  
+  # Queue size for buffering logs before processing
+  queue_size: 5000
+  
+  # Number of log entries to batch together
+  batch_size: 500
+  
+  # Timeout in milliseconds before flushing incomplete batches
+  batch_timeout: 10000
+  # Number of retry attempts for failed operations
+  batch_retry: 3
+  
+  # Interval in milliseconds between retry attempts
+  batch_interval: 2000
+
+# User account and authentication storage
+# User account and authentication storage
+userstore:
+  # Storage engine for user accounts and authentication data
+  # Options: "postgres", "memory", "ldap"
+  engine: "postgres"
+  
+  # Database connection string for PostgreSQL
+  # Format: "postgres://username:password@host:port/database?sslmode=mode"
+  dsn: "postgres://gosight:devpassword@127.0.0.1:5432/gosight?sslmode=disable"
+  
+  # LDAP base DN for LDAP authentication (when engine is "ldap")
+  ldap_base: ""
+
+# Infrastructure resource inventory storage
+resourcestore:
+  # Storage engine for discovered resources and inventory data
+  # Options: "postgres", "memory", "json"
+  engine: "postgres"
+  
+  # Database connection string for PostgreSQL storage
+  dsn: "postgres://gosight:devpassword@127.0.0.1:5432/gosight?sslmode=disable"
+  
+  # File path for JSON-based storage (when engine is "json")
+  path: ""
+
+# General data storage for miscellaneous information
+datastore:
+  # Storage engine for general application data
+  # Options: "postgres", "memory", "json"
+  engine: "postgres"
+  
+  # Database connection string for PostgreSQL storage
+  dsn: "postgres://gosight:devpassword@127.0.0.1:5432/gosight?sslmode=disable"
+  
+  # File path for JSON-based storage (when engine is "json")
+  path: ""
+
+# Alert definition and state storage
+# Alert definition and state storage
+alertstore:
+  # Storage engine for alert configurations and state
+  # Options: "postgres", "memory", "json"
+  engine: "postgres"
+  
+  # Database connection string for PostgreSQL storage
+  dsn: "postgres://gosight:devpassword@127.0.0.1:5432/gosight?sslmode=disable"
+  
+  # File path for JSON-based storage (when engine is "json")
+  path: ""
+
+# Event storage for system and application events
+# Event storage for system and application events
+eventstore:
+  # Storage engine for event data
+  # Options: "postgres", "memory", "json"
+  engine: "postgres"
+  
+  # Database connection string for PostgreSQL storage
+  dsn: "postgres://gosight:devpassword@127.0.0.1:5432/gosight?sslmode=disable"
+  
+  # File path for JSON-based storage (when engine is "json")
+  path: ""
+
+# Alert rule definitions storage
+rulestore:
+  # Storage engine for alerting rules
+  # Options: "yaml", "json", "memory", "postgres"
+  engine: "yaml"
+  
+  # File path for YAML/JSON rule definitions
+  # Contains alerting rules, thresholds, and conditions
+  path: "/etc/gosight/rules/alert_rules.yaml"
+
+# Alert routing and notification configuration storage
+routestore:
+  # File path for alert routing configuration
+  # Defines how alerts are routed to different notification channels
+  path: "/etc/gosight/routes/alert_routes.yaml"
+
+# =============================================================================
+# LOGGING CONFIGURATION
+# =============================================================================
+# Log file locations and verbosity settings
+# Log file locations and verbosity settings
+logs:
+  # Error log file path for critical errors and exceptions
+  # Should be monitored for production issues
+  error_log_file: "/var/log/gosight/error.log"
+  
+  # Application log file for general application events
+  # Contains startup, shutdown, and operational messages
+  app_log_file: "/var/log/gosight/app.log"
+  
+  # Access log file for HTTP request logging
+  # Useful for monitoring API usage and performance
+  access_log_file: "/var/log/gosight/access.log"
+  
+  # Debug log file for detailed troubleshooting information
+  # Should be disabled in production for performance and security
+  debug_log_file: "/var/log/gosight/debug.log"
+  
+  # Logging verbosity level
+  # Options: "error", "warn", "info", "debug"
+  # "debug" provides maximum detail but impacts performance
+  log_level: "info"
+
+# =============================================================================
+# CACHING CONFIGURATION
+# =============================================================================
+# High-performance data caching for improved response times
+# High-performance data caching for improved response times
+cache:
+  # Enable caching subsystem for better performance
+  # Reduces database load and improves response times
+  enabled: true
+  
+  # Cache backend engine
+  # Options: "memory" (single-node), "redis" (distributed), "memcached" (distributed)
+  engine: "memory"
+  
+  # Redis configuration (when engine is "redis")
+  redis:
+    # Redis server address in "host:port" format
+    addr: "localhost:6379"
+    
+    # Redis database number (0-15)
+    db: 0
+    
+    # Redis authentication password (leave empty if not required)
+    password: ""
+  
+  # Memcached configuration (when engine is "memcached")
+  memcached:
+    # Memcached server address in "host:port" format
+    addr: "localhost:11211"
+    
+    # SASL username for authentication (if enabled)
+    username: ""
+    
+    # SASL password for authentication (if enabled)
+    password: ""
+  
+  # Cache entry expiration time
+  # Entries older than this duration are automatically removed
+  expiration: "5m"
+  
+  # Cleanup interval for expired entries (memory cache only)
+  # How often to scan for and remove expired entries
+  cleanup_interval: "1m"
+  
+  # Maximum number of items in cache (memory cache only)
+  # Prevents unlimited memory growth
+  size: 10000
+  
+  # Resource cache flush interval
+  # How often to synchronize resource cache with persistent storage
+  resource_flush_interval: "30s"
+
+# =============================================================================
+# AUTHENTICATION AND AUTHORIZATION
+# =============================================================================
+# OAuth providers, JWT tokens, and security settings
+# OAuth providers, JWT tokens, and security settings
+auth:
+  # Enable Single Sign-On (SSO) authentication
+  # When enabled, users can authenticate via OAuth providers
+  sso_enabled: true
+  
+  # Multi-Factor Authentication (MFA) secret key
+  # Base64-encoded secret for TOTP MFA token generation
+  # Generate with: openssl rand -base64 32
+  mfa_secret_key: "h5/dLmo1H/OFCjNs2SqTyD5XLL3u7EJy/ipHzf4Ej6c="
+  
+  # JSON Web Token (JWT) signing secret
+  # Base64-encoded secret for JWT token signing and verification
+  # Generate with: openssl rand -base64 32
+  jwt_secret: "fV3kTO3e3sP/t+xCe4jC0fj76RSSg5WXRL7CcTGmzxo="
+  
+  # Google OAuth2 configuration
+  google:
+    # Google OAuth2 client ID from Google Cloud Console
+    client_id: "your-google-client-id.apps.googleusercontent.com"
+    
+    # Google OAuth2 client secret
+    client_secret: "your-google-client-secret"
+    
+    # OAuth2 redirect URI after successful authentication
+    redirect_uri: "https://yourdomain.com/auth/callback?provider=google"
+  
+  # GitHub OAuth configuration
+  github:
+    # GitHub OAuth App client ID from GitHub Developer settings
+    client_id: "your_github_client_id"
+    
+    # GitHub OAuth App client secret
+    client_secret: "your_github_client_secret"
+    
+    # OAuth2 redirect URI registered with GitHub
+    redirect_uri: "https://yourdomain.com/auth/callback?provider=github"
+  
+  # AWS Cognito configuration
+  # AWS Cognito configuration
+  aws:
+    # AWS region where the Cognito User Pool is located
+    region: "us-east-1"
+    
+    # Cognito User Pool ID
+    user_pool_id: "us-east-1_YourPoolId"
+    
+    # Cognito App Client ID
+    client_id: "your_aws_cognito_client_id"
+    
+    # Cognito App Client secret
+    client_secret: "your_aws_cognito_client_secret"
+    
+    # OAuth2 redirect URI for Cognito
+    redirect_uri: "https://yourdomain.com/auth/callback?provider=aws"
+  
+  # Azure Active Directory configuration
+  azure:
+    # Azure AD tenant ID
+    tenant_id: "your-azure-tenant-id"
+    
+    # Azure AD application (client) ID
+    client_id: "your-azure-client-id"
+    
+    # Azure AD client secret
+    client_secret: "your-azure-client-secret"
+    
+    # OAuth2 redirect URI for Azure AD
+    redirect_uri: "https://yourdomain.com/auth/callback?provider=azure"
+
+# =============================================================================
+# BUFFER ENGINE CONFIGURATION
+# =============================================================================
+# Data batching and performance optimization settings
+# Data batching and performance optimization settings
+buffer_engine:
+  # Enable the buffer engine for improved throughput and reduced storage load
+  # Batches data before writing to storage backends
+  enabled: true
+  
+  # Global flush interval for all buffer types
+  # How often to flush buffered data regardless of buffer size
+  flush_interval: "30s"
+  
+  # Maximum time to wait for buffers to flush during shutdown
+  # Ensures data isn't lost when the server stops
+  shutdown_flush_timeout: "30s"
+  
+  # Maximum number of worker goroutines for parallel buffer processing
+  # More workers can improve throughput on multi-core systems
+  max_workers: 4
+
+  # Metrics buffering configuration
+  metrics:
+    # Enable metrics buffering for improved time-series ingestion performance
+    enabled: true
+    
+    # Number of metric entries to buffer before forced flush
+    # Larger buffers improve efficiency but increase memory usage
+    buffer_size: 10000
+    
+    # Override global flush interval for metrics (optional)
+    # Metrics often benefit from more frequent flushing for real-time monitoring
+    flush_interval: "15s"
+    
+    # Drop metrics when buffer is full instead of blocking ingestion
+    # Helps maintain system responsiveness under extreme load
+    drop_on_overflow: false
+    
+    # Retry failed flush operations on the next cycle
+    # Improves reliability during temporary storage issues
+    retry_failed_flush: true
+    
+    # Flush buffers when client connections disconnect
+    # Ensures data isn't lost when agents reconnect
+    flush_on_disconnect: true
+    
+    # Disk-based overflow protection
+    fallback_disk:
+      # Enable disk fallback when memory buffers are full
+      enabled: false
+      
+      # Directory path for disk-based buffer storage
+      path: "/var/lib/gosight/buffers/metrics"
+      
+      # Maximum disk space allocation in megabytes
+      max_disk_size_mb: 100
+
+  # Log message buffering configuration
+  # Log message buffering configuration
+  logs:
+    # Enable log message buffering for improved ingestion performance
+    enabled: true
+    
+    # Number of log entries to buffer before forced flush
+    # Logs can be larger and more variable than metrics
+    buffer_size: 5000
+    
+    # Flush interval for log messages
+    # Shorter interval ensures logs are available for real-time monitoring
+    flush_interval: "30s"
+    
+    # Drop logs when buffer is full to prevent memory exhaustion
+    # Set to true for high-volume environments to maintain system stability
+    drop_on_overflow: true
+    
+    # Retry failed flush operations
+    retry_failed_flush: true
+    
+    # Disk-based overflow protection for logs
+    fallback_disk:
+      # Enable disk fallback for log overflow
+      enabled: false
+      
+      # Directory path for disk-based log buffer storage
+      path: "/var/lib/gosight/buffers/logs"
+      
+      # Maximum disk space allocation for log buffers
+      max_disk_size_mb: 500
+  
+  # General data buffering configuration
+  data:
+    # Enable general data buffering for miscellaneous data types
+    enabled: true
+    
+    # Buffer size for general data entries
+    buffer_size: 2000
+    
+    # Flush interval for general data
+    flush_interval: "1m"
+    
+    # Overflow handling for general data
+    drop_on_overflow: false
+    
+    # Retry failed flush operations
+    retry_failed_flush: true
+    
+    # Flush on client disconnect
+    flush_on_disconnect: true
+    
+    # Disk fallback for general data
+    fallback_disk:
+      # Enable disk fallback for data overflow
+      enabled: false
+      
+      # Directory path for disk-based data buffer storage
+      path: "/var/lib/gosight/buffers/data"
+      
+      # Maximum disk space allocation for data buffers
+      max_disk_size_mb: 200
+
+  # Event buffering configuration
+  # Event buffering configuration
+  events:
+    # Enable event buffering for system and application events
+    enabled: true
+    
+    # Buffer size for events (typically lower volume than metrics/logs)
+    buffer_size: 1000
+    
+    # Flush interval for events
+    # Events often need faster processing for real-time alerts
+    flush_interval: "30s"
+    
+    # Retry failed event flush operations
+    # Events are critical and should not be lost
+    retry_failed_flush: true
+
+  # Alert buffering configuration
+  alerts:
+    # Enable alert buffering for notification management
+    enabled: true
+    
+    # Buffer size for alerts (small buffer for low latency)
+    buffer_size: 200
+    
+    # Flush interval for alerts
+    # Alerts should be processed quickly for timely notifications
+    flush_interval: "10s"
+    
+    # Never drop alerts even under high load
+    # Alerts are critical for operational awareness
+    drop_on_overflow: false
+    
+    # Always retry failed alert operations
+    retry_failed_flush: true
+
+# =============================================================================
+# API CONFIGURATION
+# =============================================================================
+# API versioning and management settings
+api:
+  # Default API version when no version is specified by the client
+  # Should be set to the current stable version
+  default_version: "v1"
+  
+  # Enable automatic redirection to versioned endpoints
+  # Helps maintain backward compatibility during API evolution
+  enable_version_redirect: true
+  
+  # HTTP header name for API version specification
+  # Clients can use this header to request specific API versions
+  version_header: "X-API-Version"
+  
+  # List of supported API versions and their configurations
+  # List of supported API versions and their configurations
+  supported_versions:
+    # Version 1 - Current stable API
+    - version: "v1"
+      # Enable this version for client requests
+      enabled: true
+      
+      # Mark as deprecated when planning to sunset
+      deprecated: false
+      
+      # Human-readable description for documentation
+      description: "Current stable API version with full feature support"
+      
+      # URL path prefix for this version
+      path_prefix: "/api/v1"
+    
+    # Example of how to add future API versions:
+    # - version: "v2" 
+    #   enabled: false
+    #   deprecated: false
+    #   description: "Next API version (under development)"
+    #   path_prefix: "/api/v2"
+
+# =============================================================================
+# CONFIGURATION VALIDATION AND USAGE NOTES
+# =============================================================================
+#
+# Environment Variable Overrides:
+# Many settings can be overridden using environment variables. Common examples:
+# - GOSIGHT_GRPC_LISTEN: Override gRPC server address
+# - GOSIGHT_HTTP_LISTEN: Override HTTP server address  
+# - GOSIGHT_LOG_LEVEL: Override logging level
+# - GOSIGHT_DEBUG_ENABLE_REFLECTION: Enable/disable gRPC reflection
+#
+# Security Considerations:
+# - Change default passwords and secrets before production use
+# - Use strong, randomly generated JWT and MFA secrets
+# - Enable TLS/SSL for all external communications
+# - Restrict network access to administrative interfaces
+# - Regularly rotate authentication credentials
+# - Consider using environment variables for sensitive data
+#
+# Performance Tuning:
+# - Adjust buffer sizes based on your data volume
+# - Tune worker counts based on CPU cores
+# - Configure cache settings for your memory constraints
+# - Monitor flush intervals to balance latency vs throughput
+#
+# High Availability:
+# - Use PostgreSQL for persistent storage in production
+# - Configure Redis/Memcached for distributed caching
+# - Set up proper backup and monitoring procedures
+# - Consider load balancing for high-traffic environments
+#
+# For more information, see:
+# - Project documentation: https://github.com/aaronlmathis/gosight
+# - Configuration reference: docs/configuration.md
+# - Security guide: SECURITY.md
+#
+# Generated by GoSight Configuration Tool
+# Last updated: 2025-05-29

@@ -12,12 +12,15 @@ Package config provides configuration loading and management for the GoSight ser
 
 - [func ApplyEnvOverrides\(cfg \*Config\)](<#ApplyEnvOverrides>)
 - [func EnsureDefaultConfig\(path string\) error](<#EnsureDefaultConfig>)
+- [type APIConfig](<#APIConfig>)
+- [type APIVersionConfig](<#APIVersionConfig>)
 - [type AWSConfig](<#AWSConfig>)
   - [func \(a \*AWSConfig\) ToOAuthConfig\(\) \*oauth2.Config](<#AWSConfig.ToOAuthConfig>)
 - [type AlertBufferConfig](<#AlertBufferConfig>)
 - [type AzureConfig](<#AzureConfig>)
   - [func \(a \*AzureConfig\) ToOAuthConfig\(\) \*oauth2.Config](<#AzureConfig.ToOAuthConfig>)
 - [type BufferEngineConfig](<#BufferEngineConfig>)
+- [type CacheConfig](<#CacheConfig>)
 - [type Config](<#Config>)
   - [func LoadConfig\(path string\) \(\*Config, error\)](<#LoadConfig>)
 - [type DataBufferConfig](<#DataBufferConfig>)
@@ -28,34 +31,188 @@ Package config provides configuration loading and management for the GoSight ser
 - [type GoogleConfig](<#GoogleConfig>)
   - [func \(g \*GoogleConfig\) ToOAuthConfig\(\) \*oauth2.Config](<#GoogleConfig.ToOAuthConfig>)
 - [type LogBufferConfig](<#LogBufferConfig>)
+- [type MemcachedConfig](<#MemcachedConfig>)
 - [type MetricBufferConfig](<#MetricBufferConfig>)
 - [type OTLPProtocolConfig](<#OTLPProtocolConfig>)
 - [type OpenTelemetryConfig](<#OpenTelemetryConfig>)
+- [type RedisConfig](<#RedisConfig>)
 - [type SyslogCollectionConfig](<#SyslogCollectionConfig>)
 
 
 <a name="ApplyEnvOverrides"></a>
-## func [ApplyEnvOverrides](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L227>)
+## func [ApplyEnvOverrides](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L552>)
 
 ```go
 func ApplyEnvOverrides(cfg *Config)
 ```
 
-ApplyEnvOverrides applies environment variable overrides to the configuration. It checks for specific environment variables and updates the corresponding fields in the Config struct. This allows for dynamic configuration without modifying the YAML file.
+ApplyEnvOverrides applies environment variable overrides to the configuration. This function allows runtime configuration modification without editing YAML files, making it ideal for containerized deployments, CI/CD pipelines, and different deployment environments \(development, staging, production\).
+
+Supported environment variables:
+
+- GOSIGHT\_GRPC\_LISTEN: Override gRPC server listen address
+- GOSIGHT\_HTTP\_LISTEN: Override HTTP server listen address
+- GOSIGHT\_ERROR\_LOG\_FILE: Override error log file path
+- GOSIGHT\_APP\_LOG\_FILE: Override application log file path
+- GOSIGHT\_ACCESS\_LOG\_FILE: Override access log file path
+- GOSIGHT\_LOG\_LEVEL: Override logging level \(debug, info, warn, error\)
+- GOSIGHT\_TLS\_CERT\_FILE: Override TLS certificate file path
+- GOSIGHT\_TLS\_KEY\_FILE: Override TLS private key file path
+- GOSIGHT\_TLS\_CLIENT\_CA\_FILE: Override client CA certificate file path
+- GOSIGHT\_DEBUG\_ENABLE\_REFLECTION: Enable/disable gRPC reflection \(true/false\)
+- GOSIGHT\_USERSTORE\_TYPE: Override user store backend type
+- GOSIGHT\_USERSTORE\_DSN: Override user store connection string
+- GOSIGHT\_USERSTORE\_LDAP\_BASE: Override LDAP base DN
+
+Environment variable precedence:
+
+1. Environment variables \(highest priority\)
+2. YAML configuration file
+3. Default values \(lowest priority\)
+
+Example usage:
+
+```
+cfg, _ := LoadConfig("config.yaml")
+ApplyEnvOverrides(cfg)  // Apply environment overrides
+```
+
+This function modifies the passed configuration struct in\-place and should be called after LoadConfig\(\) but before using the configuration.
 
 <a name="EnsureDefaultConfig"></a>
-## func [EnsureDefaultConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/default.go#L35>)
+## func [EnsureDefaultConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/default.go#L84>)
 
 ```go
 func EnsureDefaultConfig(path string) error
 ```
 
-EnsureDefaultConfig checks if the default configuration file exists at the specified path.
+EnsureDefaultConfig checks if the default configuration file exists at the specified path and creates it with minimal default settings if it doesn't exist.
+
+This function provides automatic configuration file generation for first\-time installations and development environments, reducing setup complexity while maintaining security through explicit file creation.
+
+Parameters:
+
+- path: Target path for the configuration file \(absolute or relative\)
+
+Returns:
+
+- error: File creation or directory creation errors
+
+Behavior:
+
+- Returns nil immediately if configuration file already exists
+- Creates parent directories if they don't exist \(with 0755 permissions\)
+- Writes default configuration with restrictive permissions \(0644\)
+- Preserves existing configuration files without modification
+
+Error conditions:
+
+- Permission denied when creating directories or files
+- Disk space insufficient for file creation
+- Invalid path or filesystem errors
+
+Security considerations:
+
+- Creates files with 0644 permissions \(readable by owner and group\)
+- Creates directories with 0755 permissions \(standard directory permissions\)
+- Does not overwrite existing configuration files
+
+Example usage:
+
+```
+if err := EnsureDefaultConfig("/etc/gosight/server.yaml"); err != nil {
+	log.Fatalf("Failed to create default config: %v", err)
+}
+```
+
+The generated configuration file should be reviewed and customized for production use, particularly security and storage settings.
+
+<a name="APIConfig"></a>
+## type [APIConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L452-L457>)
+
+APIConfig represents the configuration for API versioning and management. This configuration enables sophisticated API version management including backward compatibility, deprecation handling, and client migration support.
+
+Key features:
+
+- Multiple concurrent API versions
+- Automatic version detection via headers or path prefixes
+- Version\-specific routing and middleware
+- Deprecation warnings and sunset notifications
+- Client migration assistance through redirects
+
+Version resolution order:
+
+1. X\-API\-Version header \(or custom header\)
+2. Path prefix \(/v1/, /v2/, etc.\)
+3. Default version fallback
+
+Example configuration:
+
+```
+api:
+  default_version: "v1"
+  version_header: "X-API-Version"
+  enable_version_redirect: true
+  supported_versions:
+    - version: "v1"
+      enabled: true
+      path_prefix: "/v1"
+    - version: "v2"
+      enabled: true
+      deprecated: false
+      path_prefix: "/v2"
+```
+
+```go
+type APIConfig struct {
+    DefaultVersion        string             `yaml:"default_version" default:"v1"`
+    SupportedVersions     []APIVersionConfig `yaml:"supported_versions"`
+    EnableVersionRedirect bool               `yaml:"enable_version_redirect" default:"true"`
+    VersionHeader         string             `yaml:"version_header" default:"X-API-Version"`
+}
+```
+
+<a name="APIVersionConfig"></a>
+## type [APIVersionConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L473-L479>)
+
+APIVersionConfig represents configuration for a specific API version. Each API version can be independently enabled, deprecated, and configured with its own routing rules and metadata.
+
+Version lifecycle management:
+
+- Enabled: Controls whether the version accepts new requests
+- Deprecated: Indicates the version is deprecated \(adds warning headers\)
+- Description: Human\-readable version information for documentation
+- PathPrefix: URL path prefix for version\-specific routing
+
+Deprecation handling:
+
+- Deprecated versions include Sunset and Deprecation headers
+- Clients receive migration guidance through response headers
+- Monitoring can track usage of deprecated versions
+
+```go
+type APIVersionConfig struct {
+    Version     string `yaml:"version"`
+    Enabled     bool   `yaml:"enabled" default:"true"`
+    Deprecated  bool   `yaml:"deprecated" default:"false"`
+    Description string `yaml:"description"`
+    PathPrefix  string `yaml:"path_prefix"`
+}
+```
 
 <a name="AWSConfig"></a>
-## type [AWSConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L186-L192>)
+## type [AWSConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L289-L295>)
 
-AWSConfig represents the configuration for AWS Cognito authentication
+AWSConfig represents the configuration for AWS Cognito authentication. AWS Cognito provides managed user authentication and authorization services with support for social identity providers, enterprise identity providers, and custom authentication flows.
+
+Configuration requires:
+
+- AWS region where the Cognito User Pool is deployed
+- User Pool ID from the Cognito service
+- App Client credentials configured in the User Pool
+- Redirect URI matching your GoSight callback endpoint
+
+The OAuth2 flow uses the standard authorization code grant with PKCE for enhanced security in web applications.
 
 ```go
 type AWSConfig struct {
@@ -68,18 +225,58 @@ type AWSConfig struct {
 ```
 
 <a name="AWSConfig.ToOAuthConfig"></a>
-### func \(\*AWSConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L282>)
+### func \(\*AWSConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L648>)
 
 ```go
 func (a *AWSConfig) ToOAuthConfig() *oauth2.Config
 ```
 
-ToOAuthConfig converts the AWSConfig to an OAuth2 configuration
+ToOAuthConfig converts the AWSConfig to an OAuth2 configuration. This method creates a standard OAuth2 configuration for AWS Cognito authentication, automatically constructing the appropriate endpoints based on the configured region and user pool ID.
+
+AWS Cognito OAuth2 endpoints are constructed as:
+
+- AuthURL: https://{user_pool_id}.auth.{region}.amazoncognito.com/oauth2/authorize
+- TokenURL: https://{user_pool_id}.auth.{region}.amazoncognito.com/oauth2/token
+
+The configuration includes standard OpenID Connect scopes for accessing user profile information and authentication status.
+
+Returns:
+
+- \*oauth2.Config: OAuth2 configuration for AWS Cognito authentication
+
+Note: Requires valid AWS Cognito User Pool configuration with OAuth2 enabled and appropriate app client settings.
 
 <a name="AlertBufferConfig"></a>
-## type [AlertBufferConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/bufferConfig.go#L91-L97>)
+## type [AlertBufferConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/bufferConfig.go#L228-L234>)
 
-AlertBufferConfig is the configuration for the alerts buffer. It includes settings for buffering alerts data before it is sent to the stores
+AlertBufferConfig represents the configuration for alert buffering. Alerts are critical notifications that require careful handling to ensure timely delivery while avoiding notification storms and duplicate alerts.
+
+Alert\-specific requirements:
+
+- Time\-sensitive delivery for critical incidents
+- Deduplication to prevent alert storms
+- Ordering preservation for alert correlation
+- Minimal latency for high\-severity alerts
+
+Configuration features:
+
+- BufferSize: Maximum alerts to buffer before flush
+- FlushInterval: Maximum alert delay tolerance
+- DropOnOverflow: Overflow handling \(typically disabled for alerts\)
+- RetryFailedFlush: Retry mechanism for delivery failures
+
+Alert buffering strategies:
+
+- Short flush intervals to minimize notification delays
+- Conservative overflow policies to prevent alert loss
+- Retry mechanisms to ensure delivery reliability
+- Size\-based flushing to handle alert bursts
+
+Performance vs. reliability trade\-offs:
+
+- Smaller buffers reduce latency but increase overhead
+- Retry logic ensures delivery but may increase delay
+- No disk fallback to maintain alert delivery speed
 
 ```go
 type AlertBufferConfig struct {
@@ -92,9 +289,18 @@ type AlertBufferConfig struct {
 ```
 
 <a name="AzureConfig"></a>
-## type [AzureConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L195-L200>)
+## type [AzureConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L310-L315>)
 
-AzureConfig represents the configuration for Azure AD authentication
+AzureConfig represents the configuration for Azure Active Directory authentication. Azure AD \(now Microsoft Entra ID\) provides enterprise\-grade identity and access management with support for conditional access, multi\-factor authentication, and integration with Microsoft 365 and other enterprise applications.
+
+Configuration requires:
+
+- Tenant ID from your Azure AD tenant
+- Application \(client\) ID from app registration
+- Client secret for server\-to\-server authentication
+- Redirect URI configured in the app registration
+
+Supports Microsoft Graph API access for user profile information and organizational data integration.
 
 ```go
 type AzureConfig struct {
@@ -106,18 +312,72 @@ type AzureConfig struct {
 ```
 
 <a name="AzureConfig.ToOAuthConfig"></a>
-### func \(\*AzureConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L296>)
+### func \(\*AzureConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L681>)
 
 ```go
 func (a *AzureConfig) ToOAuthConfig() *oauth2.Config
 ```
 
-ToOAuthConfig converts the AzureConfig to an OAuth2 configuration
+ToOAuthConfig converts the AzureConfig to an OAuth2 configuration. This method creates a standard OAuth2 configuration for Azure Active Directory \(Microsoft Entra ID\) authentication using the Microsoft identity platform v2.0 endpoints.
+
+Azure AD OAuth2 endpoints are constructed as:
+
+- AuthURL: https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/authorize
+- TokenURL: https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token
+
+Configured scopes include:
+
+- "openid": OpenID Connect authentication
+- "email": User email address access
+- "profile": Basic user profile information
+- "offline\_access": Refresh token support for long\-lived sessions
+- "https://graph.microsoft.com/User.Read": Microsoft Graph API access for user data
+
+Returns:
+
+- \*oauth2.Config: OAuth2 configuration for Azure AD authentication
+
+The configuration supports both personal Microsoft accounts and organizational accounts depending on the tenant configuration.
 
 <a name="BufferEngineConfig"></a>
-## type [BufferEngineConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/bufferConfig.go#L33-L43>)
+## type [BufferEngineConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/bufferConfig.go#L63-L73>)
 
-BufferEngineConfig is the configuration for the buffer engine. It includes settings for metrics, logs, data, events, and alerts buffering. The buffer engine is responsible for buffering data before it is sent to the stores
+BufferEngineConfig represents the comprehensive configuration for the buffer engine subsystem. The buffer engine provides high\-performance data buffering and batching capabilities to optimize throughput and reduce load on downstream storage systems.
+
+Key features:
+
+- Multi\-type data buffering \(metrics, logs, events, alerts, data\)
+- Configurable flush intervals and buffer sizes
+- Graceful shutdown with timeout\-controlled flushing
+- Worker pool management for parallel processing
+- Per\-data\-type configuration granularity
+
+The buffer engine operates as a write\-through cache layer that:
+
+1. Accepts high\-frequency data ingestion
+2. Batches data efficiently in memory
+3. Flushes to persistent storage on intervals or size thresholds
+4. Provides reliability through disk fallback options
+
+Performance characteristics:
+
+- Reduces database write operations through batching
+- Smooths out traffic spikes and burst writes
+- Provides configurable trade\-offs between latency and throughput
+- Supports graceful degradation under high load
+
+Example configuration:
+
+```
+buffer_engine:
+  enabled: true
+  flush_interval: "30s"
+  max_workers: 4
+  metrics:
+    enabled: true
+    buffer_size: 10000
+    flush_interval: "15s"
+```
 
 ```go
 type BufferEngineConfig struct {
@@ -133,10 +393,89 @@ type BufferEngineConfig struct {
 }
 ```
 
-<a name="Config"></a>
-## type [Config](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L43-L148>)
+<a name="CacheConfig"></a>
+## type [CacheConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L370-L379>)
 
-Config represents the configuration structure for the GoSight server. It includes settings for server address, storage engine, database path, logging, TLS settings, and debug options.
+CacheConfig represents the configuration for the caching subsystem. The cache system provides high\-performance data caching to reduce database load and improve response times for frequently accessed data.
+
+Supported cache backends:
+
+- "memory": In\-memory LRU cache \(default, fastest, single\-node\)
+- "redis": Redis backend \(distributed, persistent\)
+- "memcached": Memcached backend \(distributed, volatile\)
+
+The cache system includes:
+
+- Automatic expiration and cleanup
+- Configurable size limits
+- Resource\-specific flush intervals
+- Backend\-specific configuration options
+
+Performance considerations:
+
+- Memory cache: Fastest access, limited to single node
+- Redis: Network overhead, but supports clustering and persistence
+- Memcached: Network overhead, optimized for high throughput
+
+Example configuration:
+
+```
+cache:
+  enabled: true
+  engine: "redis"
+  expiration: "10m"
+  size: 10000
+  redis:
+    addr: "localhost:6379"
+    db: 0
+```
+
+```go
+type CacheConfig struct {
+    Enabled               bool            `yaml:"enabled"`
+    Engine                string          `yaml:"engine"`
+    Redis                 RedisConfig     `yaml:"redis"`
+    Memcached             MemcachedConfig `yaml:"memcached"`
+    Expiration            time.Duration   `yaml:"expiration" default:"5m"`
+    CleanupInterval       time.Duration   `yaml:"cleanup_interval" default:"1m"`
+    Size                  int             `yaml:"size" default:"1000"`
+    ResourceFlushInterval time.Duration   `yaml:"resource_flush_interval" env:"CACHE_RESOURCE_FLUSH_INTERVAL" envDefault:"30"`
+}
+```
+
+<a name="Config"></a>
+## type [Config](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L68-L185>)
+
+Config represents the comprehensive configuration structure for the GoSight server. This is the root configuration object that encompasses all server settings including:
+
+- Server networking and protocol settings \(gRPC, HTTP\)
+- Storage engine configurations for different data types
+- Authentication and authorization providers
+- TLS/SSL certificate settings
+- Caching backend configurations
+- Buffer engine settings for data batching
+- Monitoring and telemetry configurations
+- Debug and development options
+
+The configuration is typically loaded from a YAML file and can be overridden by environment variables for deployment flexibility.
+
+Example usage:
+
+```
+cfg, err := LoadConfig("config.yaml")
+if err != nil {
+	log.Fatal(err)
+}
+ApplyEnvOverrides(cfg)
+```
+
+The configuration supports multiple storage backends including:
+
+- PostgreSQL for persistent storage
+- SQLite for lightweight deployments
+- Memory storage for testing
+- Redis for high\-performance caching
+- File\-based storage for simple deployments
 
 ```go
 type Config struct {
@@ -170,6 +509,7 @@ type Config struct {
     }   `yaml:"tls"`
 
     Debug struct {
+        Enabled          bool `yaml:"enabled"`
         EnableReflection bool `yaml:"enable_reflection"`
     }   `yaml:"debug"`
 
@@ -185,7 +525,8 @@ type Config struct {
     }   `yaml:"metricstore"`
 
     LogStore struct {
-        Engine        string `yaml:"engine"` // file, victoriametric etc
+        Engine        string `yaml:"engine"`          // file, victoriametric etc
+        Table         string `yaml:"table,omitempty"` // optional table name for PostgreSQL
         Dir           string `yaml:"dir"`
         Url           string `yaml:"url,omitempty"` // optional URL for remote storage
         Workers       int    `yaml:"workers"`
@@ -207,6 +548,12 @@ type Config struct {
         Path   string `yaml:"path,omitempty"` // optional path for JSON file
         DSN    string `yaml:"dsn,omitempty"`  // optional DSN for PostgreSQL
     }   `yaml:"datastore"`
+
+    ResourceStore struct {
+        Engine string `yaml:"engine"`         // "memory", "json", or "postgres"
+        Path   string `yaml:"path,omitempty"` // optional path for JSON file
+        DSN    string `yaml:"dsn,omitempty"`  // optional DSN for PostgreSQL
+    }   `yaml:"resourcestore"`
 
     AlertStore struct {
         Engine string `yaml:"engine"`         // "memory", "json", or "postgres"
@@ -244,22 +591,71 @@ type Config struct {
     }   `yaml:"auth"`
 
     OpenTelemetry OpenTelemetryConfig `yaml:"opentelemetry"`
+
+    Cache CacheConfig `yaml:"cache"`
+
+    API APIConfig `yaml:"api"`
 }
 ```
 
 <a name="LoadConfig"></a>
-### func [LoadConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L211>)
+### func [LoadConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L508>)
 
 ```go
 func LoadConfig(path string) (*Config, error)
 ```
 
-LoadConfig loads the configuration from a YAML file. It returns a Config struct and an error if any occurs during loading.
+LoadConfig loads the configuration from a YAML file with comprehensive error handling. This function reads and parses a YAML configuration file, returning a fully populated Config struct. It performs basic validation during unmarshaling and provides detailed error information for troubleshooting.
+
+Parameters:
+
+- path: Absolute or relative path to the YAML configuration file
+
+Returns:
+
+- \*Config: Populated configuration struct with all settings
+- error: Detailed error information including file access and parsing errors
+
+Error handling:
+
+- File not found: Returns clear indication of missing file
+- Permission denied: Indicates file access permission issues
+- YAML syntax errors: Provides line number and syntax details
+- Type validation: Reports field type mismatches
+
+Example usage:
+
+```
+cfg, err := LoadConfig("/etc/gosight/server.yaml")
+if err != nil {
+	log.Fatalf("Failed to load config: %v", err)
+}
+```
+
+The loaded configuration should be validated and have environment overrides applied using ApplyEnvOverrides\(\) before use.
 
 <a name="DataBufferConfig"></a>
-## type [DataBufferConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/bufferConfig.go#L70-L78>)
+## type [DataBufferConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/bufferConfig.go#L161-L169>)
 
-DataBufferConfig is the configuration for the data buffer. It includes settings for buffering data before it is sent to the stores
+DataBufferConfig represents the configuration for general data buffering. This buffer handles miscellaneous data types that don't fit into specific categories like metrics or logs, providing a flexible buffering solution for custom data ingestion workflows.
+
+Use cases:
+
+- Custom telemetry data from applications
+- Third\-party integration data feeds
+- Batch processing of API responses
+- Temporary data aggregation before analysis
+
+Configuration capabilities:
+
+- BufferSize: Maximum entries before forced flush
+- FlushInterval: Time\-based flush frequency
+- DropOnOverflow: Overflow handling strategy
+- RetryFailedFlush: Error recovery mechanism
+- FlushOnDisconnect: Network resilience feature
+- FallbackDisk: Persistent overflow storage
+
+The data buffer provides generic buffering capabilities while maintaining the same reliability and performance characteristics as specialized buffers for metrics and logs.
 
 ```go
 type DataBufferConfig struct {
@@ -274,9 +670,45 @@ type DataBufferConfig struct {
 ```
 
 <a name="DiskBufferConfig"></a>
-## type [DiskBufferConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/bufferConfig.go#L101-L105>)
+## type [DiskBufferConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/bufferConfig.go#L270-L274>)
 
-DiskBufferConfig is the configuration for the disk buffer. It includes settings for buffering data on disk before it is sent to the stores
+DiskBufferConfig represents the configuration for disk\-based buffer fallback. When memory buffers reach capacity or during system stress, the disk buffer provides persistent storage to prevent data loss while maintaining system stability and performance.
+
+Disk buffering features:
+
+- Persistent storage for overflow data
+- Configurable size limits to prevent disk exhaustion
+- Automatic cleanup when memory buffers have capacity
+- Sequential write optimization for performance
+
+Configuration options:
+
+- Enabled: Controls whether disk fallback is active
+- Path: Directory path for storing buffered data files
+- MaxDiskSizeMB: Maximum disk space allocation in megabytes
+
+Operational behavior:
+
+- Activates when memory buffers reach capacity
+- Uses sequential file writes for optimal I/O performance
+- Automatically rotates files when size limits are reached
+- Provides data recovery during system restarts
+
+Performance considerations:
+
+- Disk I/O is slower than memory but provides durability
+- Sequential writes minimize disk seek time
+- Size limits prevent disk space exhaustion
+- File rotation maintains manageable file sizes
+
+Example configuration:
+
+```
+fallback_disk:
+  enabled: true
+  path: "/var/lib/gosight/buffer"
+  max_disk_size_mb: 1024
+```
 
 ```go
 type DiskBufferConfig struct {
@@ -287,9 +719,31 @@ type DiskBufferConfig struct {
 ```
 
 <a name="EventBufferConfig"></a>
-## type [EventBufferConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/bufferConfig.go#L82-L87>)
+## type [EventBufferConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/bufferConfig.go#L195-L200>)
 
-EventBufferConfig is the configuration for the events buffer. It includes settings for buffering events data before it is sent to the stores
+EventBufferConfig represents the configuration for event data buffering. Events represent discrete occurrences or state changes in the system, often requiring different buffering strategies than continuous metrics or log streams.
+
+Event characteristics:
+
+- Typically lower frequency than metrics but higher importance
+- May require ordered processing for correlation
+- Often trigger downstream processing workflows
+- Critical events may need immediate processing
+
+Configuration options:
+
+- BufferSize: Maximum number of events to buffer
+- FlushInterval: Maximum event retention time in buffer
+- RetryFailedFlush: Retry policy for storage failures
+
+Event buffering benefits:
+
+- Enables batch processing of related events
+- Reduces storage transaction overhead
+- Provides event ordering within flush windows
+- Smooths irregular event generation patterns
+
+Note: Events typically don't use overflow dropping or disk fallback to ensure critical event data is never lost.
 
 ```go
 type EventBufferConfig struct {
@@ -301,9 +755,23 @@ type EventBufferConfig struct {
 ```
 
 <a name="GitHubConfig"></a>
-## type [GitHubConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L203-L207>)
+## type [GitHubConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L334-L338>)
 
-GitHubConfig represents the configuration for GitHub OAuth authentication
+GitHubConfig represents the configuration for GitHub OAuth authentication. GitHub OAuth provides authentication using GitHub user accounts, making it ideal for development teams and organizations already using GitHub for source code management.
+
+Setup process:
+
+1. Register a new OAuth App in GitHub Settings \> Developer settings
+2. Configure Authorization callback URL
+3. Obtain Client ID and Client Secret
+4. Set appropriate scopes for user data access
+
+Required scopes:
+
+- "read:user" for basic user profile information
+- "user:email" for accessing user email addresses
+
+GitHub OAuth is particularly useful for teams wanting to leverage existing GitHub organization membership for access control.
 
 ```go
 type GitHubConfig struct {
@@ -314,18 +782,47 @@ type GitHubConfig struct {
 ```
 
 <a name="GitHubConfig.ToOAuthConfig"></a>
-### func \(\*GitHubConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L316>)
+### func \(\*GitHubConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L721>)
 
 ```go
 func (g *GitHubConfig) ToOAuthConfig() *oauth2.Config
 ```
 
-ToOAuthConfig converts the GitHubConfig to an OAuth2 configuration
+ToOAuthConfig converts the GitHubConfig to an OAuth2 configuration. This method creates a standard OAuth2 configuration for GitHub OAuth authentication, enabling users to authenticate using their GitHub accounts.
+
+GitHub OAuth2 endpoints:
+
+- AuthURL: https://github.com/login/oauth/authorize
+- TokenURL: https://github.com/login/oauth/access_token
+
+Configured scopes:
+
+- "read:user": Access to user's public profile information
+- "user:email": Access to user's email addresses \(including private emails\)
+
+Returns:
+
+- \*oauth2.Config: OAuth2 configuration for GitHub authentication
+
+The configuration enables access to user profile data and email information necessary for user identification and account linking. Additional scopes can be added based on application requirements \(e.g., repository access\).
+
+GitHub OAuth is particularly useful for developer tools and applications that want to integrate with existing GitHub workflows and permissions.
 
 <a name="GoogleConfig"></a>
-## type [GoogleConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L179-L183>)
+## type [GoogleConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L270-L274>)
 
-GoogleConfig represents the configuration for Google OAuth2 authentication. It includes the client ID, client secret, and redirect URI.
+GoogleConfig represents the configuration for Google OAuth2 authentication. This configuration enables Single Sign\-On \(SSO\) authentication through Google's OAuth2 service, allowing users to authenticate using their Google accounts.
+
+To set up Google OAuth2:
+
+1. Create a project in Google Cloud Console
+2. Enable the Google\+ API
+3. Create OAuth2 credentials
+4. Configure authorized redirect URIs
+
+The redirect URI should match the callback endpoint in your GoSight server \(typically: https://yourdomain.com/auth/google/callback\).
+
+Required OAuth2 scopes: "openid", "email", "profile"
 
 ```go
 type GoogleConfig struct {
@@ -336,18 +833,68 @@ type GoogleConfig struct {
 ```
 
 <a name="GoogleConfig.ToOAuthConfig"></a>
-### func \(\*GoogleConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L271>)
+### func \(\*GoogleConfig\) [ToOAuthConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L621>)
 
 ```go
 func (g *GoogleConfig) ToOAuthConfig() *oauth2.Config
 ```
 
-ToOAuthConfig converts the GoogleConfig to an OAuth2 configuration. It sets the client ID, client secret, redirect URI, scopes, and endpoint.
+ToOAuthConfig converts the GoogleConfig to an OAuth2 configuration. This method transforms the Google\-specific configuration into a standard OAuth2 configuration that can be used with the golang.org/x/oauth2 library for implementing the OAuth2 authorization code flow.
+
+The conversion includes:
+
+- Setting up Google's OAuth2 endpoints
+- Configuring required scopes for user information
+- Preparing redirect URI for callback handling
+
+Required OAuth2 scopes:
+
+- "openid": Enables OpenID Connect authentication
+- "email": Access to user's email address
+- "profile": Access to user's basic profile information
+
+Returns:
+
+- \*oauth2.Config: Ready\-to\-use OAuth2 configuration for Google authentication
+
+Example usage:
+
+```
+googleCfg := &GoogleConfig{
+	ClientID: "your-client-id",
+	ClientSecret: "your-client-secret",
+	RedirectURI: "https://yourapp.com/auth/google/callback",
+}
+oauth2Cfg := googleCfg.ToOAuthConfig()
+authURL := oauth2Cfg.AuthCodeURL("state")
+```
 
 <a name="LogBufferConfig"></a>
-## type [LogBufferConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/bufferConfig.go#L59-L66>)
+## type [LogBufferConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/bufferConfig.go#L130-L137>)
 
-LogBufferConfig is the configuration for the logs buffer. It includes settings for buffering logs data before it is sent to the stores
+LogBufferConfig represents the configuration for log message buffering. Log buffering optimizes the ingestion and storage of log messages from various sources including applications, system logs, and syslog feeds.
+
+Log\-specific considerations:
+
+- Variable message sizes require flexible buffer management
+- Log bursts during incidents need overflow protection
+- Critical logs may require immediate flushing
+- Disk fallback ensures no log message loss
+
+Configuration features:
+
+- BufferSize: Maximum number of log entries to buffer
+- FlushInterval: Maximum time logs remain in buffer
+- DropOnOverflow: Policy for handling buffer overflow
+- RetryFailedFlush: Retry mechanism for storage failures
+- FallbackDisk: Disk\-based overflow protection
+
+Buffering benefits for logs:
+
+- Reduces storage I/O operations during log bursts
+- Enables efficient batch processing of log data
+- Provides smoothing for irregular log patterns
+- Maintains log ordering within flush intervals
 
 ```go
 type LogBufferConfig struct {
@@ -360,10 +907,58 @@ type LogBufferConfig struct {
 }
 ```
 
-<a name="MetricBufferConfig"></a>
-## type [MetricBufferConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/bufferConfig.go#L47-L55>)
+<a name="MemcachedConfig"></a>
+## type [MemcachedConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L416-L420>)
 
-MetricBufferConfig is the configuration for the metrics buffer. It includes settings for buffering metrics data before it is sent to the stores
+MemcachedConfig represents the configuration for Memcached caching backend. Memcached is a high\-performance, distributed memory object caching system optimized for speed and simplicity, ideal for web applications with high read/write ratios.
+
+Configuration options:
+
+- Addr: Memcached server address in "host:port" format
+- Username: SASL authentication username \(if SASL is enabled\)
+- Password: SASL authentication password \(if SASL is enabled\)
+
+Memcached characteristics:
+
+- Volatile storage \(data lost on restart\)
+- Simple key\-value operations
+- Excellent performance for read\-heavy workloads
+- Easy horizontal scaling
+
+```go
+type MemcachedConfig struct {
+    Addr     string `yaml:"addr"`
+    Username string `yaml:"username"`
+    Password string `yaml:"password"`
+}
+```
+
+<a name="MetricBufferConfig"></a>
+## type [MetricBufferConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/bufferConfig.go#L98-L106>)
+
+MetricBufferConfig represents the configuration for metrics data buffering. Metrics are typically high\-frequency, time\-series data points that benefit significantly from batching to reduce storage system load and improve write throughput.
+
+Configuration options:
+
+- BufferSize: Maximum number of metric entries to buffer before forced flush
+- FlushInterval: Time\-based flush trigger for ensuring data freshness
+- DropOnOverflow: Behavior when buffer capacity is exceeded
+- RetryFailedFlush: Retry policy for failed storage operations
+- FlushOnDisconnect: Ensure data persistence during network issues
+- FallbackDisk: Disk\-based backup when memory buffers are full
+
+Metrics buffering strategies:
+
+- Time\-based flushing ensures data staleness limits
+- Size\-based flushing prevents memory exhaustion
+- Overflow handling prevents data loss under high load
+- Disk fallback provides durability guarantees
+
+Performance considerations:
+
+- Larger buffers improve batching efficiency but increase memory usage
+- Shorter intervals improve data freshness but reduce batching benefits
+- Disk fallback adds durability at the cost of I/O overhead
 
 ```go
 type MetricBufferConfig struct {
@@ -378,9 +973,11 @@ type MetricBufferConfig struct {
 ```
 
 <a name="OTLPProtocolConfig"></a>
-## type [OTLPProtocolConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L159-L162>)
+## type [OTLPProtocolConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L217-L220>)
 
-OTLPProtocolConfig defines the configuration for an OTLP protocol.
+OTLPProtocolConfig defines the configuration for an OTLP protocol endpoint. This configuration specifies whether a particular OTLP protocol \(HTTP or gRPC\) is enabled and the network address it should bind to for receiving telemetry data.
+
+The address format should be ":port" for binding to all interfaces on the specified port, or "host:port" for binding to a specific interface.
 
 ```go
 type OTLPProtocolConfig struct {
@@ -390,9 +987,24 @@ type OTLPProtocolConfig struct {
 ```
 
 <a name="OpenTelemetryConfig"></a>
-## type [OpenTelemetryConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L152-L156>)
+## type [OpenTelemetryConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L205-L209>)
 
-OpenTelemetryConfig defines the configuration for OpenTelemetry It includes settings for the OTLP receiver
+OpenTelemetryConfig defines the configuration for OpenTelemetry observability. OpenTelemetry provides distributed tracing, metrics, and logging capabilities for monitoring and debugging the GoSight server in production environments.
+
+The configuration supports both HTTP and gRPC protocols for the OTLP \(OpenTelemetry Protocol\) receiver, allowing integration with various observability backends like Jaeger, Zipkin, Prometheus, and cloud\-native solutions.
+
+Example YAML configuration:
+
+```
+opentelemetry:
+  enabled: true
+  http:
+    enabled: true
+    addr: ":4318"
+  grpc:
+    enabled: true
+    addr: ":4317"
+```
 
 ```go
 type OpenTelemetryConfig struct {
@@ -402,10 +1014,57 @@ type OpenTelemetryConfig struct {
 }
 ```
 
-<a name="SyslogCollectionConfig"></a>
-## type [SyslogCollectionConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L166-L175>)
+<a name="RedisConfig"></a>
+## type [RedisConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L395-L399>)
 
-SyslogCollectionConfig defines the configuration for syslog collection The syslog collection can be used to collect syslog messages from network devices.
+RedisConfig represents the configuration for Redis caching backend. Redis provides distributed caching with persistence, clustering, and advanced data structure support beyond simple key\-value operations.
+
+Configuration options:
+
+- Addr: Redis server address in "host:port" format
+- Password: Authentication password \(leave empty if not required\)
+- DB: Redis database number \(0\-15, default databases\)
+
+Redis features utilized:
+
+- Automatic key expiration
+- Memory\-efficient data structures
+- Persistence options \(RDB/AOF\)
+- High availability through clustering
+
+```go
+type RedisConfig struct {
+    Addr     string `yaml:"addr"`
+    Password string `yaml:"password"`
+    DB       int    `yaml:"db"`
+}
+```
+
+<a name="SyslogCollectionConfig"></a>
+## type [SyslogCollectionConfig](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/config/config.go#L245-L254>)
+
+SyslogCollectionConfig defines the configuration for syslog message collection. The syslog collection subsystem enables GoSight to receive and process syslog messages from network devices, servers, and other infrastructure components.
+
+It supports both TCP and UDP protocols with configurable buffer sizes and connection limits to handle high\-volume syslog ingestion while maintaining system stability and performance.
+
+Key features:
+
+- Dual protocol support \(TCP/UDP\) for maximum compatibility
+- Configurable buffer sizes for optimal memory usage
+- Connection limiting to prevent resource exhaustion
+- Per\-IP rate limiting for DDoS protection
+
+Example configuration:
+
+```
+syslog_collection:
+  tcp_enabled: true
+  udp_enabled: true
+  tcp_port: 514
+  udp_port: 514
+  max_connections: 1000
+  default_ip_limit: 100
+```
 
 ```go
 type SyslogCollectionConfig struct {

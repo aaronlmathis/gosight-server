@@ -30,7 +30,38 @@ import (
 	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
-// InitAuth initializes the authentication providers for the GoSight server.
+// InitAuth initializes the complete authentication system for the GoSight server.
+// This function sets up cryptographic secrets, multi-factor authentication,
+// and all configured authentication providers to enable secure user access.
+//
+// The initialization process includes:
+//
+// 1. JWT Secret Setup:
+//   - Decodes and validates the base64-encoded JWT signing secret
+//   - Ensures the secret meets minimum security requirements (32+ bytes)
+//   - Stores the secret for session token generation and validation
+//
+// 2. MFA Secret Setup:
+//   - Initializes the multi-factor authentication encryption key
+//   - Enables TOTP (Time-based One-Time Password) functionality
+//   - Provides secure storage for MFA device registrations
+//
+// 3. Authentication Provider Configuration:
+//   - Builds provider instances based on server configuration
+//   - Configures OAuth settings for external providers (Google, GitHub, etc.)
+//   - Sets up local authentication with password hashing
+//   - Validates all provider configurations
+//
+// The function performs critical security validations and will fail if secrets
+// are malformed or insufficient for production security requirements.
+//
+// Parameters:
+//   - cfg: Server configuration containing authentication settings and secrets
+//   - userStore: User storage interface for authentication data persistence
+//
+// Returns:
+//   - map[string]gosightauth.AuthProvider: Configured authentication providers by name
+//   - error: If secret initialization or provider configuration fails
 func InitAuth(cfg *config.Config, userStore userstore.UserStore) (map[string]gosightauth.AuthProvider, error) {
 	// Decode and store JWTSecret
 	err := gosightauth.InitJWTSecret(cfg.Auth.JWTSecret)
@@ -53,8 +84,33 @@ func InitAuth(cfg *config.Config, userStore userstore.UserStore) (map[string]gos
 	return authProviders, nil
 }
 
-// buildAuthProviders builds the authentication providers based on the configuration.
-// It returns a map of provider names to their respective AuthProvider implementations.
+// buildAuthProviders constructs authentication provider instances based on configuration.
+// This function creates and configures the actual AuthProvider implementations for
+// each authentication method specified in the server configuration. Each provider
+// is initialized with its specific OAuth configuration and user store access.
+//
+// Supported authentication providers:
+//   - local: Username/password authentication with bcrypt password hashing
+//   - google: Google OAuth 2.0 authentication
+//   - github: GitHub OAuth 2.0 authentication
+//   - azure: Microsoft Azure OAuth 2.0 authentication
+//   - aws: Amazon Web Services OAuth 2.0 authentication
+//
+// OAuth providers use the ToOAuthConfig() helper methods to convert GoSight
+// configuration structures into standard oauth2.Config objects. All providers
+// receive access to the user store for user lookup and creation during the
+// authentication callback process.
+//
+// The function validates that all configured providers are supported and
+// returns an error if an unknown provider is specified in the configuration.
+//
+// Parameters:
+//   - cfg: Server configuration containing auth provider settings and OAuth credentials
+//   - store: User store interface for user data access during authentication
+//
+// Returns:
+//   - map[string]gosightauth.AuthProvider: Map of provider names to configured instances
+//   - error: If an unsupported provider is configured or initialization fails
 func buildAuthProviders(cfg *config.Config, store userstore.UserStore) (map[string]gosightauth.AuthProvider, error) {
 	providers := make(map[string]gosightauth.AuthProvider)
 

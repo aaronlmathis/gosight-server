@@ -20,6 +20,7 @@ type User struct {
 	SSOID         string
 	Roles         []Role
 	CreatedAt     time.Time
+	UpdatedAt     time.Time
 	LastLogin     time.Time
 	Scopes        map[string][]string
 }
@@ -94,4 +95,26 @@ type Permission struct {
 	ID          string
 	Name        string
 	Description string
+}
+
+// CreateUserRequest represents the request payload for creating a new user
+type CreateUserRequest struct {
+	Username  string `json:"username"`
+	Email     string `json:"email"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Password  string `json:"password"`
+}
+
+// UpdateUserRequest represents the request payload for updating a user
+type UpdateUserRequest struct {
+	Username  string `json:"username"`
+	Email     string `json:"email"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+}
+
+// AdminPasswordChangeRequest represents the request payload for admin password changes
+type AdminPasswordChangeRequest struct {
+	NewPassword string `json:"new_password"`
 }

@@ -31,8 +31,29 @@ import (
 	"github.com/aaronlmathis/gosight-shared/utils"
 )
 
-// InitLogStore initializes the log store for the GoSight agent.
-// The log store is responsible for storing and retrieving logs.
+// InitLogStore initializes the log store component for the GoSight server.
+// The log store provides high-performance storage and retrieval for application
+// logs, system logs, and other structured log data. It serves as the primary
+// backend for log aggregation, search, and analysis capabilities.
+//
+// The log store supports multiple storage engines optimized for different
+// use cases and deployment scenarios:
+//   - elasticsearch: Full-text search and analytics
+//   - victorialogs: High-performance log storage with LogsQL
+//   - file: Simple file-based storage for development
+//   - postgres: Database storage for structured logs
+//
+// The function integrates with the log cache for improved query performance
+// and delegates engine-specific initialization to the logstore package.
+//
+// Parameters:
+//   - ctx: Context for initialization and cancellation
+//   - cfg: Configuration containing log store settings and engine selection
+//   - logCache: Cache component for improved log query performance
+//
+// Returns:
+//   - logstore.LogStore: Initialized log store interface implementation
+//   - error: If log store initialization fails for the specified engine
 func InitLogStore(ctx context.Context, cfg *config.Config, logCache cache.LogCache) (logstore.LogStore, error) {
 	engine := cfg.LogStore.Engine
 	utils.Info("Initializing log store engine: %s", engine)

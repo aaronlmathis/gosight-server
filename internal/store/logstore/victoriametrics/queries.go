@@ -71,7 +71,7 @@ func (v *VictoriaLogStore) queryMatchingLogIDs(filter model.LogFilter) ([]logRef
 	add("container_id", filter.ContainerID)
 	add("container_name", filter.ContainerName)
 	add("platform", filter.Platform)
-	for k, v := range filter.Tags {
+	for k, v := range filter.Labels {
 		add(k, v)
 	}
 
@@ -198,16 +198,16 @@ func (v *VictoriaLogStore) GetLogByID(logID string) (*model.LogEntry, error) {
 
 	if entry, ok := v.cache.Get(logID); ok {
 		utils.Debug("Log was found in cache: %v", entry.Log.Message)
-		if entry.Log.Tags == nil {
-			entry.Log.Tags = make(map[string]string)
+		if entry.Log.Labels == nil {
+			entry.Log.Labels = make(map[string]string)
 		}
-		entry.Log.Tags["endpoint_id"] = entry.Meta.EndpointID
-		entry.Log.Tags["agent_id"] = entry.Meta.AgentID
-		entry.Log.Tags["host_id"] = entry.Meta.HostID
-		entry.Log.Tags["hostname"] = entry.Meta.Hostname
+		entry.Log.Labels["endpoint_id"] = entry.Meta.EndpointID
+		entry.Log.Labels["agent_id"] = entry.Meta.AgentID
+		entry.Log.Labels["host_id"] = entry.Meta.HostID
+		entry.Log.Labels["hostname"] = entry.Meta.Hostname
 
-		for k, v := range entry.Meta.Tags {
-			entry.Log.Tags[k] = v
+		for k, v := range entry.Meta.Labels {
+			entry.Log.Labels[k] = v
 		}
 		return &entry.Log, nil
 	}
@@ -238,16 +238,16 @@ func (v *VictoriaLogStore) GetLogByID(logID string) (*model.LogEntry, error) {
 				_ = gz.Close()
 				_ = f.Close()
 
-				if entry.Log.Tags == nil {
-					entry.Log.Tags = make(map[string]string)
+				if entry.Log.Labels == nil {
+					entry.Log.Labels = make(map[string]string)
 				}
-				entry.Log.Tags["endpoint_id"] = entry.Meta.EndpointID
-				entry.Log.Tags["agent_id"] = entry.Meta.AgentID
-				entry.Log.Tags["host_id"] = entry.Meta.HostID
-				entry.Log.Tags["hostname"] = entry.Meta.Hostname
+				entry.Log.Labels["endpoint_id"] = entry.Meta.EndpointID
+				entry.Log.Labels["agent_id"] = entry.Meta.AgentID
+				entry.Log.Labels["host_id"] = entry.Meta.HostID
+				entry.Log.Labels["hostname"] = entry.Meta.Hostname
 
-				for k, v := range entry.Meta.Tags {
-					entry.Log.Tags[k] = v
+				for k, v := range entry.Meta.Labels {
+					entry.Log.Labels[k] = v
 				}
 				return &entry.Log, nil
 			}

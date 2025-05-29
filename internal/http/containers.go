@@ -71,20 +71,20 @@ func (s *HttpServer) HandleContainers(w http.ResponseWriter, r *http.Request) {
 			}
 
 			for _, row := range rows {
-				id := row.Tags["container_id"]
+				id := row.Labels["container_id"]
 				if id == "" {
 					continue
 				}
 				if _, ok := results[id]; !ok {
 					results[id] = &ContainerMetrics{
-						Host:   row.Tags["hostname"],
-						Name:   row.Tags["container_name"],
-						Image:  row.Tags["image"],
+						Host:   row.Labels["hostname"],
+						Name:   row.Labels["container_name"],
+						Image:  row.Labels["image"],
 						Status: "stopped",
 						Labels: make(map[string]string),
-						Ports:  row.Tags["ports"],
+						Ports:  row.Labels["ports"],
 					}
-					for k, v := range row.Tags {
+					for k, v := range row.Labels {
 						if strings.HasPrefix(k, "label.") {
 							results[id].Labels[strings.TrimPrefix(k, "label.")] = v
 						}

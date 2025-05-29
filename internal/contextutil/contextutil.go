@@ -19,30 +19,133 @@ You should have received a copy of the GNU General Public License
 along with GoSight. If not, see https://www.gnu.org/licenses/.
 */
 
-// Package contextutil provides safe helpers for working with context values
+// Package contextutil provides safe helpers for working with context values.
+// This package offers type-safe context value storage and retrieval functions
+// for common authentication, authorization, and request tracking data.
+//
+// The package uses private key types to prevent context key collisions and
+// provides consistent interfaces for storing and retrieving values across
+// the GoSight server application.
+//
+// Supported context values:
+//   - User identification (user ID)
+//   - Authorization data (roles, permissions, scopes)
+//   - Request tracking (trace ID)
+//   - Access control flags (forbidden status)
+//
+// Key features:
+//   - Type-safe value storage and retrieval
+//   - Collision-resistant private key types
+//   - Consistent error handling through boolean returns
+//   - Integration with authentication and authorization systems
+//   - Request correlation support for distributed tracing
+//
+// Usage patterns:
+//   - Middleware sets context values during request processing
+//   - Handlers retrieve values for authorization decisions
+//   - Logging systems extract trace IDs for correlation
+//   - Authorization systems check roles and permissions
+//
+// Example usage:
+//
+//	// In authentication middleware:
+//	ctx = contextutil.SetUserID(ctx, "user123")
+//	ctx = contextutil.SetUserRoles(ctx, []string{"admin", "user"})
+//
+//	// In request handlers:
+//	userID, ok := contextutil.GetUserID(ctx)
+//	if !ok {
+//		return errors.New("user not authenticated")
+//	}
+//
+//	// In authorization checks:
+//	roles, _ := contextutil.GetUserRoles(ctx)
+//	if !hasRequiredRole(roles, "admin") {
+//		ctx = contextutil.SetForbidden(ctx)
+//	}
 package contextutil
 
 import (
 	"context"
 )
 
-// ctxKey private key type to avoid collisions
+// ctxKey is a private key type used to prevent context key collisions.
+// Using a private type ensures that context keys defined in this package
+// cannot conflict with keys from other packages, following Go best practices
+// for context value management.
+//
+// This approach provides type safety and prevents accidental key collisions
+// that could lead to security vulnerabilities or data corruption in context
+// value storage and retrieval operations.
 type ctxKey string
 
+// Context key constants for storing various types of request-scoped data.
+// These keys are used internally by the helper functions and should not be
+// used directly by application code to maintain encapsulation and type safety.
 const (
-	userIDKey     ctxKey = "user_id"
-	roleKey       ctxKey = "user_roles"
+	// userIDKey stores the authenticated user's unique identifier
+	userIDKey ctxKey = "user_id"
+
+	// roleKey stores the user's assigned roles as a string slice
+	roleKey ctxKey = "user_roles"
+
+	// permissionKey stores the user's granted permissions as a string slice
 	permissionKey ctxKey = "user_permissions"
-	traceIDKey    ctxKey = "trace_id"
-	forbiddenKey  ctxKey = "forbidden"
+
+	// traceIDKey stores the distributed tracing correlation identifier
+	traceIDKey ctxKey = "trace_id"
+
+	// forbiddenKey stores a boolean flag indicating forbidden access
+	forbiddenKey ctxKey = "forbidden"
 )
 
-// SetUserID returns a new context with the user ID stored
+// SetUserID returns a new context with the user ID stored.
+// This function is typically called during authentication to associate
+// a user identifier with the request context for downstream use.
+//
+// Parameters:
+//   - ctx: The parent context to extend
+//   - userID: The unique identifier for the authenticated user
+//
+// Returns:
+//   - context.Context: New context containing the user ID
+//
+// The user ID should be a stable, unique identifier such as a UUID,
+// database primary key, or username. This value is used throughout
+// the request lifecycle for authorization decisions, audit logging,
+// and resource ownership checks.
+//
+// Example usage:
+//
+//	// In authentication middleware:
+//	ctx = contextutil.SetUserID(r.Context(), user.ID)
+//	r = r.WithContext(ctx)
 func SetUserID(ctx context.Context, userID string) context.Context {
 	return context.WithValue(ctx, userIDKey, userID)
 }
 
-// GetUserID retrieves the user ID from the context
+// GetUserID retrieves the user ID from the context.
+// This function provides type-safe access to the stored user identifier
+// with clear indication of whether the value exists in the context.
+//
+// Parameters:
+//   - ctx: The context to search for the user ID
+//
+// Returns:
+//   - string: The user ID if present, empty string if not found
+//   - bool: true if user ID was found, false otherwise
+//
+// The boolean return value allows callers to distinguish between
+// an empty user ID and a missing user ID, enabling proper error
+// handling and authentication state validation.
+//
+// Example usage:
+//
+//	userID, ok := contextutil.GetUserID(ctx)
+//	if !ok {
+//		return errors.New("user not authenticated")
+//	}
+//	// Use userID for authorization or audit logging
 func GetUserID(ctx context.Context) (string, bool) {
 	val := ctx.Value(userIDKey)
 	if id, ok := val.(string); ok {
@@ -51,12 +154,60 @@ func GetUserID(ctx context.Context) (string, bool) {
 	return "", false
 }
 
-// SetUserRoles stores a slice of role names in the context
+// SetUserRoles stores a slice of role names in the context.
+// Roles represent high-level access categories that group related
+// permissions and define what actions a user can perform within
+// the GoSight system.
+//
+// Parameters:
+//   - ctx: The parent context to extend
+//   - roles: Slice of role names assigned to the user
+//
+// Returns:
+//   - context.Context: New context containing the user roles
+//
+// Common role examples:
+//   - "admin": Full system administration privileges
+//   - "operator": Monitoring and operational access
+//   - "viewer": Read-only access to dashboards and data
+//   - "user": Standard user privileges
+//
+// Roles are typically determined during authentication based on
+// user account settings, group memberships, or external identity
+// provider claims.
+//
+// Example usage:
+//
+//	roles := []string{"admin", "operator"}
+//	ctx = contextutil.SetUserRoles(ctx, roles)
 func SetUserRoles(ctx context.Context, roles []string) context.Context {
 	return context.WithValue(ctx, roleKey, roles)
 }
 
-// GetUserRoles retrieves the roles slice from context
+// GetUserRoles retrieves the roles slice from context.
+// This function provides access to the user's assigned roles for
+// authorization decisions and access control enforcement.
+//
+// Parameters:
+//   - ctx: The context to search for user roles
+//
+// Returns:
+//   - []string: Slice of role names if present, nil if not found
+//   - bool: true if roles were found, false otherwise
+//
+// The returned slice should not be modified as it may be shared
+// across multiple goroutines. If modification is needed, create
+// a copy of the slice first.
+//
+// Example usage:
+//
+//	roles, ok := contextutil.GetUserRoles(ctx)
+//	if !ok {
+//		return errors.New("user roles not available")
+//	}
+//	if !hasRole(roles, "admin") {
+//		return errors.New("insufficient privileges")
+//	}
 func GetUserRoles(ctx context.Context) ([]string, bool) {
 	val := ctx.Value(roleKey)
 	if roles, ok := val.([]string); ok {
@@ -65,12 +216,57 @@ func GetUserRoles(ctx context.Context) ([]string, bool) {
 	return nil, false
 }
 
-// SetUserPermissions stores a slice of permission strings in the context
+// SetUserPermissions stores a slice of permission strings in the context.
+// Permissions represent fine-grained access controls that define specific
+// actions a user can perform on particular resources or API endpoints.
+//
+// Parameters:
+//   - ctx: The parent context to extend
+//   - perms: Slice of permission strings granted to the user
+//
+// Returns:
+//   - context.Context: New context containing the user permissions
+//
+// Permission format conventions:
+//   - Resource-based: "resource:action" (e.g., "dashboard:read", "alert:create")
+//   - Hierarchical: "service.resource:action" (e.g., "metrics.dashboard:write")
+//   - Wildcard: "resource:*" for all actions on a resource
+//
+// Permissions are typically derived from roles but can also include
+// direct grants for specific users or temporary elevated access.
+//
+// Example usage:
+//
+//	perms := []string{"dashboard:read", "alert:create", "metric:write"}
+//	ctx = contextutil.SetUserPermissions(ctx, perms)
 func SetUserPermissions(ctx context.Context, perms []string) context.Context {
 	return context.WithValue(ctx, permissionKey, perms)
 }
 
-// GetUserPermissions retrieves the permissions slice from context
+// GetUserPermissions retrieves the permissions slice from context.
+// This function provides access to the user's granted permissions for
+// fine-grained authorization decisions and API access control.
+//
+// Parameters:
+//   - ctx: The context to search for user permissions
+//
+// Returns:
+//   - []string: Slice of permission strings if present, nil if not found
+//   - bool: true if permissions were found, false otherwise
+//
+// The returned slice should not be modified as it may be shared.
+// Use permission checking functions or create a copy if modification
+// is required.
+//
+// Example usage:
+//
+//	perms, ok := contextutil.GetUserPermissions(ctx)
+//	if !ok {
+//		return errors.New("user permissions not available")
+//	}
+//	if !hasPermission(perms, "dashboard:write") {
+//		return errors.New("write access denied")
+//	}
 func GetUserPermissions(ctx context.Context) ([]string, bool) {
 	val := ctx.Value(permissionKey)
 	if perms, ok := val.([]string); ok {
@@ -79,12 +275,65 @@ func GetUserPermissions(ctx context.Context) ([]string, bool) {
 	return nil, false
 }
 
-// SetTraceID stores a trace ID for request correlation
+// SetTraceID stores a trace ID for request correlation and distributed tracing.
+// Trace IDs enable request tracking across multiple services and components,
+// facilitating debugging, performance analysis, and request flow visualization.
+//
+// Parameters:
+//   - ctx: The parent context to extend
+//   - traceID: Unique identifier for the request trace
+//
+// Returns:
+//   - context.Context: New context containing the trace ID
+//
+// Trace ID characteristics:
+//   - Should be unique across all requests
+//   - Typically generated at request entry point
+//   - Propagated to all downstream services and operations
+//   - Used for log correlation and distributed tracing
+//
+// Common trace ID formats:
+//   - UUID: Standard universally unique identifier
+//   - OpenTelemetry: 32-character hexadecimal string
+//   - Custom: Application-specific format with uniqueness guarantees
+//
+// Example usage:
+//
+//	traceID := generateTraceID()
+//	ctx = contextutil.SetTraceID(ctx, traceID)
+//	// All subsequent operations will include this trace ID
 func SetTraceID(ctx context.Context, traceID string) context.Context {
 	return context.WithValue(ctx, traceIDKey, traceID)
 }
 
-// GetTraceID retrieves the trace ID if set
+// GetTraceID retrieves the trace ID if set.
+// This function provides access to the request's trace identifier for
+// logging, monitoring, and distributed tracing correlation.
+//
+// Parameters:
+//   - ctx: The context to search for the trace ID
+//
+// Returns:
+//   - string: The trace ID if present, empty string if not found
+//   - bool: true if trace ID was found, false otherwise
+//
+// The trace ID can be used for:
+//   - Structured logging with request correlation
+//   - Distributed tracing span creation
+//   - Error reporting and debugging
+//   - Performance monitoring and analytics
+//
+// Example usage:
+//
+//	traceID, ok := contextutil.GetTraceID(ctx)
+//	if ok {
+//		logger.WithField("trace_id", traceID).Info("Processing request")
+//	}
+//
+//	// For OpenTelemetry integration:
+//	if traceID, ok := contextutil.GetTraceID(ctx); ok {
+//		span.SetAttributes(attribute.String("trace.id", traceID))
+//	}
 func GetTraceID(ctx context.Context) (string, bool) {
 	val := ctx.Value(traceIDKey)
 	if id, ok := val.(string); ok {
@@ -93,12 +342,63 @@ func GetTraceID(ctx context.Context) (string, bool) {
 	return "", false
 }
 
-// SetUserScopes stores a map of user scopes in the context for the user
+// SetUserScopes stores a map of user scopes in the context for the user.
+// Scopes provide hierarchical access control by organizing permissions
+// into logical groups or domains, enabling fine-grained authorization
+// based on context or resource categories.
+//
+// Parameters:
+//   - ctx: The parent context to extend
+//   - scopes: Map of scope names to their associated permissions
+//
+// Returns:
+//   - context.Context: New context containing the user scopes
+//
+// Scope structure:
+//   - Key: Scope name (e.g., "metrics", "alerts", "dashboards")
+//   - Value: Slice of permissions within that scope
+//
+// Example scope organization:
+//
+//	scopes := map[string][]string{
+//		"metrics": {"read", "write", "delete"},
+//		"alerts":  {"read", "create"},
+//		"users":   {"read"},
+//	}
+//
+// Scopes enable context-aware authorization where permissions
+// can be evaluated based on the resource domain or API namespace.
 func SetUserScopes(ctx context.Context, scopes map[string][]string) context.Context {
 	return context.WithValue(ctx, ctxKey("user_scopes"), scopes)
 }
 
-// GetUserScopes retrieves the user scopes from the context
+// GetUserScopes retrieves the user scopes from the context.
+// This function provides access to the user's scoped permissions for
+// domain-specific authorization decisions and resource access control.
+//
+// Parameters:
+//   - ctx: The context to search for user scopes
+//
+// Returns:
+//   - map[string][]string: Map of scope names to permissions if present, nil if not found
+//   - bool: true if scopes were found, false otherwise
+//
+// The returned map should not be modified as it may be shared.
+// Create a copy if modification is required for scope manipulation.
+//
+// Example usage:
+//
+//	scopes, ok := contextutil.GetUserScopes(ctx)
+//	if !ok {
+//		return errors.New("user scopes not available")
+//	}
+//
+//	// Check permissions within a specific scope
+//	if metricPerms, exists := scopes["metrics"]; exists {
+//		if !hasPermission(metricPerms, "write") {
+//			return errors.New("metric write access denied")
+//		}
+//	}
 func GetUserScopes(ctx context.Context) (map[string][]string, bool) {
 	val := ctx.Value(ctxKey("user_scopes"))
 	if scopes, ok := val.(map[string][]string); ok {
@@ -107,12 +407,68 @@ func GetUserScopes(ctx context.Context) (map[string][]string, bool) {
 	return nil, false
 }
 
-// SetForbidden sets a flag in the context to indicate forbidden access
+// SetForbidden sets a flag in the context to indicate forbidden access.
+// This function marks a request context as having forbidden access,
+// typically used by authorization middleware to signal that a request
+// should be denied due to insufficient privileges.
+//
+// Parameters:
+//   - ctx: The parent context to extend
+//
+// Returns:
+//   - context.Context: New context with the forbidden flag set
+//
+// Use cases:
+//   - Authorization middleware detecting insufficient permissions
+//   - Resource ownership validation failures
+//   - Rate limiting or abuse detection
+//   - Maintenance mode or feature flag restrictions
+//
+// The forbidden flag is typically checked by response handling
+// middleware to return appropriate HTTP status codes (403 Forbidden)
+// and error messages to clients.
+//
+// Example usage:
+//
+//	// In authorization middleware:
+//	if !hasRequiredRole(userRoles, requiredRole) {
+//		ctx = contextutil.SetForbidden(ctx)
+//		// Continue processing to allow logging and audit
+//	}
 func SetForbidden(ctx context.Context) context.Context {
 	return context.WithValue(ctx, forbiddenKey, true)
 }
 
-// IsForbidden checks if the context has the forbidden flag set
+// IsForbidden checks if the context has the forbidden flag set.
+// This function allows response handling code to determine if a request
+// has been marked as forbidden by authorization middleware and should
+// result in an access denied response.
+//
+// Parameters:
+//   - ctx: The context to check for the forbidden flag
+//
+// Returns:
+//   - bool: true if the request is forbidden, false otherwise
+//
+// The function returns false if the forbidden key is not present
+// in the context or if it's not a boolean value, following the
+// principle of secure defaults (allow by default only when explicitly set).
+//
+// Example usage:
+//
+//	// In response middleware:
+//	if contextutil.IsForbidden(ctx) {
+//		http.Error(w, "Access forbidden", http.StatusForbidden)
+//		return
+//	}
+//
+//	// In API handlers:
+//	if contextutil.IsForbidden(r.Context()) {
+//		return &api.ErrorResponse{
+//			Code:    "FORBIDDEN",
+//			Message: "Insufficient privileges",
+//		}
+//	}
 func IsForbidden(ctx context.Context) bool {
 	v, ok := ctx.Value(forbiddenKey).(bool)
 	return ok && v

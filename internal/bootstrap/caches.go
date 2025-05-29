@@ -26,11 +26,33 @@ import (
 	"fmt"
 
 	"github.com/aaronlmathis/gosight-server/internal/cache"
-	"github.com/aaronlmathis/gosight-server/internal/store/datastore"
+	"github.com/aaronlmathis/gosight-server/internal/cache/resourcecache"
+	"github.com/aaronlmathis/gosight-server/internal/config"
+	"github.com/aaronlmathis/gosight-server/internal/store/resourcestore"
 )
 
-// InitCaches initializes caches for the system context.
-func InitCaches(ctx context.Context, dataStore datastore.DataStore) (*cache.Cache, error) {
+// InitCaches initializes all caching components for the GoSight system.
+// This function sets up various cache types including metric cache, tag cache,
+// process cache, log cache, and resource cache based on the configuration.
+//
+// The caches improve system performance by storing frequently accessed data
+// in memory, reducing the need for expensive database queries. Different cache
+// types serve specific purposes:
+//   - Metric Cache: Stores metric metadata and time-series data
+//   - Tag Cache: Caches resource tags for fast filtering and search
+//   - Process Cache: Stores process information for monitoring
+//   - Log Cache: Buffers log entries for efficient processing
+//   - Resource Cache: Caches resource metadata and relationships
+//
+// Parameters:
+//   - ctx: Context for the initialization process
+//   - cfg: Configuration containing cache settings and engine type
+//   - resourceStore: Resource store for cache population and refresh
+//
+// Returns:
+//   - *cache.Cache: Initialized cache container with all cache types
+//   - error: If cache initialization fails for any component
+func InitCaches(ctx context.Context, cfg *config.Config, resourceStore resourcestore.ResourceStore) (*cache.Cache, error) {
 	caches := &cache.Cache{}
 
 	// Initialize Metric Cache
@@ -41,12 +63,12 @@ func InitCaches(ctx context.Context, dataStore datastore.DataStore) (*cache.Cach
 	tagCache := cache.NewTagCache()
 
 	// Warm fill tag cache
-	tags, err := dataStore.GetAllTags(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load tags for cache: %w", err)
-	}
+	//tags, err := resourceStore.GetAllTags(ctx)
+	//if err != nil {
+	//	return nil, fmt.Errorf("failed to load tags for cache: %w", err)
+	//}
 
-	tagCache.LoadFromStore(tags)
+	//tagCache.LoadFromStore(tags)
 
 	caches.Tags = tagCache
 
@@ -58,6 +80,22 @@ func InitCaches(ctx context.Context, dataStore datastore.DataStore) (*cache.Cach
 
 	logCache := cache.NewLogCache()
 	caches.Logs = logCache
+
+	switch cfg.Cache.Engine {
+	//case "redis":
+	//	resourceCache = resourcecache.NewRedisResourceCache()
+	//case "memcache":
+	//	resourceCache = resourcecache.NewMemcacheResourceCache()
+	case "memory":
+		caches.Resources = resourcecache.NewInMemoryResourceCache(resourceStore, cfg.Cache.ResourceFlushInterval)
+	default:
+		return nil, fmt.Errorf("unsupported cache provider: %s", cfg.Cache.Engine)
+	}
+
+	// Warm the resource cache with existing data from store
+	if err := caches.Resources.WarmCache(ctx); err != nil {
+		return nil, fmt.Errorf("failed to warm resource cache: %w", err)
+	}
 
 	return caches, nil
 }

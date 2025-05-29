@@ -19,12 +19,6 @@ LDFLAGS := -X 'main.Version=$(VERSION)' \
 BIN_DIR := bin
 SERVER_OUT := $(BIN_DIR)/gosight-server
 
-#---------------------------------------
-# Environment
-#---------------------------------------
-# default config path (relative to this Makefile)
-GOSIGHT_SERVER_CONFIG ?= ../configs/server.yaml
-export GOSIGHT_SERVER_CONFIG
 
 #---------------------------------------
 # Phony targets
@@ -40,8 +34,8 @@ all: server
 #---------------------------------------
 .PHONY: run
 run: server
-	@echo "Running GoSight server with GOSIGHT_SERVER_CONFIG=$(GOSIGHT_SERVER_CONFIG)"
-	sudo  $(SERVER_OUT) -config='../configs/server.yaml'
+	@echo "Running GoSight server $(VERSION)"
+	sudo  $(SERVER_OUT)
 
 # Build the GoSight server
 server:

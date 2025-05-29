@@ -12,8 +12,12 @@ type UserStore interface {
 	GetUserByUsername(ctx context.Context, username string) (*usermodel.User, error)
 	GetUserByID(ctx context.Context, username string) (*usermodel.User, error)
 	GetUserWithPermissions(ctx context.Context, userID string) (*usermodel.User, error)
+	GetAllUsersWithPermissions(ctx context.Context) ([]*usermodel.User, error)
 	GetUserBySSO(ctx context.Context, provider string, ssoID string) (*usermodel.User, error)
 	SaveUser(ctx context.Context, u *usermodel.User) error
+	CreateUser(ctx context.Context, u *usermodel.User) error
+	UpdateUser(ctx context.Context, u *usermodel.User) error
+	DeleteUser(ctx context.Context, userID string) error
 	CreateRole(ctx context.Context, r *usermodel.Role) error
 	AssignRoleToUser(ctx context.Context, userID, roleID string) error
 	CreatePermission(ctx context.Context, p *usermodel.Permission) error

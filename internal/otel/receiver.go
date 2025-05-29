@@ -28,8 +28,8 @@ import (
 	"net/http"
 
 	"github.com/aaronlmathis/gosight-server/internal/sys"
+	"github.com/aaronlmathis/gosight-shared/model"
 	"github.com/aaronlmathis/gosight-shared/utils"
-	"github.com/aaronlmathis/gosight/shared/model"
 	"github.com/gorilla/mux"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/pmetric"

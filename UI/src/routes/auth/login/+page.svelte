@@ -91,7 +91,7 @@
 	}
 
 	function handleSSOLogin(provider: string) {
-		window.location.href = `/login/start?provider=${provider}&next=${encodeURIComponent(next)}`;
+		window.location.href = `/api/v1/auth/login/start?provider=${provider}&next=${encodeURIComponent(next)}`;
 	}
 
 	function getProviderIcon(provider: string): string {

@@ -50,3 +50,6 @@ format.sh
 bin/
 uploads/
 UI/ignore/
+map_gosight*
+/config/*
+*.nope

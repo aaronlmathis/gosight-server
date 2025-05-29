@@ -23,19 +23,14 @@ package telemetry
 
 import (
 	"context"
-	"io"
 	"time"
 
 	"github.com/aaronlmathis/gosight-server/internal/events"
 	"github.com/aaronlmathis/gosight-server/internal/sys"
 	"github.com/aaronlmathis/gosight-shared/model"
-	pb "github.com/aaronlmathis/gosight-shared/proto"
 	"github.com/aaronlmathis/gosight-shared/utils"
 	"github.com/google/uuid"
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
-	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
-	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
-	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -49,62 +44,6 @@ func NewLogsHandler(sys *sys.SystemContext) *LogsHandler {
 	utils.Debug("LogsHandler initialized with store: %T", sys.Stores.Logs)
 	return &LogsHandler{
 		Sys: sys,
-	}
-}
-
-func (h *LogsHandler) SubmitStream(stream pb.LogService_SubmitStreamServer) error {
-	utils.Info("Log SubmitStream started...")
-
-	for {
-		pbPayload, err := stream.Recv()
-		if err == io.EOF {
-			utils.Info("Log stream closed cleanly by client.")
-			return nil
-		}
-		if err != nil {
-			utils.Error("Log stream receive error: %v", err)
-			return err
-		}
-		SafeHandlePayload(func() {
-			converted := ConvertToModelLogPayload(pbPayload)
-
-			// Tag enrichment from in-memory cache
-			if converted.Meta != nil && converted.Meta.EndpointID != "" {
-				tags := h.Sys.Cache.Tags.GetFlattenedTagsForEndpoint(converted.Meta.EndpointID)
-				if len(tags) > 0 {
-					if converted.Meta.Tags == nil {
-						converted.Meta.Tags = make(map[string]string)
-					}
-					for k, v := range tags {
-						if _, exists := converted.Meta.Tags[k]; !exists {
-							converted.Meta.Tags[k] = v
-						}
-					}
-				}
-			}
-			// Evaluate severity level of logs and act accordingly
-			h.EvaluateSeverityLevel(&converted)
-
-			// Check rulesrunner
-			h.Sys.Tele.Evaluator.EvaluateLogs(h.Sys.Ctx, converted.Logs, converted.Meta)
-
-			// Broadcast to hub.LogHub Websocket
-			h.Sys.WSHub.Logs.Broadcast(converted)
-
-			// Write to BufferedLog store, fallback to writing to logstore directly.
-			if h.Sys.Buffers == nil || h.Sys.Buffers.Metrics == nil {
-				utils.Warn("[stream] Logs buffer not configured — writing directly to store")
-				// Fall back to writing directly to store
-				if err := h.Sys.Stores.Logs.Write([]model.LogPayload{converted}); err != nil {
-					utils.Warn("Failed to write logs directly to store: %v", err)
-				}
-			} else {
-				if err := h.Sys.Buffers.Logs.WriteAny(converted); err != nil {
-					utils.Warn("Failed to buffer LogPayload: %v", err)
-				}
-			}
-
-		})
 	}
 }
 
@@ -122,19 +61,10 @@ func (h *LogsHandler) Export(ctx context.Context, req *collogpb.ExportLogsServic
 	// Process each converted payload (preserving existing business logic)
 	for _, converted := range logPayloads {
 		SafeHandlePayload(func() {
-			// Tag enrichment from in-memory cache (PRESERVED)
-			if converted.Meta != nil && converted.Meta.EndpointID != "" {
-				tags := h.Sys.Cache.Tags.GetFlattenedTagsForEndpoint(converted.Meta.EndpointID)
-				if len(tags) > 0 {
-					if converted.Meta.Tags == nil {
-						converted.Meta.Tags = make(map[string]string)
-					}
-					for k, v := range tags {
-						if _, exists := converted.Meta.Tags[k]; !exists {
-							converted.Meta.Tags[k] = v
-						}
-					}
-				}
+			// Resource discovery and payload enrichment
+			enrichedPayload := h.Sys.Tele.ResourceDiscovery.ProcessLogPayload(&converted)
+			if enrichedPayload != nil {
+				converted = *enrichedPayload
 			}
 
 			// Evaluate severity level of logs and act accordingly (PRESERVED)
@@ -163,93 +93,6 @@ func (h *LogsHandler) Export(ctx context.Context, req *collogpb.ExportLogsServic
 
 	// Return OTLP success response
 	return &collogpb.ExportLogsServiceResponse{}, nil
-}
-
-// convertOTLPToModelLogPayloads converts OTLP logs to GoSight model.LogPayload format
-func convertOTLPToModelLogPayloads(req *collogpb.ExportLogsServiceRequest) []model.LogPayload {
-	var payloads []model.LogPayload
-
-	for _, resourceLogs := range req.ResourceLogs {
-		// Extract resource attributes (host_id, agent_id, etc.)
-		meta := extractMetaFromResource(resourceLogs.Resource)
-
-		for _, scopeLogs := range resourceLogs.ScopeLogs {
-			var logs []model.LogEntry
-
-			for _, logRecord := range scopeLogs.LogRecords {
-				logEntry := model.LogEntry{
-					Timestamp: time.Unix(0, int64(logRecord.TimeUnixNano)),
-					Level:     convertSeverityToLevel(logRecord.SeverityNumber),
-					Message:   logRecord.Body.GetStringValue(),
-					Source:    scopeLogs.Scope.GetName(),
-					Fields:    convertAttributesToMap(logRecord.Attributes),
-				}
-				logs = append(logs, logEntry)
-			}
-
-			if len(logs) > 0 {
-				payload := model.LogPayload{
-					AgentID:    meta.AgentID,
-					HostID:     meta.HostID,
-					Hostname:   meta.Hostname,
-					EndpointID: meta.EndpointID,
-					Timestamp:  time.Now(),
-					Logs:       logs,
-					Meta:       &meta,
-				}
-				payloads = append(payloads, payload)
-			}
-		}
-	}
-
-	return payloads
-}
-
-// extractMetaFromResource extracts GoSight meta information from OTLP resource attributes
-func extractMetaFromResource(resource *resourcepb.Resource) model.Meta {
-	meta := model.Meta{}
-
-	if resource != nil {
-		for _, attr := range resource.Attributes {
-			switch attr.Key {
-			case "host.id":
-				meta.HostID = attr.Value.GetStringValue()
-			case "service.instance.id":
-				meta.AgentID = attr.Value.GetStringValue()
-			case "host.name":
-				meta.Hostname = attr.Value.GetStringValue()
-			case "gosight.endpoint.id":
-				meta.EndpointID = attr.Value.GetStringValue()
-			}
-		}
-	}
-
-	return meta
-}
-
-// convertSeverityToLevel converts OTLP severity numbers to GoSight log levels
-func convertSeverityToLevel(severity logpb.SeverityNumber) string {
-	switch {
-	case severity >= logpb.SeverityNumber_SEVERITY_NUMBER_FATAL:
-		return "critical"
-	case severity >= logpb.SeverityNumber_SEVERITY_NUMBER_ERROR:
-		return "error"
-	case severity >= logpb.SeverityNumber_SEVERITY_NUMBER_WARN:
-		return "warning"
-	case severity >= logpb.SeverityNumber_SEVERITY_NUMBER_INFO:
-		return "info"
-	default:
-		return "debug"
-	}
-}
-
-// convertAttributesToMap converts OTLP attributes to string map
-func convertAttributesToMap(attributes []*commonpb.KeyValue) map[string]string {
-	result := make(map[string]string)
-	for _, attr := range attributes {
-		result[attr.Key] = attr.Value.GetStringValue()
-	}
-	return result
 }
 
 // EvaluateSeverityLevel evaluates the severity level of logs based on thresholds defined in the system.

@@ -616,7 +616,10 @@ class DataService {
 	async getAvailableMetrics(): Promise<Array<{ namespace: string; subnamespace: string; metric: string; description?: string }>> {
 		try {
 			const response = await fetch('/api/v1/metrics/available', {
-				credentials: 'include'
+				credentials: 'include',
+				headers: {
+					'X-API-Version': 'v1'
+				}
 			});
 
 			if (response.ok) {
@@ -637,7 +640,10 @@ class DataService {
 	async getAvailableEndpoints(): Promise<Array<{ id: string; name: string; type: string; status: string }>> {
 		try {
 			const response = await fetch('/api/v1/endpoints', {
-				credentials: 'include'
+				credentials: 'include',
+				headers: {
+					'X-API-Version': 'v1'
+				}
 			});
 
 			if (response.ok) {

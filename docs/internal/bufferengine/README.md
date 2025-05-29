@@ -46,9 +46,25 @@ Description: Package bufferengine provides a buffered data store implementation 
 
 
 <a name="BufferEngine"></a>
-## type [BufferEngine](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L50-L56>)
+## type [BufferEngine](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L134-L140>)
 
-BufferEngine is a struct that manages multiple buffered stores. It is responsible for starting and stopping the stores, as well as flushing the data at regular intervals.
+BufferEngine orchestrates multiple buffered storage backends, managing their lifecycle, flush schedules, and ensuring reliable data persistence across heterogeneous storage technologies. The engine implements a sophisticated producer\-consumer pattern optimized for high\-throughput monitoring data.
+
+The engine provides:
+
+- Independent flush scheduling per storage backend
+- Concurrent operation with configurable worker limits
+- Context\-aware cancellation and graceful shutdown
+- Comprehensive error handling and recovery
+- Resource management and cleanup coordination
+
+Architecture:
+
+- Each registered store operates independently with its own flush schedule
+- Flush operations run concurrently to maximize throughput
+- Context cancellation provides immediate shutdown coordination
+- WaitGroup ensures all operations complete before engine termination
+- Error isolation prevents store failures from affecting other stores
 
 ```go
 type BufferEngine struct {
@@ -57,45 +73,102 @@ type BufferEngine struct {
 ```
 
 <a name="NewBufferEngine"></a>
-### func [NewBufferEngine](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L63>)
+### func [NewBufferEngine](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L158>)
 
 ```go
 func NewBufferEngine(ctx context.Context, flushInterval time.Duration, maxWorkers int) *BufferEngine
 ```
 
-NewBufferEngine creates a new BufferEngine instance. It takes a context, flush interval, and maximum number of workers as parameters. The flush interval is used to determine how often the data should be flushed to the stores. The maximum number of workers is used to limit the number of concurrent goroutines that can be used for flushing the data.
+NewBufferEngine creates and initializes a new BufferEngine instance configured for managing multiple storage backends with optimal performance characteristics. The engine is immediately ready for store registration and operation.
+
+The configuration parameters enable fine\-tuning for different deployment scenarios, from single\-node installations to high\-throughput distributed environments. The context integration ensures clean shutdown coordination with the broader application lifecycle.
+
+Parameters:
+
+- ctx: Context for cancellation and shutdown coordination
+- flushInterval: Default flush interval \(individual stores may override\)
+- maxWorkers: Maximum concurrent flush operations \(resource limiting\)
+
+Returns:
+
+- \*BufferEngine: Configured engine ready for store registration
 
 <a name="BufferEngine.RegisterStore"></a>
-### func \(\*BufferEngine\) [RegisterStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L76>)
+### func \(\*BufferEngine\) [RegisterStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L176>)
 
 ```go
 func (e *BufferEngine) RegisterStore(store BufferedStore)
 ```
 
-RegisterStore registers a new buffered store with the BufferEngine. It adds the store to the list of stores managed by the engine. The store must implement the BufferedStore interface. The engine will manage the lifecycle of the store, including starting and stopping it. The store will be flushed at regular intervals as specified by the flush interval.
+RegisterStore adds a new storage backend to the engine's managed store collection. The store becomes part of the engine's lifecycle management, receiving automatic flush scheduling and shutdown coordination.
+
+Stores can be registered before or after the engine starts, providing flexibility for dynamic storage configuration. Each store operates independently with its own flush schedule and error isolation.
+
+Parameters:
+
+- store: The storage backend to register \(must implement BufferedStore\)
 
 <a name="BufferEngine.Start"></a>
-### func \(\*BufferEngine\) [Start](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L86>)
+### func \(\*BufferEngine\) [Start](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L198>)
 
 ```go
 func (e *BufferEngine) Start()
 ```
 
-Start starts the BufferEngine and its registered stores. It launches a goroutine for each store that will flush the data at regular intervals. The flush interval is determined by the store's Interval method. The engine will also listen for a cancellation signal from the context. When the context is cancelled, the engine will stop all stores and wait for them to finish flushing.
+Start initiates the buffer engine's operation, launching independent flush routines for each registered storage backend. The engine coordinates multiple concurrent operations while maintaining individual store autonomy and optimal performance characteristics.
+
+Each store operates with its own dedicated goroutine and flush schedule, enabling heterogeneous storage backends to function at their optimal frequencies. The engine monitors context cancellation for coordinated shutdown and ensures all stores receive final flush operations.
+
+The startup process:
+
+- Launches dedicated goroutine per registered store
+- Configures individual flush timers based on store preferences
+- Establishes context cancellation monitoring
+- Provides comprehensive logging and monitoring integration
+
+This method should be called after all desired stores are registered.
 
 <a name="BufferEngine.Stop"></a>
-### func \(\*BufferEngine\) [Stop](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L120>)
+### func \(\*BufferEngine\) [Stop](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L240>)
 
 ```go
 func (e *BufferEngine) Stop()
 ```
 
-Stop stops the BufferEngine and all its registered stores. It waits for all background flush routines to finish before closing the stores. The engine will also log any errors encountered while closing the stores. This method should be called when the engine is no longer needed, such as during application shutdown.
+Stop performs graceful shutdown of the buffer engine and all registered storage backends. This method ensures all buffered data is persisted and resources are properly released before termination.
+
+The shutdown process:
+
+- Waits for all background flush routines to complete
+- Performs final flush operations for each store
+- Closes all storage backends with proper error handling
+- Provides comprehensive shutdown logging and status reporting
+
+This method blocks until all operations are complete, ensuring data consistency and preventing data loss during application shutdown. It should be called as part of the application's cleanup sequence.
 
 <a name="BufferedDataStore"></a>
-## type [BufferedDataStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L53-L61>)
+## type [BufferedDataStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L87-L95>)
 
-BufferedDataStore is a buffered implementation of the DataStore interface. It buffers process payloads in memory and flushes them to the underlying data store when the buffer reaches a certain size or after a specified interval. This helps to reduce the number of write operations and improve performance. The buffer is protected by a mutex to ensure thread safety.
+BufferedDataStore implements high\-performance buffered storage for process monitoring data, optimizing write operations through intelligent batching and configurable flush strategies. This implementation significantly reduces I/O overhead and improves overall system throughput in high\-frequency process monitoring scenarios.
+
+The buffer operates with dual flush triggers:
+
+- Size\-based: Automatic flush when buffer reaches capacity
+- Time\-based: Periodic flush based on configurable intervals
+
+This design ensures optimal performance while preventing unbounded memory growth and providing predictable data persistence guarantees.
+
+Key Features:
+
+- Thread\-safe concurrent operations with optimized locking
+- Configurable buffer size and flush intervals
+- Automatic batch optimization for storage efficiency
+- Context\-aware operations with cancellation support
+- Comprehensive error handling and recovery
+- Memory\-efficient buffer management
+- Integration with diverse storage backends
+
+The implementation provides reliable data persistence while minimizing the performance impact on data collection operations.
 
 ```go
 type BufferedDataStore struct {
@@ -104,67 +177,125 @@ type BufferedDataStore struct {
 ```
 
 <a name="NewBufferedDataStore"></a>
-### func [NewBufferedDataStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L68>)
+### func [NewBufferedDataStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L116>)
 
 ```go
 func NewBufferedDataStore(ctx context.Context, name string, store datastore.DataStore, maxSize int, flushInterval time.Duration) *BufferedDataStore
 ```
 
-NewBufferedDataStore creates a new BufferedDataStore instance. It takes a context, a name for the data store, an underlying data store, a maximum buffer size, and a flush interval as parameters. The flush interval is the time duration after which the buffer will be flushed to the underlying data store, even if the buffer size has not reached the maximum.
+NewBufferedDataStore creates and initializes a new BufferedDataStore instance configured for optimal process data storage performance. The store immediately begins accepting write operations and manages automatic flush operations based on the specified configuration parameters.
+
+The configuration enables fine\-tuning for different deployment scenarios:
+
+- maxSize: Controls memory usage and batch size optimization
+- flushInterval: Balances latency vs. throughput requirements
+- ctx: Enables graceful shutdown and operation cancellation
+
+Parameters:
+
+- ctx: Context for cancellation and timeout control
+- name: Human\-readable identifier for logging and monitoring
+- store: The underlying persistent storage implementation
+- maxSize: Maximum buffer size before automatic flush
+- flushInterval: Time interval for periodic flush operations
+
+Returns:
+
+- \*BufferedDataStore: Configured buffer ready for data operations
 
 <a name="BufferedDataStore.Close"></a>
-### func \(\*BufferedDataStore\) [Close](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L150>)
+### func \(\*BufferedDataStore\) [Close](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L243>)
 
 ```go
 func (b *BufferedDataStore) Close() error
 ```
 
-Close closes the buffered data store. It flushes any remaining payloads in the buffer to the underlying data store and releases any resources held by the buffered data store. This method is called when the buffered data store is no longer needed. It is important to call this method to ensure that all data is written to the underlying data store before closing the application.
+Close performs graceful shutdown of the buffered data store, ensuring all buffered data is persisted before termination. This method is essential for data consistency and should be called as part of the application's cleanup sequence.
+
+The close operation guarantees that no buffered data is lost during shutdown by performing a final flush before resource cleanup. This ensures data durability across application restarts and shutdowns.
+
+Returns:
+
+- error: Any error encountered during final flush operation
 
 <a name="BufferedDataStore.Flush"></a>
-### func \(\*BufferedDataStore\) [Flush](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L124>)
+### func \(\*BufferedDataStore\) [Flush](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L204>)
 
 ```go
 func (b *BufferedDataStore) Flush() error
 ```
 
-Flush flushes the buffer to the underlying data store. It is called to ensure that any remaining payloads in the buffer are written to the underlying data store before closing the buffered data store. This method is protected by a mutex to ensure thread safety when accessing the buffer.
+Flush immediately persists all buffered data to the underlying storage system, regardless of current buffer size or timing. This method provides explicit control over data persistence and is commonly used during shutdown sequences or when immediate durability is required.
+
+The operation is thread\-safe and can be called concurrently with write operations. It ensures all currently buffered data is safely persisted before returning.
+
+Returns:
+
+- error: Any error encountered during the flush operation
 
 <a name="BufferedDataStore.Interval"></a>
-### func \(\*BufferedDataStore\) [Interval](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L87>)
+### func \(\*BufferedDataStore\) [Interval](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L144>)
 
 ```go
 func (b *BufferedDataStore) Interval() time.Duration
 ```
 
-Interval returns the flush interval of the buffered data store. This is the time duration after which the buffer will be flushed
+Interval returns the configured time duration between automatic flush operations. The buffer engine uses this value to schedule periodic flush operations, enabling each buffer to operate at its optimal frequency based on data characteristics and storage requirements.
+
+Returns:
+
+- time.Duration: Time interval between automatic flush operations
 
 <a name="BufferedDataStore.Name"></a>
-### func \(\*BufferedDataStore\) [Name](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L81>)
+### func \(\*BufferedDataStore\) [Name](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L133>)
 
 ```go
 func (b *BufferedDataStore) Name() string
 ```
 
-Name returns the name of the buffered data store. This is used to identify the buffered data store in logs and metrics.
+Name returns the human\-readable identifier for this buffered data store instance. This identifier is used for logging, monitoring, metrics, and administrative operations to distinguish between multiple buffer instances.
+
+Returns:
+
+- string: The store's display name
 
 <a name="BufferedDataStore.Write"></a>
-### func \(\*BufferedDataStore\) [Write](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L109>)
+### func \(\*BufferedDataStore\) [Write](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L182>)
 
 ```go
 func (b *BufferedDataStore) Write(payload *model.ProcessPayload) error
 ```
 
-Write writes a process payload to the buffered data store. It appends the payload to the buffer and checks if the buffer size has reached the maximum size. If it has, it calls the flushLocked method to flush the buffer to the underlying data store. This method is protected by a mutex to ensure thread safety when accessing the buffer.
+Write adds a process payload to the buffer with automatic flush management. The method implements intelligent buffering with size\-based flush triggers, ensuring optimal batch sizes while preventing unbounded memory growth.
+
+When the buffer reaches capacity, an automatic flush operation is triggered to persist the accumulated data. This approach optimizes both memory usage and storage performance by maintaining predictable batch sizes.
+
+Parameters:
+
+- payload: The process payload to buffer for later persistence
+
+Returns:
+
+- error: Any error encountered during buffering or automatic flush
 
 <a name="BufferedDataStore.WriteAny"></a>
-### func \(\*BufferedDataStore\) [WriteAny](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L96>)
+### func \(\*BufferedDataStore\) [WriteAny](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L161>)
 
 ```go
 func (b *BufferedDataStore) WriteAny(payload interface{}) error
 ```
 
-WriteAny writes a process payload to the buffered data store. It takes an interface\{\} as a parameter and attempts to cast it to a \*model.ProcessPayload. If the cast is successful, it calls the Write method to add the payload to the buffer. If the cast fails, it returns an error indicating that the payload type is invalid. This method is used to provide a generic interface for writing different types of payloads,
+WriteAny provides a type\-safe interface for writing arbitrary payloads to the buffered data store. This method validates the payload type and delegates to the appropriate typed write method, ensuring type safety while maintaining interface compatibility with the BufferedStore interface.
+
+The method specifically handles process payloads, validating the type and rejecting incompatible data with descriptive error messages.
+
+Parameters:
+
+- payload: The data payload to write \(must be \*model.ProcessPayload\)
+
+Returns:
+
+- error: Type validation error or write operation error
 
 <a name="BufferedLogStore"></a>
 ## type [BufferedLogStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/logbuffer.go#L46-L53>)
@@ -315,27 +446,87 @@ func (b *BufferedMetricStore) WriteAny(payload interface{}) error
 WriteAny writes a payload to the buffered metric store. It takes an interface\{\} as a parameter and attempts to convert it to a MetricPayload. If the conversion is successful, it writes the payload to the buffer. If the conversion fails, it returns an error.
 
 <a name="BufferedStore"></a>
-## type [BufferedStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L40-L46>)
+## type [BufferedStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/engine.go#L72-L114>)
 
-BufferedStore is an interface that defines the methods for a buffered store. It is used to abstract the underlying store implementation, allowing for different storage engines to be used \(e.g., file, database\). The BufferedStore interface defines methods for writing data, flushing the buffer, closing the store, and retrieving the store name and flush interval.
+BufferedStore defines the interface that all storage backends must implement to participate in the buffer engine's managed storage system. This interface abstracts the underlying storage implementation details while providing standardized lifecycle and data management operations.
+
+The interface supports diverse storage technologies including databases, file systems, message queues, and cloud storage services. Each implementation can define its own optimal buffering strategy and flush behavior while maintaining compatibility with the engine's orchestration framework.
+
+Key Operations:
+
+- WriteAny: Accepts heterogeneous data for buffered storage
+- Flush: Persists buffered data to the underlying storage system
+- Close: Performs cleanup and ensures data durability on shutdown
+- Name: Provides identification for logging and monitoring
+- Interval: Defines optimal flush frequency for the storage type
+
+Implementations should be thread\-safe and handle concurrent access gracefully.
 
 ```go
 type BufferedStore interface {
+    // WriteAny accepts arbitrary data payloads for buffered storage. The method
+    // should handle type conversion and validation internally, providing flexible
+    // data ingestion capabilities for diverse payload types.
+    //
+    // Parameters:
+    //   - payload: The data to buffer (type depends on implementation)
+    //
+    // Returns:
+    //   - error: Any error encountered during buffering operation
     WriteAny(payload interface{}) error
+
+    // Flush persists all buffered data to the underlying storage system. This
+    // method should be idempotent and handle partial failures gracefully,
+    // ensuring data consistency and durability.
+    //
+    // Returns:
+    //   - error: Any error encountered during the flush operation
     Flush() error
+
+    // Close performs graceful shutdown of the storage backend, ensuring all
+    // buffered data is persisted and resources are properly released. This
+    // method should perform a final flush before closing.
+    //
+    // Returns:
+    //   - error: Any error encountered during cleanup operations
     Close() error
+
+    // Name returns a human-readable identifier for the storage backend,
+    // used for logging, monitoring, and administrative operations.
+    //
+    // Returns:
+    //   - string: The storage backend's display name
     Name() string
+
+    // Interval returns the optimal flush frequency for this storage backend.
+    // The engine uses this value to schedule periodic flush operations,
+    // allowing each backend to define its own performance characteristics.
+    //
+    // Returns:
+    //   - time.Duration: Recommended time between flush operations
     Interval() time.Duration
 }
 ```
 
 <a name="DataStore"></a>
-## type [DataStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L44-L46>)
+## type [DataStore](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/bufferengine/databuffer.go#L49-L61>)
 
-DataStore is an interface that defines the methods for writing process payloads. It is used to abstract the underlying data store implementation, allowing for different storage engines to be used \(e.g., file, database\).
+DataStore defines the interface for persistent storage of process monitoring data within the GoSight system. This interface abstracts the underlying storage implementation, enabling support for diverse storage backends including databases, file systems, and cloud storage services.
+
+The interface is designed to handle batch operations efficiently, supporting high\-throughput process monitoring scenarios where large volumes of process data need to be persisted with minimal latency impact.
 
 ```go
 type DataStore interface {
+    // Write persists a batch of process payloads to the underlying storage system.
+    // The method should handle batch operations efficiently and provide appropriate
+    // error handling for partial failures.
+    //
+    // Parameters:
+    //   - ctx: Context for cancellation and timeout control
+    //   - batches: Slice of process payloads to persist
+    //
+    // Returns:
+    //   - error: Any error encountered during the write operation
     Write(ctx context.Context, batches []*model.ProcessPayload) error
 }
 ```

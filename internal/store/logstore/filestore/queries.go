@@ -58,17 +58,17 @@ func (v *FileStore) GetLogs(filter model.LogFilter) ([]model.LogEntry, error) {
 				count++
 				ts := entry.Timestamp
 
-				// Enrich tags
-				if entry.Tags == nil {
-					entry.Tags = make(map[string]string)
+				// Enrich labels
+				if entry.Labels == nil {
+					entry.Labels = make(map[string]string)
 				}
-				entry.Tags["endpoint_id"] = payload.Meta.EndpointID
-				entry.Tags["agent_id"] = payload.Meta.AgentID
-				entry.Tags["host_id"] = payload.Meta.HostID
-				entry.Tags["hostname"] = payload.Meta.Hostname
-				entry.Tags["job"] = payload.Meta.Tags["job"]
-				for k, v := range payload.Meta.Tags {
-					entry.Tags[k] = v
+				entry.Labels["endpoint_id"] = payload.Meta.EndpointID
+				entry.Labels["agent_id"] = payload.Meta.AgentID
+				entry.Labels["host_id"] = payload.Meta.HostID
+				entry.Labels["hostname"] = payload.Meta.Hostname
+				entry.Labels["job"] = payload.Meta.Labels["job"]
+				for k, v := range payload.Meta.Labels {
+					entry.Labels[k] = v
 				}
 
 				// Cursor filtering
@@ -106,7 +106,7 @@ func (v *FileStore) GetLogs(filter model.LogFilter) ([]model.LogEntry, error) {
 					if want == "" {
 						return true
 					}
-					return strings.EqualFold(entry.Tags[key], want)
+					return strings.EqualFold(entry.Labels[key], want)
 				}
 				if !match("endpoint_id", filter.EndpointID) ||
 
@@ -128,9 +128,9 @@ func (v *FileStore) GetLogs(filter model.LogFilter) ([]model.LogEntry, error) {
 				// Meta match
 				meta := entry.Meta
 
-				// Tags match
-				for k, v := range filter.Tags {
-					if actual, ok := entry.Tags[k]; !ok || !strings.EqualFold(actual, v) {
+				// Labels match
+				for k, v := range filter.Labels {
+					if actual, ok := entry.Labels[k]; !ok || !strings.EqualFold(actual, v) {
 						goto skip
 					}
 				}

@@ -16,7 +16,7 @@ Package grpcserver provides the implementation of the gRPC server for GoSight. I
 
 
 <a name="GrpcServer"></a>
-## type [GrpcServer](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/grpc/grpc.go#L50-L56>)
+## type [GrpcServer](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/grpc/grpc.go#L51-L57>)
 
 GrpcServer represents a gRPC server instance. It contains the system context, log handler, stream handler, listener, and server instance.
 
@@ -31,7 +31,7 @@ type GrpcServer struct {
 ```
 
 <a name="NewGRPCServer"></a>
-### func [NewGRPCServer](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/grpc/grpc.go#L61>)
+### func [NewGRPCServer](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/grpc/grpc.go#L62>)
 
 ```go
 func NewGRPCServer(sys *sys.SystemContext) (*GrpcServer, error)
@@ -40,7 +40,7 @@ func NewGRPCServer(sys *sys.SystemContext) (*GrpcServer, error)
 NewGRPCServer creates a new gRPC server instance with the provided system context. It initializes the server with TLS configuration and registers the metrics and log services. The server listens on the address specified in the system context configuration.
 
 <a name="GrpcServer.GracefulDisconnectAllAgents"></a>
-### func \(\*GrpcServer\) [GracefulDisconnectAllAgents](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/grpc/grpc.go#L179>)
+### func \(\*GrpcServer\) [GracefulDisconnectAllAgents](<https://github.com/aaronlmathis/gosight-server/blob/main/internal/grpc/grpc.go#L184>)
 
 ```go
 func (g *GrpcServer) GracefulDisconnectAllAgents()
