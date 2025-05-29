@@ -62,6 +62,21 @@ func (s *PGStore) GetUserByEmail(ctx context.Context, email string) (*usermodel.
 	return u, nil
 }
 
+func (s *PGStore) GetUserBySSO(ctx context.Context, provider string, ssoID string) (*usermodel.User, error) {
+	row := s.db.QueryRowContext(ctx, `
+		SELECT u.id, u.username, u.first_name, u.last_name, u.email, u.password_hash, u.mfa_secret 
+		FROM users u 
+		JOIN user_sso_providers usp ON u.id = usp.user_id 
+		WHERE usp.provider = $1 AND usp.sso_id = $2
+	`, provider, ssoID)
+
+	u := &usermodel.User{}
+	if err := row.Scan(&u.ID, &u.Username, &u.FirstName, &u.LastName, &u.Email, &u.PasswordHash, &u.TOTPSecret); err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
 func (s *PGStore) GetUserWithPermissions(ctx context.Context, userID string) (*usermodel.User, error) {
 	u := &usermodel.User{ID: userID, Roles: []usermodel.Role{}}
 
@@ -136,42 +151,347 @@ func (s *PGStore) GetUserWithPermissions(ctx context.Context, userID string) (*u
 	return u, nil
 }
 
-func (s *PGStore) AssignRoleToUser(ctx context.Context, userID, roleID string) error {
-	return nil
-}
+// Role management methods
 
-func (s *PGStore) GetUserBySSO(ctx context.Context, provider, ssoID string) (*usermodel.User, error) {
-	row := s.db.QueryRowContext(ctx, `
-		SELECT id, email, password_hash, mfa_secret, sso_provider, sso_id, last_login
-		FROM users
-		WHERE sso_provider = $1 AND sso_id = $2
-	`, provider, ssoID)
-
-	u := &usermodel.User{}
-	if err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.TOTPSecret, &u.SSOProvider, &u.SSOID, &u.LastLogin); err != nil {
+func (s *PGStore) GetRoles(ctx context.Context) ([]*usermodel.Role, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, name, description 
+		FROM roles 
+		ORDER BY name
+	`)
+	if err != nil {
 		return nil, err
 	}
-	return u, nil
+	defer rows.Close()
+
+	var roles []*usermodel.Role
+	for rows.Next() {
+		role := &usermodel.Role{}
+		err := rows.Scan(&role.ID, &role.Name, &role.Description)
+		if err != nil {
+			return nil, err
+		}
+		roles = append(roles, role)
+	}
+	return roles, nil
 }
 
-func (s *PGStore) SaveUser(ctx context.Context, u *usermodel.User) error {
-	_, err := s.db.ExecContext(ctx, `
-		UPDATE users
-		SET
-			last_login = $1,
-			sso_provider = $2,
-			sso_id = $3
-		WHERE id = $4
-	`, u.LastLogin, u.SSOProvider, u.SSOID, u.ID)
+func (s *PGStore) GetRole(ctx context.Context, roleID string) (*usermodel.Role, error) {
+	row := s.db.QueryRowContext(ctx, `
+		SELECT id, name, description 
+		FROM roles 
+		WHERE id = $1
+	`, roleID)
+
+	role := &usermodel.Role{}
+	err := row.Scan(&role.ID, &role.Name, &role.Description)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get permissions for this role
+	permRows, err := s.db.QueryContext(ctx, `
+		SELECT p.id, p.name, p.description
+		FROM permissions p
+		JOIN role_permissions rp ON rp.permission_id = p.id
+		WHERE rp.role_id = $1
+		ORDER BY p.name
+	`, roleID)
+	if err != nil {
+		return nil, err
+	}
+	defer permRows.Close()
+
+	for permRows.Next() {
+		perm := usermodel.Permission{}
+		err := permRows.Scan(&perm.ID, &perm.Name, &perm.Description)
+		if err != nil {
+			return nil, err
+		}
+		role.Permissions = append(role.Permissions, perm)
+	}
+
+	return role, nil
+}
+
+func (s *PGStore) CreateRole(ctx context.Context, r *usermodel.Role) error {
+	err := s.db.QueryRowContext(ctx, `
+		INSERT INTO roles (name, description)
+		VALUES ($1, $2)
+		RETURNING id
+	`, r.Name, r.Description).Scan(&r.ID)
 
 	return err
 }
 
-func (s *PGStore) CreateRole(ctx context.Context, r *usermodel.Role) error { return nil }
+func (s *PGStore) UpdateRole(ctx context.Context, r *usermodel.Role) error {
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE roles
+		SET name = $2, description = $3
+		WHERE id = $1
+	`, r.ID, r.Name, r.Description)
 
-func (s *PGStore) CreatePermission(ctx context.Context, p *usermodel.Permission) error { return nil }
-func (s *PGStore) AttachPermissionToRole(ctx context.Context, roleID, permID string) error {
+	return err
+}
+
+func (s *PGStore) DeleteRole(ctx context.Context, roleID string) error {
+	// First remove all role-permission associations
+	_, err := s.db.ExecContext(ctx, `DELETE FROM role_permissions WHERE role_id = $1`, roleID)
+	if err != nil {
+		return err
+	}
+
+	// Then remove all user-role associations
+	_, err = s.db.ExecContext(ctx, `DELETE FROM user_roles WHERE role_id = $1`, roleID)
+	if err != nil {
+		return err
+	}
+
+	// Finally, delete the role
+	_, err = s.db.ExecContext(ctx, `DELETE FROM roles WHERE id = $1`, roleID)
+	return err
+}
+
+func (s *PGStore) GetRolePermissions(ctx context.Context, roleID string) ([]*usermodel.Permission, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT p.id, p.name, p.description
+		FROM permissions p
+		JOIN role_permissions rp ON rp.permission_id = p.id
+		WHERE rp.role_id = $1
+		ORDER BY p.name
+	`, roleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var permissions []*usermodel.Permission
+	for rows.Next() {
+		perm := &usermodel.Permission{}
+		err := rows.Scan(&perm.ID, &perm.Name, &perm.Description)
+		if err != nil {
+			return nil, err
+		}
+		permissions = append(permissions, perm)
+	}
+	return permissions, nil
+}
+
+func (s *PGStore) AssignPermissionsToRole(ctx context.Context, roleID string, permissionIDs []string) error {
+	for _, permID := range permissionIDs {
+		_, err := s.db.ExecContext(ctx, `
+			INSERT INTO role_permissions (role_id, permission_id)
+			VALUES ($1, $2)
+			ON CONFLICT (role_id, permission_id) DO NOTHING
+		`, roleID, permID)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+func (s *PGStore) RemovePermissionsFromRole(ctx context.Context, roleID string, permissionIDs []string) error {
+	for _, permID := range permissionIDs {
+		_, err := s.db.ExecContext(ctx, `
+			DELETE FROM role_permissions
+			WHERE role_id = $1 AND permission_id = $2
+		`, roleID, permID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *PGStore) GetUsersWithRole(ctx context.Context, roleID string) ([]*usermodel.User, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT u.id, u.username, u.first_name, u.last_name, u.email, u.created_at, u.updated_at, u.last_login
+		FROM users u
+		JOIN user_roles ur ON ur.user_id = u.id
+		WHERE ur.role_id = $1
+		ORDER BY u.username
+	`, roleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []*usermodel.User
+	for rows.Next() {
+		user := &usermodel.User{}
+		err := rows.Scan(&user.ID, &user.Username, &user.FirstName, &user.LastName, &user.Email, &user.CreatedAt, &user.UpdatedAt, &user.LastLogin)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+	return users, nil
+}
+
+// Permission management methods
+
+func (s *PGStore) GetPermissions(ctx context.Context) ([]*usermodel.Permission, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, name, description 
+		FROM permissions 
+		ORDER BY name
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var permissions []*usermodel.Permission
+	for rows.Next() {
+		perm := &usermodel.Permission{}
+		err := rows.Scan(&perm.ID, &perm.Name, &perm.Description)
+		if err != nil {
+			return nil, err
+		}
+		permissions = append(permissions, perm)
+	}
+	return permissions, nil
+}
+
+func (s *PGStore) GetPermission(ctx context.Context, permissionID string) (*usermodel.Permission, error) {
+	row := s.db.QueryRowContext(ctx, `
+		SELECT id, name, description 
+		FROM permissions 
+		WHERE id = $1
+	`, permissionID)
+
+	perm := &usermodel.Permission{}
+	err := row.Scan(&perm.ID, &perm.Name, &perm.Description)
+	if err != nil {
+		return nil, err
+	}
+	return perm, nil
+}
+
+func (s *PGStore) CreatePermission(ctx context.Context, p *usermodel.Permission) error {
+	err := s.db.QueryRowContext(ctx, `
+		INSERT INTO permissions (name, description)
+		VALUES ($1, $2)
+		RETURNING id
+	`, p.Name, p.Description).Scan(&p.ID)
+
+	return err
+}
+
+func (s *PGStore) UpdatePermission(ctx context.Context, p *usermodel.Permission) error {
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE permissions
+		SET name = $2, description = $3
+		WHERE id = $1
+	`, p.ID, p.Name, p.Description)
+
+	return err
+}
+
+func (s *PGStore) DeletePermission(ctx context.Context, permissionID string) error {
+	// First remove all role-permission associations
+	_, err := s.db.ExecContext(ctx, `DELETE FROM role_permissions WHERE permission_id = $1`, permissionID)
+	if err != nil {
+		return err
+	}
+
+	// Then delete the permission
+	_, err = s.db.ExecContext(ctx, `DELETE FROM permissions WHERE id = $1`, permissionID)
+	return err
+}
+
+func (s *PGStore) GetRolesWithPermission(ctx context.Context, permissionID string) ([]*usermodel.Role, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT r.id, r.name, r.description
+		FROM roles r
+		JOIN role_permissions rp ON rp.role_id = r.id
+		WHERE rp.permission_id = $1
+		ORDER BY r.name
+	`, permissionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var roles []*usermodel.Role
+	for rows.Next() {
+		role := &usermodel.Role{}
+		err := rows.Scan(&role.ID, &role.Name, &role.Description)
+		if err != nil {
+			return nil, err
+		}
+		roles = append(roles, role)
+	}
+	return roles, nil
+}
+
+// User role management methods
+
+func (s *PGStore) GetUserRoles(ctx context.Context, userID string) ([]*usermodel.Role, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT r.id, r.name, r.description
+		FROM roles r
+		JOIN user_roles ur ON ur.role_id = r.id
+		WHERE ur.user_id = $1
+		ORDER BY r.name
+	`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var roles []*usermodel.Role
+	for rows.Next() {
+		role := &usermodel.Role{}
+		err := rows.Scan(&role.ID, &role.Name, &role.Description)
+		if err != nil {
+			return nil, err
+		}
+		roles = append(roles, role)
+	}
+	return roles, nil
+}
+
+func (s *PGStore) AssignRoleToUser(ctx context.Context, userID, roleID string) error {
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO user_roles (user_id, role_id)
+		VALUES ($1, $2)
+		ON CONFLICT (user_id, role_id) DO NOTHING
+	`, userID, roleID)
+	return err
+}
+
+func (s *PGStore) AssignRolesToUser(ctx context.Context, userID string, roleIDs []string) error {
+	for _, roleID := range roleIDs {
+		err := s.AssignRoleToUser(ctx, userID, roleID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *PGStore) RemoveRolesFromUser(ctx context.Context, userID string, roleIDs []string) error {
+	for _, roleID := range roleIDs {
+		_, err := s.db.ExecContext(ctx, `
+			DELETE FROM user_roles
+			WHERE user_id = $1 AND role_id = $2
+		`, userID, roleID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *PGStore) AttachPermissionToRole(ctx context.Context, roleID, permID string) error {
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO role_permissions (role_id, permission_id)
+		VALUES ($1, $2)
+		ON CONFLICT (role_id, permission_id) DO NOTHING
+	`, roleID, permID)
+	return err
 }
 
 // Profile management methods
@@ -416,4 +736,20 @@ func (s *PGStore) UpdateUser(ctx context.Context, u *usermodel.User) error {
 func (s *PGStore) DeleteUser(ctx context.Context, userID string) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, userID)
 	return err
+}
+
+// SaveUser creates or updates a user in the database
+func (s *PGStore) SaveUser(ctx context.Context, u *usermodel.User) error {
+	// Check if user exists
+	var exists bool
+	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)`, u.ID).Scan(&exists)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		return s.UpdateUser(ctx, u)
+	} else {
+		return s.CreateUser(ctx, u)
+	}
 }

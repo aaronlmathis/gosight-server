@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { 
-		Home, 
-		Network, 
-		BarChart3, 
-		Activity, 
-		FileText, 
-		AlertTriangle, 
-		Settings, 
+	import {
+		Home,
+		Network,
+		BarChart3,
+		Activity,
+		FileText,
+		AlertTriangle,
+		Settings,
 		TrendingUp,
 		History,
 		Bell
@@ -89,10 +89,27 @@
 			tooltip: 'Reports'
 		},
 		{
-			href: '/admin',
-			label: 'Admin',
+			href: '/iam',
+			label: 'IAM',
 			icon: Settings,
-			tooltip: 'Admin'
+			tooltip: 'Identity and Access Management',
+			submenu: [
+				{
+					href: '/iam/users',
+					label: 'Users',
+					icon: 'fas fa-users'
+				},
+				{
+					href: '/iam/roles',
+					label: 'Roles',
+					icon: 'fas fa-user-tag'
+				},
+				{
+					href: '/iam/permissions',
+					label: 'Permissions',
+					icon: 'fas fa-key'
+				}
+			]
 		}
 	];
 
@@ -105,43 +122,42 @@
 
 	function hasActiveSubmenu(item: MenuItem): boolean {
 		if (!item.submenu) return false;
-		return item.submenu.some(sub => currentPath.startsWith(sub.href));
+		return item.submenu.some((sub) => currentPath.startsWith(sub.href));
 	}
 </script>
 
-<aside 
+<aside
 	id="sidebar"
-	class="fixed top-0 left-0 z-20 flex flex-col w-64 h-full pt-16 transition-transform transform bg-gray-100 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 lg:translate-x-0 hidden lg:flex"
+	class="fixed top-0 left-0 z-20 flex hidden h-full w-64 transform flex-col border-r border-gray-200 bg-gray-100 pt-20 transition-transform lg:flex lg:translate-x-0 dark:border-gray-700 dark:bg-gray-900"
 	aria-label="Sidebar"
 >
-	<div class="flex flex-col flex-1 px-3 py-4 overflow-visible">
+	<div class="flex flex-1 flex-col overflow-visible px-3 py-6">
 		<ul class="space-y-2 text-sm font-normal text-gray-700 dark:text-gray-300">
 			{#each menuItems as item}
 				<li>
 					<a
 						href={item.href}
 						data-tooltip={item.tooltip}
-						class="sidebar-link flex items-center p-2 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-all duration-200 relative"
+						class="sidebar-link relative flex items-center p-2 transition-all duration-200 hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-white"
 						class:active={isActive(item.href)}
 						class:mb-1={item.submenu}
 					>
-						<svelte:component 
-							this={item.icon} 
-							class="w-6 h-6 text-gray-800 dark:text-white" 
-						/>
+						<svelte:component this={item.icon} class="h-6 w-6 text-gray-800 dark:text-white" />
 						<span class="ml-3">{item.label}</span>
 					</a>
-					
+
 					{#if item.submenu && (isActive(item.href) || hasActiveSubmenu(item))}
-						<ul class="sidebar-submenu ml-6 mt-1 space-y-1 text-sm text-gray-600 dark:text-gray-400 mt-2">
+						<ul
+							class="sidebar-submenu mt-1 mt-2 ml-6 space-y-1 text-sm text-gray-600 dark:text-gray-400"
+						>
 							{#each item.submenu as subItem}
 								<li>
 									<a
 										href={subItem.href}
-										class="submenu-link relative block px-3 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-150"
+										class="submenu-link relative block rounded-md px-3 py-1.5 transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800"
 										class:active={isActive(subItem.href)}
 									>
-										<i class="{subItem.icon} text-xs w-3 h-3"></i>
+										<i class="{subItem.icon} h-3 w-3 text-xs"></i>
 										{subItem.label}
 									</a>
 								</li>
@@ -152,10 +168,10 @@
 			{/each}
 		</ul>
 	</div>
-	
-	<div class="text-gray-500 text-center text-xs mt-6">
+
+	<div class="mt-6 text-center text-xs text-gray-500">
 		<p class="text-gray-800 dark:text-gray-200">
-			Version: <span class="text-black dark:text-white font-semibold">1.0.0</span>
+			Version: <span class="font-semibold text-black dark:text-white">1.0.0</span>
 		</p>
 	</div>
 </aside>

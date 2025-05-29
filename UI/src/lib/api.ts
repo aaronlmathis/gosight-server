@@ -1,7 +1,28 @@
 /**
  * API client for GoSight backend
  */
-import type { AlertRule, AlertRulesResponse, EndpointsResponse, Endpoint, LogResponse } from './types';
+import type { 
+	AlertRule, 
+	AlertRulesResponse, 
+	EndpointsResponse, 
+	Endpoint, 
+	LogResponse,
+	Role,
+	Permission,
+	RoleWithPermissions,
+	PermissionWithRoles,
+	UserWithRoles,
+	CreateRoleRequest,
+	UpdateRoleRequest,
+	CreatePermissionRequest,
+	UpdatePermissionRequest,
+	AssignRolesRequest,
+	AssignPermissionsRequest,
+	RolesResponse,
+	PermissionsResponse,
+	UsersWithRoleResponse,
+	RolesWithPermissionResponse
+} from './types';
 
 export interface ApiError {
 message: string;
@@ -501,6 +522,168 @@ return this.api.request('/upload/limits');
 }
 }
 
+// Roles API
+export class RolesApi {
+	private api: ApiClient;
+
+	constructor(api: ApiClient) {
+		this.api = api;
+	}
+
+	async getAll(): Promise<Role[]> {
+		const response = await this.api.request('/roles');
+		return Array.isArray(response) ? response : [];
+	}
+
+	async get(id: string): Promise<Role> {
+		return this.api.request(`/roles/${id}`);
+	}
+
+	async create(role: CreateRoleRequest): Promise<Role> {
+		return this.api.request('/roles', {
+			method: 'POST',
+			body: JSON.stringify(role)
+		});
+	}
+
+	async update(id: string, role: UpdateRoleRequest): Promise<Role> {
+		return this.api.request(`/roles/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(role)
+		});
+	}
+
+	async delete(id: string): Promise<void> {
+		return this.api.request(`/roles/${id}`, {
+			method: 'DELETE'
+		});
+	}
+
+	async getPermissions(id: string): Promise<Permission[]> {
+		const response = await this.api.request(`/roles/${id}/permissions`);
+		return Array.isArray(response) ? response : [];
+	}
+
+	async assignPermissions(id: string, request: AssignPermissionsRequest): Promise<void> {
+		return this.api.request(`/roles/${id}/permissions`, {
+			method: 'POST',
+			body: JSON.stringify(request)
+		});
+	}
+
+	async removePermissions(id: string, request: AssignPermissionsRequest): Promise<void> {
+		return this.api.request(`/roles/${id}/permissions`, {
+			method: 'DELETE',
+			body: JSON.stringify(request)
+		});
+	}
+
+	async getUsers(id: string): Promise<UserWithRoles[]> {
+		const response = await this.api.request(`/roles/${id}/users`);
+		return Array.isArray(response) ? response : [];
+	}
+}
+
+// Permissions API
+export class PermissionsApi {
+	private api: ApiClient;
+
+	constructor(api: ApiClient) {
+		this.api = api;
+	}
+
+	async getAll(): Promise<Permission[]> {
+		const response = await this.api.request('/permissions');
+		return Array.isArray(response) ? response : [];
+	}
+
+	async get(id: string): Promise<Permission> {
+		return this.api.request(`/permissions/${id}`);
+	}
+
+	async create(permission: CreatePermissionRequest): Promise<Permission> {
+		return this.api.request('/permissions', {
+			method: 'POST',
+			body: JSON.stringify(permission)
+		});
+	}
+
+	async update(id: string, permission: UpdatePermissionRequest): Promise<Permission> {
+		return this.api.request(`/permissions/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(permission)
+		});
+	}
+
+	async delete(id: string): Promise<void> {
+		return this.api.request(`/permissions/${id}`, {
+			method: 'DELETE'
+		});
+	}
+
+	async getRoles(id: string): Promise<RoleWithPermissions[]> {
+		const response = await this.api.request(`/permissions/${id}/roles`);
+		return Array.isArray(response) ? response : [];
+	}
+}
+
+// Users API (IAM-related methods)
+export class UsersApi {
+	private api: ApiClient;
+
+	constructor(api: ApiClient) {
+		this.api = api;
+	}
+
+	async getAll(): Promise<UserWithRoles[]> {
+		const response = await this.api.request('/users');
+		return Array.isArray(response) ? response : [];
+	}
+
+	async get(id: string): Promise<UserWithRoles> {
+		return this.api.request(`/users/${id}`);
+	}
+
+	async create(user: any): Promise<UserWithRoles> {
+		return this.api.request('/users', {
+			method: 'POST',
+			body: JSON.stringify(user)
+		});
+	}
+
+	async update(id: string, user: any): Promise<UserWithRoles> {
+		return this.api.request(`/users/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(user)
+		});
+	}
+
+	async delete(id: string): Promise<void> {
+		return this.api.request(`/users/${id}`, {
+			method: 'DELETE'
+		});
+	}
+
+	async getRoles(id: string): Promise<Role[]> {
+		const response = await this.api.request(`/users/${id}/roles`);
+		return Array.isArray(response) ? response : [];
+	}
+
+	async assignRoles(id: string, request: AssignRolesRequest): Promise<void> {
+		return this.api.request(`/users/${id}/roles`, {
+			method: 'POST',
+			body: JSON.stringify(request)
+		});
+	}
+
+	async removeRoles(id: string, request: AssignRolesRequest): Promise<void> {
+		return this.api.request(`/users/${id}/roles`, {
+			method: 'DELETE',
+			body: JSON.stringify(request)
+		});
+	}
+}
+
 export class ApiClient {
 private baseUrl: string;
 public alerts: AlertsApi;
@@ -511,6 +694,9 @@ public metrics: MetricsApi;
 public reports: ReportsApi;
 public commands: CommandsApi;
 public auth: AuthApi;
+public roles: RolesApi;
+public permissions: PermissionsApi;
+public users: UsersApi;
 
 constructor(baseUrl: string = '/api/v1') {
 this.baseUrl = baseUrl;
@@ -522,6 +708,9 @@ this.metrics = new MetricsApi(this);
 this.reports = new ReportsApi(this);
 this.commands = new CommandsApi(this);
 this.auth = new AuthApi(this);
+this.roles = new RolesApi(this);
+this.permissions = new PermissionsApi(this);
+this.users = new UsersApi(this);
 }	async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
 		const url = `${this.baseUrl}${endpoint}`;
 
@@ -772,6 +961,11 @@ return this.alerts.createRule(rule);
 
 // Create and initialize API singleton instance
 export const api = new ApiClient();
+
+// Export individual API instances for direct use
+export const rolesApi = api.roles;
+export const permissionsApi = api.permissions;
+export const usersApi = api.users;
 
 // Legacy compatibility function for existing JS code
 export function gosightFetch(url: string, options?: RequestInit) {

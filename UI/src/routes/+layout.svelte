@@ -89,7 +89,7 @@
 		></div>
 
 		<!-- Main content -->
-		<main class="relative pt-16 lg:pl-64">
+		<main class="relative pt-20 lg:pl-64">
 			<div class="p-4">
 				<slot />
 			</div>

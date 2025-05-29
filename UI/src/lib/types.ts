@@ -447,3 +447,88 @@ export interface SeriesConfig {
 	color?: string;
 	type?: string;
 }
+
+// IAM Types
+export interface Role {
+	id: string;
+	name: string;
+	description: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface Permission {
+	id: string;
+	name: string;
+	description: string;
+	resource: string;
+	action: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface RoleWithPermissions extends Role {
+	permissions: Permission[];
+}
+
+export interface PermissionWithRoles extends Permission {
+	roles: Role[];
+}
+
+export interface UserWithRoles extends User {
+	roles: Role[];
+}
+
+// IAM Request types
+export interface CreateRoleRequest {
+	name: string;
+	description?: string;
+}
+
+export interface UpdateRoleRequest {
+	name?: string;
+	description?: string;
+}
+
+export interface CreatePermissionRequest {
+	name: string;
+	description?: string;
+	resource: string;
+	action: string;
+}
+
+export interface UpdatePermissionRequest {
+	name?: string;
+	description?: string;
+	resource?: string;
+	action?: string;
+}
+
+export interface AssignRolesRequest {
+	role_ids: string[];
+}
+
+export interface AssignPermissionsRequest {
+	permission_ids: string[];
+}
+
+// IAM Response types
+export interface RolesResponse {
+	roles: Role[];
+	total: number;
+}
+
+export interface PermissionsResponse {
+	permissions: Permission[];
+	total: number;
+}
+
+export interface UsersWithRoleResponse {
+	users: UserWithRoles[];
+	total: number;
+}
+
+export interface RolesWithPermissionResponse {
+	roles: RoleWithPermissions[];
+	total: number;
+}

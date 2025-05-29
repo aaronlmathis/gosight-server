@@ -18,9 +18,30 @@ type UserStore interface {
 	CreateUser(ctx context.Context, u *usermodel.User) error
 	UpdateUser(ctx context.Context, u *usermodel.User) error
 	DeleteUser(ctx context.Context, userID string) error
+	// Role management
+	GetRoles(ctx context.Context) ([]*usermodel.Role, error)
+	GetRole(ctx context.Context, roleID string) (*usermodel.Role, error)
 	CreateRole(ctx context.Context, r *usermodel.Role) error
-	AssignRoleToUser(ctx context.Context, userID, roleID string) error
+	UpdateRole(ctx context.Context, r *usermodel.Role) error
+	DeleteRole(ctx context.Context, roleID string) error
+	GetRolePermissions(ctx context.Context, roleID string) ([]*usermodel.Permission, error)
+	AssignPermissionsToRole(ctx context.Context, roleID string, permissionIDs []string) error
+	RemovePermissionsFromRole(ctx context.Context, roleID string, permissionIDs []string) error
+	GetUsersWithRole(ctx context.Context, roleID string) ([]*usermodel.User, error)
+
+	// Permission management
+	GetPermissions(ctx context.Context) ([]*usermodel.Permission, error)
+	GetPermission(ctx context.Context, permissionID string) (*usermodel.Permission, error)
 	CreatePermission(ctx context.Context, p *usermodel.Permission) error
+	UpdatePermission(ctx context.Context, p *usermodel.Permission) error
+	DeletePermission(ctx context.Context, permissionID string) error
+	GetRolesWithPermission(ctx context.Context, permissionID string) ([]*usermodel.Role, error)
+
+	// User role management
+	GetUserRoles(ctx context.Context, userID string) ([]*usermodel.Role, error)
+	AssignRoleToUser(ctx context.Context, userID, roleID string) error
+	AssignRolesToUser(ctx context.Context, userID string, roleIDs []string) error
+	RemoveRolesFromUser(ctx context.Context, userID string, roleIDs []string) error
 	AttachPermissionToRole(ctx context.Context, roleID, permID string) error
 	Close() error
 
