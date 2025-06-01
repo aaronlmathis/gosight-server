@@ -179,13 +179,12 @@ Uses shadcn/ui Card components for consistent styling.
           </Button>
           <Card.Title class="text-sm font-medium truncate">{widget.title}</Card.Title>
         </div>
-        
-        <div class="flex items-center space-x-1 flex-shrink-0">
+          <div class="flex items-center space-x-1 flex-shrink-0">
           <Button
             variant="ghost"
             size="icon"
             class="h-6 w-6 text-muted-foreground hover:text-foreground"
-            on:click={handleConfigure}
+            onclick={handleConfigure}
           >
             <MaximizeIcon class="h-3 w-3" />
           </Button>
@@ -194,7 +193,7 @@ Uses shadcn/ui Card components for consistent styling.
             variant="ghost"
             size="icon"
             class="h-6 w-6 text-muted-foreground hover:text-destructive"
-            on:click={handleRemove}
+            onclick={handleRemove}
           >
             <XIcon class="h-3 w-3" />
           </Button>

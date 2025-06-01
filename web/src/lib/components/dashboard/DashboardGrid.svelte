@@ -23,8 +23,8 @@ Provides visual feedback during drag operations and manages widget positioning.
 -->
 
 <script lang="ts">
-  import { dashboardStore, draggedWidget, isEditMode } from '$lib/stores/dashboard';
-  import type { WidgetPosition } from '$lib/types/dashboard';
+  import { dashboardStore, draggedWidget, isEditMode, activeDashboard } from '$lib/stores/dashboard';
+  import type { WidgetPosition, Widget } from '$lib/types/dashboard';
   import WidgetContainer from './WidgetContainer.svelte';
   import SampleWidget from './SampleWidget.svelte';
   import { cn } from '$lib/utils';
@@ -38,8 +38,8 @@ Provides visual feedback during drag operations and manages widget positioning.
   let isDragOver = false;
   let dropPreview: WidgetPosition | null = null;
 
-  $: widgets = $dashboardStore.widgets;
-  $: maxRows = Math.max(gridRows, ...widgets.map(w => w.position.y + w.position.height));
+  $: widgets = $activeDashboard?.widgets || [];
+  $: maxRows = Math.max(gridRows, ...widgets.map((w: Widget) => w.position.y + w.position.height));
 
   $: gridStyle = `
     display: grid;
@@ -70,9 +70,8 @@ Provides visual feedback during drag operations and manages widget positioning.
 
     return null;
   }
-
   function isPositionOccupied(position: WidgetPosition, excludeWidgetId?: string): boolean {
-    return widgets.some(widget => {
+    return widgets.some((widget: Widget) => {
       if (excludeWidgetId && widget.id === excludeWidgetId) return false;
       
       const wPos = widget.position;
@@ -84,7 +83,6 @@ Provides visual feedback during drag operations and manages widget positioning.
       );
     });
   }
-
   function handleDragOver(event: DragEvent) {
     if (!$isEditMode || !$draggedWidget) return;
 
@@ -92,7 +90,7 @@ Provides visual feedback during drag operations and manages widget positioning.
     isDragOver = true;
 
     const position = getGridPosition(event);
-    if (position && $draggedWidget) {
+    if (position && $draggedWidget && typeof $draggedWidget === 'object' && 'position' in $draggedWidget) {
       position.width = $draggedWidget.position.width;
       position.height = $draggedWidget.position.height;
       
@@ -124,16 +122,16 @@ Provides visual feedback during drag operations and manages widget positioning.
 
   function handleDrop(event: DragEvent) {
     event.preventDefault();
-    isDragOver = false;
-
-    if (!$draggedWidget || !dropPreview) {
+    isDragOver = false;    if (!$draggedWidget || !dropPreview || typeof $draggedWidget !== 'object' || !('id' in $draggedWidget)) {
       dropPreview = null;
       return;
     }
 
     dashboardStore.moveWidget($draggedWidget.id, {
       x: dropPreview.x,
-      y: dropPreview.y
+      y: dropPreview.y,
+      width: dropPreview.width,
+      height: dropPreview.height
     });
     
     dropPreview = null;
@@ -143,7 +141,6 @@ Provides visual feedback during drag operations and manages widget positioning.
     const { widget, position } = event.detail;
     dashboardStore.moveWidget(widget.id, position);
   }
-
   function handleWidgetResize(event: CustomEvent) {
     const { widget, size } = event.detail;
     dashboardStore.resizeWidget(widget.id, size);
@@ -170,15 +167,14 @@ Provides visual feedback during drag operations and manages widget positioning.
 </script>
 
 <div
-  bind:this={gridElement}
-  class={cn(
+  bind:this={gridElement}  class={cn(
     "dashboard-grid relative",
     isDragOver && "bg-accent/10"
   )}
   style={gridStyle}
-  on:dragover={handleDragOver}
-  on:dragleave={handleDragLeave}
-  on:drop={handleDrop}
+  ondragover={handleDragOver}
+  ondragleave={handleDragLeave}
+  ondrop={handleDrop}
   aria-label="Dashboard widget grid"
 >
   <!-- Existing Widgets -->
@@ -208,9 +204,8 @@ Provides visual feedback during drag operations and manages widget positioning.
   {/if}
 
   <!-- Add Widget Button (Edit Mode) -->
-  {#if $isEditMode}
-    <Card.Root class="dashboard-add-widget border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 hover:bg-accent/50 transition-all duration-200 cursor-pointer" style="grid-column: 1 / span 3; grid-row: {maxRows + 1};">
-      <Card.Content class="flex items-center justify-center h-full p-6" on:click={handleAddWidget}>
+  {#if $isEditMode}    <Card.Root class="dashboard-add-widget border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 hover:bg-accent/50 transition-all duration-200 cursor-pointer" style="grid-column: 1 / span 3; grid-row: {maxRows + 1};">
+      <Card.Content class="flex items-center justify-center h-full p-6" onclick={handleAddWidget}>
         <div class="text-center">
           <PlusIcon class="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
           <div class="text-sm font-medium text-muted-foreground">Add Widget</div>
@@ -233,11 +228,10 @@ Provides visual feedback during drag operations and manages widget positioning.
             {:else}
               Click "Add Widget" to begin.
             {/if}
-          </Card.Description>
-          {#if $isEditMode}
+          </Card.Description>          {#if $isEditMode}
             <button
               class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-              on:click={handleAddWidget}
+              onclick={handleAddWidget}
             >
               <PlusIcon class="h-4 w-4 mr-2" />
               Add Your First Widget

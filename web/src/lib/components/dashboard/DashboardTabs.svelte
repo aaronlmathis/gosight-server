@@ -23,49 +23,28 @@ Manages multiple dashboards with tab interface
 
 <script lang="ts">
   import * as Tabs from '$lib/components/ui/tabs';
-  import Button from '$lib/components/ui/button/button.svelte';
   import * as Dialog from '$lib/components/ui/dialog';
-  import * as AlertDialog from '$lib/components/ui/alert-dialog';
+  import Button from '$lib/components/ui/button/button.svelte';
   import Input from '$lib/components/ui/input/input.svelte';
-  import { Plus, X, Edit2 } from 'lucide-svelte';
+  import { Plus, X } from 'lucide-svelte';
+  import { dashboardStore } from '$lib/stores/dashboard';
   import { toast } from 'svelte-sonner';
+  import type { Snippet } from 'svelte';
 
   interface Props {
-    children: import('svelte').Snippet<[{ dashboard: Dashboard }]>;
+    children: Snippet<[{ dashboard: any }]>;
   }
 
   let { children }: Props = $props();
 
-  // Dashboard state
-  interface Dashboard {
-    id: string;
-    name: string;
-    isActive: boolean;
-  }
-
-  let dashboards = $state<Dashboard[]>([
-    { id: 'main', name: 'Main Dashboard', isActive: true },
-    { id: 'performance', name: 'Performance', isActive: false },
-    { id: 'security', name: 'Security', isActive: false }
-  ]);
-
-  let activeDashboardId = $state('main');
   let showCreateDialog = $state(false);
   let showDeleteDialog = $state(false);
   let deleteDashboardId = $state<string | null>(null);
   let newDashboardName = $state('');
 
-  // Reactive derived values
-  let activeDashboard = $derived(dashboards.find(d => d.id === activeDashboardId));
-
-  function switchToDashboard(dashboardId: string) {
-    activeDashboardId = dashboardId;
-    // Update active state
-    dashboards = dashboards.map(d => ({
-      ...d,
-      isActive: d.id === dashboardId
-    }));
-  }
+  // Get reactive dashboard data
+  let dashboards = $derived($dashboardStore.dashboards);
+  let activeDashboardId = $derived($dashboardStore.activeDashboardId);
 
   function createDashboard() {
     if (!newDashboardName.trim()) {
@@ -73,19 +52,9 @@ Manages multiple dashboards with tab interface
       return;
     }
 
-    const id = newDashboardName.toLowerCase().replace(/\s+/g, '-');
-    const newDashboard: Dashboard = {
-      id,
-      name: newDashboardName.trim(),
-      isActive: false
-    };
-
-    dashboards = [...dashboards, newDashboard];
-    switchToDashboard(id);
-    
+    dashboardStore.createDashboard(newDashboardName.trim());
     newDashboardName = '';
     showCreateDialog = false;
-    toast.success(`Dashboard "${newDashboard.name}" created`);
   }
 
   function confirmDeleteDashboard(dashboardId: string) {
@@ -100,27 +69,14 @@ Manages multiple dashboards with tab interface
 
   function deleteDashboard() {
     if (!deleteDashboardId) return;
-
-    const dashboardToDelete = dashboards.find(d => d.id === deleteDashboardId);
-    if (!dashboardToDelete) return;
-
-    // If deleting active dashboard, switch to first remaining
-    if (deleteDashboardId === activeDashboardId) {
-      const remaining = dashboards.filter(d => d.id !== deleteDashboardId);
-      if (remaining.length > 0) {
-        activeDashboardId = remaining[0].id;
-      }
-    }
-
-    dashboards = dashboards.filter(d => d.id !== deleteDashboardId);
     
-    toast.success(`Dashboard "${dashboardToDelete.name}" deleted`);
+    dashboardStore.deleteDashboard(deleteDashboardId);
     showDeleteDialog = false;
     deleteDashboardId = null;
   }
 </script>
 
-<Tabs.Root bind:value={activeDashboardId} class="w-full">
+<Tabs.Root value={activeDashboardId} class="w-full">
   <!-- Tab List with Add Button -->
   <div class="flex items-center justify-center gap-2 border-b px-4">
     <Tabs.List class="h-10 flex-shrink-0">
@@ -128,7 +84,7 @@ Manages multiple dashboards with tab interface
         <Tabs.Trigger 
           value={dashboard.id}
           class="relative group"
-          onclick={() => switchToDashboard(dashboard.id)}
+          onclick={() => dashboardStore.setActiveDashboard(dashboard.id)}
         >
           {dashboard.name}
           
@@ -160,10 +116,9 @@ Manages multiple dashboards with tab interface
       <Plus class="h-4 w-4" />
     </Button>
   </div>
-
-  <!-- Tab Content -->
+  <!-- Tab Content - Each dashboard gets its own content -->
   {#each dashboards as dashboard (dashboard.id)}
-    <Tabs.Content value={dashboard.id} class="mt-0">
+    <Tabs.Content value={dashboard.id} class="space-y-4">
       {@render children({ dashboard })}
     </Tabs.Content>
   {/each}
@@ -171,30 +126,20 @@ Manages multiple dashboards with tab interface
 
 <!-- Create Dashboard Dialog -->
 <Dialog.Root bind:open={showCreateDialog}>
-  <Dialog.Content class="sm:max-w-md">
+  <Dialog.Content class="sm:max-w-[425px]">
     <Dialog.Header>
       <Dialog.Title>Create New Dashboard</Dialog.Title>
       <Dialog.Description>
         Enter a name for your new dashboard.
       </Dialog.Description>
     </Dialog.Header>
-    
     <div class="grid gap-4 py-4">
-      <div class="grid gap-2">
-        <label for="dashboard-name" class="text-sm font-medium">Dashboard Name</label>
-        <Input
-          id="dashboard-name"
-          bind:value={newDashboardName}
-          placeholder="e.g. Network Monitoring"
-          onkeydown={(e) => {
-            if (e.key === 'Enter') {
-              createDashboard();
-            }
-          }}
-        />
-      </div>
+      <Input
+        bind:value={newDashboardName}
+        placeholder="Dashboard name"
+        onkeydown={(e) => e.key === 'Enter' && createDashboard()}
+      />
     </div>
-    
     <Dialog.Footer>
       <Button variant="outline" onclick={() => showCreateDialog = false}>
         Cancel
@@ -206,23 +151,22 @@ Manages multiple dashboards with tab interface
   </Dialog.Content>
 </Dialog.Root>
 
-<!-- Delete Dashboard Confirmation -->
-<AlertDialog.Root bind:open={showDeleteDialog}>
-  <AlertDialog.Content>
-    <AlertDialog.Header>
-      <AlertDialog.Title>Delete Dashboard</AlertDialog.Title>
-      <AlertDialog.Description>
+<!-- Delete Confirmation Dialog -->
+<Dialog.Root bind:open={showDeleteDialog}>
+  <Dialog.Content class="sm:max-w-[425px]">
+    <Dialog.Header>
+      <Dialog.Title>Delete Dashboard</Dialog.Title>
+      <Dialog.Description>
         Are you sure you want to delete this dashboard? This action cannot be undone.
-      </AlertDialog.Description>
-    </AlertDialog.Header>
-    
-    <AlertDialog.Footer>
-      <AlertDialog.Cancel onclick={() => showDeleteDialog = false}>
+      </Dialog.Description>
+    </Dialog.Header>
+    <Dialog.Footer>
+      <Button variant="outline" onclick={() => showDeleteDialog = false}>
         Cancel
-      </AlertDialog.Cancel>
-      <AlertDialog.Action onclick={deleteDashboard} class="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-        Delete
-      </AlertDialog.Action>
-    </AlertDialog.Footer>
-  </AlertDialog.Content>
-</AlertDialog.Root>
+      </Button>
+      <Button variant="destructive" onclick={deleteDashboard}>
+        Delete Dashboard
+      </Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>

@@ -3,7 +3,6 @@ Simple Badge Component for shadcn/ui compatibility
 -->
 <script lang="ts" module>
 	import { tv, type VariantProps } from "tailwind-variants";
-	import type { HTMLAttributes } from "svelte/elements";
 	import { cn, type WithElementRef } from "$lib/utils.js";
 
 	export const badgeVariants = tv({
@@ -25,7 +24,7 @@ Simple Badge Component for shadcn/ui compatibility
 </script>
 
 <script lang="ts">
-	import type { HTMLSpanAttributes } from "svelte/elements";
+	import type { HTMLAttributes } from "svelte/elements";
 
 	let {
 		ref = $bindable(null),
@@ -33,7 +32,7 @@ Simple Badge Component for shadcn/ui compatibility
 		variant = "default",
 		children,
 		...restProps
-	}: WithElementRef<HTMLSpanAttributes> & {
+	}: WithElementRef<HTMLAttributes<HTMLSpanElement>> & {
 		variant?: Variant;
 	} = $props();
 </script>

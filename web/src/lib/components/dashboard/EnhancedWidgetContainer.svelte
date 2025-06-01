@@ -30,9 +30,11 @@ Uses all available shadcn/ui components for a sleek experience.
   import * as ContextMenu from '$lib/components/ui/context-menu';
   import * as Dialog from '$lib/components/ui/dialog';
   import Button from '$lib/components/ui/button/button.svelte';
-  import { Settings, Copy, Maximize2, Eye, EyeOff, Trash2 } from 'lucide-svelte';
+  import { Settings, Copy, Trash2 } from 'lucide-svelte';
   import type { Widget, WidgetPosition } from '$lib/types/dashboard';
-  import { dashboardStore, isEditMode, draggedWidget } from '$lib/stores/dashboard';  interface Props {
+  import { isEditMode, draggedWidget, dashboardStore } from '$lib/stores/dashboard';
+
+  interface Props {
     widget: Widget;
     children?: Snippet;
     onmove?: (event: { widget: Widget; position: WidgetPosition }) => void;
@@ -46,16 +48,15 @@ Uses all available shadcn/ui components for a sleek experience.
   let showConfigDialog = $state(false);
   let isDragging = $state(false);
 
-  // Grid positioning style
-  let containerStyle = $derived(`
-    grid-column: ${widget.position.x + 1} / span ${widget.position.width};
-    grid-row: ${widget.position.y + 1} / span ${widget.position.height};
-    transform: ${isDragging ? 'scale(1.05) rotate(2deg)' : 'scale(1)'};
-    opacity: ${isDragging ? 0.6 : 1};
-    z-index: ${isDragging ? 1000 : 1};
-    transition: ${isDragging ? 'none' : 'all 0.2s ease'};
-    box-shadow: ${isDragging ? '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' : ''};
-  `);
+  // CRITICAL FIX: Use the widget prop directly for positioning
+  let gridColumn = $derived(`${widget.position.x + 1} / span ${widget.position.width}`);
+  let gridRow = $derived(`${widget.position.y + 1} / span ${widget.position.height}`);
+
+  // Debug logging
+  $effect(() => {
+    console.log(`Widget ${widget.id} - Position:`, widget.position);
+    console.log(`Widget ${widget.id} - Grid styles:`, { gridColumn, gridRow });
+  });
 
   function handleDragStart(event: DragEvent) {
     if (!$isEditMode) return;
@@ -70,9 +71,9 @@ Uses all available shadcn/ui components for a sleek experience.
     }
   }
 
-  function handleDragEnd(event: DragEvent) {
+  function handleDragEnd() {
+    console.log('Drag ended for widget:', widget.id);
     isDragging = false;
-    draggedWidget.set(null);
   }
 
   function handleConfigure() {
@@ -94,14 +95,6 @@ Uses all available shadcn/ui components for a sleek experience.
     });
   }
 
-  function handleMaximize() {
-    console.log('Maximize widget:', widget.id);
-  }
-
-  function handleToggleVisibility() {
-    console.log('Toggle visibility:', widget.id);
-  }
-
   function handleRemove() {
     onremove?.({ widget });
   }
@@ -119,7 +112,8 @@ Uses all available shadcn/ui components for a sleek experience.
       class:ring-primary={$isEditMode}
       class:opacity-50={isDragging}
       class:scale-95={isDragging}
-      style={containerStyle}
+      style:grid-column={gridColumn}
+      style:grid-row={gridRow}
       draggable={$isEditMode}
       ondragstart={handleDragStart}
       ondragend={handleDragEnd}
@@ -174,15 +168,6 @@ Uses all available shadcn/ui components for a sleek experience.
       <Copy class="mr-2 h-4 w-4" />
       Duplicate
     </ContextMenu.Item>
-    <ContextMenu.Item onclick={handleMaximize}>
-      <Maximize2 class="mr-2 h-4 w-4" />
-      Maximize
-    </ContextMenu.Item>
-    <ContextMenu.Item onclick={handleToggleVisibility}>
-      <Eye class="mr-2 h-4 w-4" />
-      Toggle Visibility
-    </ContextMenu.Item>
-    <ContextMenu.Separator />
     <ContextMenu.Item onclick={handleRemove} class="text-destructive focus:text-destructive">
       <Trash2 class="mr-2 h-4 w-4" />
       Remove

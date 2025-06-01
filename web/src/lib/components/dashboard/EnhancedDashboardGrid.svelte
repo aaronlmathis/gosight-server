@@ -23,12 +23,13 @@ Uses shadcn/ui styling and proper Svelte 5 patterns.
 -->
 
 <script lang="ts">
-  import { dashboardStore, draggedWidget, isEditMode, showGridLines } from '$lib/stores/dashboard';
+  import { dashboardStore, draggedWidget, isEditMode, activeDashboard } from '$lib/stores/dashboard';
   import type { WidgetPosition, Widget } from '$lib/types/dashboard';
   import EnhancedWidgetContainer from './EnhancedWidgetContainer.svelte';
   import EnhancedSampleWidget from './EnhancedSampleWidget.svelte';
   import { cn } from '$lib/utils';
   import * as Card from '$lib/components/ui/card';
+  import Button from '$lib/components/ui/button/button.svelte';
   import { Plus } from 'lucide-svelte';
 
   const { gridCols = 12, gridRows = 8 } = $props();
@@ -36,36 +37,29 @@ Uses shadcn/ui styling and proper Svelte 5 patterns.
   let gridElement: HTMLElement;
   let isDragOver = $state(false);
   let dropPreview: WidgetPosition | null = $state(null);
-
-  // Derived state
-  let widgets = $derived($dashboardStore.widgets);
+  
+  // Derived state from active dashboard
+  let widgets = $derived($activeDashboard.widgets);
   let editMode = $derived($isEditMode);
-  let gridLinesVisible = $derived($showGridLines);
   let maxRows = $derived(Math.max(gridRows, ...widgets.map(w => w.position.y + w.position.height)));
 
   // Debug logging
   $effect(() => {
-    console.log('Dashboard Grid State:', {
+    console.log('Dashboard Grid State Updated:', {
+      dashboardId: $activeDashboard.id,
+      dashboardName: $activeDashboard.name,
       widgets: widgets.length,
       editMode,
-      gridLinesVisible,
       maxRows,
       widgetDetails: widgets.map(w => ({ 
         id: w.id, 
         title: w.title, 
-        position: w.position 
+        position: w.position
       }))
     });
   });
 
-  // Auto-enable grid lines when edit mode is enabled
-  $effect(() => {
-    if (editMode && !gridLinesVisible) {
-      showGridLines.set(true);
-    }
-  });
-
-  // Grid styling with conditional grid lines
+  // Grid styling with conditional grid lines - REMOVE DASHED BORDER
   let gridStyle = $derived(`
     display: grid;
     grid-template-columns: repeat(${gridCols}, 1fr);
@@ -74,53 +68,28 @@ Uses shadcn/ui styling and proper Svelte 5 patterns.
     padding: 1rem;
     min-height: calc(100vh - 200px);
     position: relative;
-    ${gridLinesVisible ? `
+    ${editMode ? `
       background-image: 
-        linear-gradient(to right, var(--color-border) 1px, transparent 1px),
-        linear-gradient(to bottom, var(--color-border) 1px, transparent 1px);
+        linear-gradient(to right, rgba(148, 163, 184, 0.3) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(148, 163, 184, 0.3) 1px, transparent 1px);
       background-size: 20px 20px;
       background-position: 0 0;
     ` : ''}
-    ${editMode ? `
-      border: 2px dashed var(--color-border);
-      border-radius: 0.5rem;
-      background-color: var(--color-muted);
-    ` : ''}
   `);
-
-  // Show grid cell boundaries when dragging for visual debugging
-  let showCellBoundaries = $derived(editMode && isDragOver);
 
   function getGridPosition(event: DragEvent): WidgetPosition | null {
     if (!gridElement) return null;
 
     const rect = gridElement.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
+    const x = event.clientX - rect.left - 16; // Account for padding
+    const y = event.clientY - rect.top - 16;
 
-    // Use a simpler approach that works better with CSS Grid
-    // We'll calculate based on percentages of the container
-    const containerWidth = rect.width;
-    const containerHeight = rect.height;
-    
-    // Account for padding (1rem = 16px)
-    const padding = 16;
-    const gap = 16;
-    
-    const usableWidth = containerWidth - (2 * padding);
-    const usableHeight = containerHeight - (2 * padding);
-    
-    const cellWidth = (usableWidth - (gridCols - 1) * gap) / gridCols;
-    const cellHeight = (usableHeight - (maxRows - 1) * gap) / maxRows;
-    
-    // Calculate position relative to the usable area
-    const relativeX = x - padding;
-    const relativeY = y - padding;
-    
-    const gridX = Math.floor(relativeX / (cellWidth + gap));
-    const gridY = Math.floor(relativeY / (cellHeight + gap));
+    const cellWidth = (rect.width - 32) / gridCols; // Account for padding and gap
+    const cellHeight = (rect.height - 32) / maxRows;
 
-    // Debug logging (more concise)
+    const gridX = Math.floor(x / cellWidth);
+    const gridY = Math.floor(y / cellHeight);
+
     console.log('Drop position:', { gridX, gridY, mouseX: x, mouseY: y });
 
     if (gridX >= 0 && gridX < gridCols && gridY >= 0) {
@@ -148,6 +117,7 @@ Uses shadcn/ui styling and proper Svelte 5 patterns.
     if (!editMode) return;
 
     event.preventDefault();
+    event.dataTransfer!.dropEffect = 'move';
     isDragOver = true;
 
     const position = getGridPosition(event);
@@ -177,61 +147,75 @@ Uses shadcn/ui styling and proper Svelte 5 patterns.
     }
   }
 
-  function handleDragLeave(event: DragEvent) {
-    // Only hide preview if we're leaving the grid entirely
-    if (!gridElement?.contains(event.relatedTarget as Node)) {
-      isDragOver = false;
-      dropPreview = null;
-    }
-  }
-
   function handleDrop(event: DragEvent) {
     event.preventDefault();
     isDragOver = false;
 
+    console.log('Drop event:', { 
+      draggedWidget: $draggedWidget, 
+      dropPreview, 
+      editMode 
+    });
+
     if (!editMode || !$draggedWidget || !dropPreview) {
+      console.log('Drop cancelled:', { editMode, draggedWidget: $draggedWidget, dropPreview });
       dropPreview = null;
+      draggedWidget.set(null);
       return;
     }
 
     const position = dropPreview;
     dropPreview = null;
 
-    console.log('Dropping widget:', { draggedWidget: $draggedWidget, position });
+    console.log('Processing drop:', { draggedWidget: $draggedWidget, position });
 
-    // Handle existing widget moves
-    if (typeof $draggedWidget === 'object') {
-      // Only update x and y, preserve original width and height
-      const newPosition = {
-        x: position.x,
-        y: position.y,
-        width: $draggedWidget.position.width,
-        height: $draggedWidget.position.height
-      };
-      console.log('Moving widget to:', newPosition);
-      dashboardStore.moveWidget($draggedWidget.id, newPosition);
+    try {
+      // Handle existing widget moves
+      if (typeof $draggedWidget === 'object') {
+        const newPosition = {
+          x: position.x,
+          y: position.y,
+          width: $draggedWidget.position.width,
+          height: $draggedWidget.position.height
+        };
+        console.log('Moving widget:', $draggedWidget.id, 'to position:', newPosition);
+        dashboardStore.moveWidget($draggedWidget.id, newPosition);
+      }
+      // Handle new widget from palette
+      else if (typeof $draggedWidget === 'string') {
+        console.log('Adding new widget:', $draggedWidget, 'at position:', position);
+        dashboardStore.addWidget({
+          type: $draggedWidget as any,
+          title: `New ${$draggedWidget}`,
+          position,
+          config: {}
+        });
+      }
+    } catch (error) {
+      console.error('Error during drop:', error);
+    } finally {
+      draggedWidget.set(null);
     }
-    // Handle new widget from palette
-    else if (typeof $draggedWidget === 'string') {
-      dashboardStore.addWidget({
-        type: $draggedWidget as any,
-        title: `New ${$draggedWidget}`,
-        position,
-        config: {}
-      });
-    }
-
-    draggedWidget.set(null);
   }
 
+  function handleDragLeave(event: DragEvent) {
+    if (event.currentTarget === event.target) {
+      isDragOver = false;
+      dropPreview = null;
+    }
+  }
+
+  // Widget event handlers
   function handleWidgetMove(event: { widget: Widget; position: WidgetPosition }) {
-    const { widget, position } = event;
-    dashboardStore.moveWidget(widget.id, position);
+    dashboardStore.moveWidget(event.widget.id, event.position);
   }
 
   function handleWidgetResize(event: { widget: Widget; size: Pick<WidgetPosition, 'width' | 'height'> }) {
-    const { widget, size } = event;
-    dashboardStore.resizeWidget(widget.id, size);
+    const newPosition = {
+      ...event.widget.position,
+      ...event.size
+    };
+    dashboardStore.moveWidget(event.widget.id, newPosition);
   }
 
   function handleWidgetRemove(event: { widget: Widget }) {
@@ -239,8 +223,8 @@ Uses shadcn/ui styling and proper Svelte 5 patterns.
   }
 
   function handleWidgetConfigure(event: { widget: Widget }) {
-    // TODO: Open widget configuration modal
     console.log('Configure widget:', event.widget);
+    // Widget configuration logic would go here
   }
 
   function handleAddWidget() {
@@ -259,32 +243,15 @@ Uses shadcn/ui styling and proper Svelte 5 patterns.
   class={cn(
     "dashboard-grid relative",
     isDragOver && "bg-accent/10",
-    gridLinesVisible && "grid-lines-visible"
+    editMode && "grid-lines-visible"
   )}
   style={gridStyle}
   ondragover={handleDragOver}
-  ondragleave={handleDragLeave}
   ondrop={handleDrop}
+  ondragleave={handleDragLeave}
   role="application"
   aria-label="Dashboard widget grid"
 >
-  <!-- Debug Grid Cell Boundaries (only when dragging) -->
-  {#if showCellBoundaries}
-    {#each Array(gridCols * maxRows) as _, i}
-      {@const col = i % gridCols}
-      {@const row = Math.floor(i / gridCols)}
-      <div
-        class="absolute border border-red-300/50 pointer-events-none"
-        style="
-          grid-column: {col + 1};
-          grid-row: {row + 1};
-          background: rgba(255, 0, 0, 0.05);
-          z-index: 999;
-        "
-      ></div>
-    {/each}
-  {/if}
-
   <!-- Existing Widgets -->
   {#each widgets as widget (widget.id)}
     <EnhancedWidgetContainer 
@@ -301,92 +268,59 @@ Uses shadcn/ui styling and proper Svelte 5 patterns.
   {/each}
 
   <!-- Drop Preview -->
-  {#if isDragOver && dropPreview}
+  {#if dropPreview && editMode}
     <div
-      class="drop-preview rounded-xl border-2 border-dashed border-primary bg-primary/10 flex items-center justify-center text-primary text-sm font-medium"
-      style="
-        grid-column: {dropPreview.x + 1} / span {dropPreview.width};
-        grid-row: {dropPreview.y + 1} / span {dropPreview.height};
-      "
+      class="drop-preview absolute rounded-lg border-2 border-dashed border-primary bg-primary/10 pointer-events-none z-10"
+      style={`
+        grid-column: ${dropPreview.x + 1} / span ${dropPreview.width};
+        grid-row: ${dropPreview.y + 1} / span ${dropPreview.height};
+      `}
     >
-      Drop here
+      <div class="h-full w-full flex items-center justify-center text-primary font-medium">
+        Drop Here
+      </div>
     </div>
   {/if}
 
-  <!-- Empty State -->
-  {#if widgets.length === 0}
-    <div
-      class="col-span-full row-span-4 flex flex-col items-center justify-center text-center p-8"
-    >
-      <Card.Root class="w-full max-w-md">
-        <Card.Content class="p-8">
-          <div class="flex flex-col items-center gap-4">
-            <div class="rounded-full bg-primary/10 p-3">
-              <Plus class="h-8 w-8 text-primary" />
-            </div>
-            <div class="space-y-2">
-              <h3 class="text-lg font-semibold">No widgets yet</h3>
-              <p class="text-sm text-muted-foreground">
-                {editMode 
-                  ? 'Use the widget palette in the toolbar to add your first widget, or drag widgets from the "Add Widget" menu'
-                  : 'Switch to edit mode to start adding widgets to your dashboard'
-                }
-              </p>
-            </div>
-            {#if editMode}
-              <button
-                onclick={handleAddWidget}
-                class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 gap-2"
-              >
-                <Plus class="h-4 w-4" />
-                Add Sample Widget
-              </button>
-            {/if}
-          </div>
+  <!-- Add Widget Button (when in edit mode and no widgets) -->
+  {#if editMode && widgets.length === 0}
+    <div class="col-span-full flex items-center justify-center py-12">
+      <Card.Root class="w-80">
+        <Card.Content class="flex flex-col items-center justify-center p-6">
+          <Plus class="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 class="text-lg font-semibold mb-2">No widgets yet</h3>
+          <p class="text-sm text-muted-foreground text-center mb-4">
+            Add your first widget to get started with your dashboard.
+          </p>
+          <Button onclick={handleAddWidget}>
+            <Plus class="mr-2 h-4 w-4" />
+            Add Widget
+          </Button>
         </Card.Content>
       </Card.Root>
-    </div>
-  {/if}
-
-  <!-- Edit Mode Helper Text -->
-  {#if editMode && widgets.length === 0}
-    <div class="col-span-full row-span-1 flex items-center justify-center">
-      <div class="text-center p-4 bg-primary/5 rounded-lg border border-primary/20">
-        <p class="text-sm text-primary font-medium">
-          Grid lines visible • Click "Add Widget" or drag widgets here
-        </p>
-      </div>
     </div>
   {/if}
 </div>
 
 <style>
-  .grid-lines-visible {
-    position: relative;
+  .dashboard-grid {
+    transition: all 0.3s ease;
   }
 
-  .grid-lines-visible::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    pointer-events: none;
-    z-index: 1;
+  .dashboard-grid.grid-lines-visible {
+    background-attachment: local;
   }
 
   .drop-preview {
-    z-index: 10;
     animation: pulse 2s infinite;
   }
 
   @keyframes pulse {
     0%, 100% {
-      opacity: 0.7;
+      opacity: 0.3;
     }
     50% {
-      opacity: 1;
+      opacity: 0.7;
     }
   }
 </style>

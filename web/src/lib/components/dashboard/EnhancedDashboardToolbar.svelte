@@ -22,7 +22,7 @@ Modern toolbar with theme toggle, layout options, export features, and more.
 -->
 
 <script lang="ts">
-  import { dashboardStore, isEditMode, showGridLines } from '$lib/stores/dashboard';
+  import { dashboardStore, activeDashboard, isEditMode, showGridLines } from '$lib/stores/dashboard';
   import { toast } from 'svelte-sonner';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import * as Sheet from '$lib/components/ui/sheet';
@@ -190,7 +190,7 @@ Modern toolbar with theme toggle, layout options, export features, and more.
       {#if autoRefresh}
         <Badge variant="outline">Auto-refresh: {refreshInterval}s</Badge>
       {/if}
-      <Badge variant="outline">{dashboard.widgets.length} widgets</Badge>
+      <Badge variant="outline">{$activeDashboard?.widgets.length || 0} widgets</Badge>
     </div>
 
     <!-- Right Section - Tools and Settings -->

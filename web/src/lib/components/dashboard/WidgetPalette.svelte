@@ -1,5 +1,17 @@
 <!-- 
-Copyright (C) 2025 Aaron Mathis
+Copyright (C) 2025  import { dashboardStore, activeDashboard } from '$lib/stores/dashboard';
+  import type { WidgetTemplate, WidgetType } from '$lib/types/dashboard';
+  import { cn } from '$lib/utils';
+  import * as Card from '$lib/components/ui/card';
+  import { Button } from '$lib/components/ui/button';
+  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+  import BarChart3Icon from '@lucide/svelte/icons/bar-chart-3';
+  import TableIcon from '@lucide/svelte/icons/table';
+  import ActivityIcon from '@lucide/svelte/icons/activity';
+  import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
+  import FileTextIcon from '@lucide/svelte/icons/file-text';
+  import GaugeIcon from '@lucide/svelte/icons/gauge';
+  import PlusIcon from '@lucide/svelte/icons/plus';
 This file is part of GoSight Server.
 
 GoSight Server is free software: you can redistribute it and/or modify
@@ -23,7 +35,7 @@ Includes predefined widget templates with icons and descriptions.
 -->
 
 <script lang="ts">
-  import { dashboardStore, isEditMode } from '$lib/stores/dashboard';
+  import { dashboardStore, activeDashboard, isEditMode } from '$lib/stores/dashboard';
   import type { WidgetTemplate, WidgetType } from '$lib/types/dashboard';
   import { cn } from '$lib/utils';
   import * as Card from '$lib/components/ui/card';
@@ -102,7 +114,7 @@ Includes predefined widget templates with icons and descriptions.
       template.defaultSize.height
     );
     
-    const widgetCount = dashboardStore.widgets?.length || 0;
+    const widgetCount = $activeDashboard?.widgets?.length || 0;
     
     dashboardStore.addWidget({
       type: template.type,
@@ -119,22 +131,23 @@ Includes predefined widget templates with icons and descriptions.
 
 {#if variant === 'dropdown'}
   <DropdownMenu.Root>
-    <DropdownMenu.Trigger asChild let:builder>
-      <Button builders={[builder]} variant="default" class="gap-2">
-        <PlusIcon class="h-4 w-4" />
-        Add Widget
-      </Button>
+    <DropdownMenu.Trigger>
+      {#snippet child({ props })}
+        <Button {...props} variant="default" class="gap-2">
+          <PlusIcon class="h-4 w-4" />
+          Add Widget
+        </Button>
+      {/snippet}
     </DropdownMenu.Trigger>
     <DropdownMenu.Content class="w-80" align="end">
       <DropdownMenu.Label>Choose a Widget Type</DropdownMenu.Label>
       <DropdownMenu.Separator />
       
-      <div class="grid gap-1 p-1">
-        {#each widgetTemplates as template}
+      <div class="grid gap-1 p-1">        {#each widgetTemplates as template}
           {@const IconComponent = getIcon(template.icon)}
           <DropdownMenu.Item 
             class="p-3 cursor-pointer focus:bg-accent"
-            on:click={() => addWidget(template)}
+            onclick={() => addWidget(template)}
           >
             <div class="flex items-start gap-3">
               <div class="flex-shrink-0 mt-0.5">
@@ -167,10 +180,9 @@ Includes predefined widget templates with icons and descriptions.
     
     <Card.Content class="space-y-2 overflow-y-auto">
       {#each widgetTemplates as template}
-        {@const IconComponent = getIcon(template.icon)}
-        <Card.Root 
+        {@const IconComponent = getIcon(template.icon)}        <Card.Root 
           class="cursor-pointer hover:shadow-md transition-all duration-200 hover:scale-[1.02]"
-          on:click={() => addWidget(template)}
+          onclick={() => addWidget(template)}
         >
           <Card.Content class="p-4">
             <div class="flex items-start gap-3">

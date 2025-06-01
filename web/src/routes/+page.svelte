@@ -108,9 +108,8 @@
 			</header>
 			
 			<!-- Dashboard Content with Tabs -->
-			<div class="flex-1 flex flex-col overflow-hidden">
-				<DashboardTabs>
-					{#snippet children({ dashboard })}
+			<div class="flex-1 flex flex-col overflow-hidden">				<DashboardTabs>
+					{#snippet children({ dashboard }: { dashboard: any })}
 						<div class="flex-1 flex flex-col p-4 gap-4 overflow-hidden">
 							<!-- Edit Mode Toolbar (appears below tabs when in edit mode) -->
 							{#if $isEditMode}
