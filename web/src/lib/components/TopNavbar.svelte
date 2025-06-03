@@ -60,7 +60,7 @@ Fixed top navigation bar with logo and theme toggle
 <div class="fixed top-0 left-0 right-0 z-50 flex items-center border-b bg-sidebar h-16">
   <!-- Logo Area - 16rem width, no border -->
   <div class="flex items-center px-4 py-4" style="width: 16rem;">
-    <h1 class="text-sidebar-primary text-xl font-bold">GoSight</h1>
+    <h1 class="text-4xl font-bold">GoSight</h1>
   </div>
 
   <!-- Spacer -->
