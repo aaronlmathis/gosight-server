@@ -49,18 +49,8 @@
 	}
 </script>
 
-<svelte:head>
-	<title>Dashboard - GoSight</title>
-</svelte:head>
-<PermissionGuard requiredPermission="gosight:dashboard:view">
-	<!-- Top Navbar (Fixed at top) -->
-	<TopNavbar />
 
-	<!-- Main Layout with sidebar below header -->
-	<div class="flex h-screen">
-		<Sidebar.Provider class="pt-16">
-			<AppSidebar />
-			<Sidebar.Inset class="flex flex-1 flex-col">
+
 				<!-- Breadcrumb Header -->
 				<header class="bg-background flex h-16 shrink-0 items-center gap-2 border-b">
 					<div class="flex items-center gap-2 px-4">
@@ -106,28 +96,26 @@
 						{/if}
 					</div>
 				</header>
+				<PermissionGuard requiredPermission="gosight:dashboard:view">
+					<!-- Dashboard Content with Tabs -->
+					<div class="flex flex-1 flex-col">
+						<DashboardTabs>
+							{#snippet children({ dashboard }: { dashboard: any })}
+								<div class="flex flex-1 flex-col">
+									<!-- Edit Mode Toolbar (appears below tabs when in edit mode) -->
+									{#if $isEditMode}
+										<div class="px-4 pt-4">
+											<EditModeToolbar />
+										</div>
+									{/if}
 
-				<!-- Dashboard Content with Tabs -->
-				<div class="flex flex-1 flex-col">
-					<DashboardTabs>
-						{#snippet children({ dashboard }: { dashboard: any })}
-							<div class="flex flex-1 flex-col">
-								<!-- Edit Mode Toolbar (appears below tabs when in edit mode) -->
-								{#if $isEditMode}
-									<div class="px-4 pt-4">
-										<EditModeToolbar />
+									<!-- Dashboard Grid -->
+									<div class="flex-1 overflow-auto">
+										<DashboardGrid />
 									</div>
-								{/if}
-
-								<!-- Dashboard Grid -->
-								<div class="flex-1 overflow-auto">
-									<DashboardGrid />
 								</div>
-							</div>
-						{/snippet}
-					</DashboardTabs>
-				</div>
-			</Sidebar.Inset>
-		</Sidebar.Provider>
-	</div>
-</PermissionGuard>
+							{/snippet}
+						</DashboardTabs>
+
+					</div>
+				</PermissionGuard>

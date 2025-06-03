@@ -88,6 +88,7 @@ function createAuthStore() {
 			return hasPermission;
 		},
 		setUser: (userData: User) => {
+			console.log('Setting user data:', userData); // Add this line
 			set({
 				user: userData,
 				isAuthenticated: true,
