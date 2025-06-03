@@ -7,7 +7,7 @@
 <script lang="ts">
 	import '../../app.css';
 	import { onMount } from 'svelte';
-	import { auth } from '$lib/stores/auth';
+	import { auth } from '$lib/stores/authStore';
 
 	onMount(async () => {
 		// Initialize auth store

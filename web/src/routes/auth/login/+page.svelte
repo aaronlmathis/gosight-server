@@ -2,8 +2,8 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { api } from '$lib/api';
-	import { auth } from '$lib/stores/auth';
+	import { api } from '$lib/api/api';
+	import { auth } from '$lib/stores/authStore';
 
 	let username = '';
 	let password = '';
