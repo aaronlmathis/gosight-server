@@ -7,4 +7,3 @@
 
 {@render children()}
 
-<Toaster position="top-right" />
