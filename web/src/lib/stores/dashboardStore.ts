@@ -19,10 +19,11 @@
  * Provides CRUD operations for widgets and dashboard management.
  */
 
-import { writable, get } from 'svelte/store';
+import { writable, get, derived } from 'svelte/store';
 import { browser } from '$app/environment';
 import { toast } from 'svelte-sonner';
 import type { Dashboard, Widget, WidgetPosition, WidgetType } from '$lib/types/dashboard';
+import { getWidgetSize, getCurrentBreakpoint, validateWidgetSize } from '$lib/configs/widget-sizing';
 
 // Multi-dashboard store structure
 interface DashboardStore {
@@ -161,6 +162,108 @@ function createDashboardStore() {
         return {
           ...store,
           dashboards: store.dashboards.map(d => 
+            d.id === store.activeDashboardId ? updatedDashboard : d
+          )
+        };
+      });
+
+      if (browser) {
+        const store = get({ subscribe });
+        localStorage.setItem('dashboards', JSON.stringify(store));
+        toast.success(`Added ${widget.title} widget`);
+      }
+
+      return newWidget.id;
+    },
+
+    /**
+     * Add a widget with smart sizing based on widget type and current screen size
+     */
+    addWidgetWithSmartSizing: (widgetType: string, title: string, config: Record<string, any> = {}) => {
+      // Get appropriate size for current breakpoint
+      const breakpoint = getCurrentBreakpoint();
+      const defaultSize = getWidgetSize(widgetType, breakpoint);
+
+      // Find empty position using inline logic to avoid circular reference
+      const store = get({ subscribe });
+      const activeDashboard = store.dashboards.find(d => d.id === store.activeDashboardId);
+
+      let foundPosition: WidgetPosition;
+      if (!activeDashboard) {
+        foundPosition = { x: 0, y: 0, width: defaultSize.width, height: defaultSize.height };
+      } else {
+        // Inline findEmptyPosition logic
+        const { columns } = activeDashboard.layout;
+        const widgets = activeDashboard.widgets;
+
+        // Create a grid to track occupied cells
+        const maxRows = Math.max(10, ...widgets.map(w => w.position.y + w.position.height));
+        const grid = Array(maxRows).fill(null).map(() => Array(columns).fill(false));
+
+        // Mark occupied cells
+        widgets.forEach(widget => {
+          for (let y = widget.position.y; y < widget.position.y + widget.position.height; y++) {
+            for (let x = widget.position.x; x < widget.position.x + widget.position.width; x++) {
+              if (y < maxRows && x < columns) {
+                grid[y][x] = true;
+              }
+            }
+          }
+        });
+
+        // Find first available position
+        foundPosition = { x: 0, y: maxRows, width: defaultSize.width, height: defaultSize.height };
+        for (let y = 0; y <= maxRows - defaultSize.height; y++) {
+          for (let x = 0; x <= columns - defaultSize.width; x++) {
+            let canPlace = true;
+
+            // Check if the area is free
+            for (let dy = 0; dy < defaultSize.height && canPlace; dy++) {
+              for (let dx = 0; dx < defaultSize.width && canPlace; dx++) {
+                if (y + dy >= maxRows || grid[y + dy][x + dx]) {
+                  canPlace = false;
+                }
+              }
+            }
+
+            if (canPlace) {
+              foundPosition = { x, y, width: defaultSize.width, height: defaultSize.height };
+              y = maxRows; // Break outer loop
+              break;
+            }
+          }
+        }
+      }
+
+      const widget = {
+        type: widgetType,
+        title,
+        config,
+        position: foundPosition
+      };
+
+      // Create the new widget
+      const newWidget: Widget = {
+        ...widget,
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      // Add to store
+      update(store => {
+        const activeDashboard = store.dashboards.find(d => d.id === store.activeDashboardId);
+        if (!activeDashboard) return store;
+
+        const updatedDashboard = {
+          ...activeDashboard,
+          widgets: [...activeDashboard.widgets, newWidget],
+          updatedAt: new Date().toISOString()
+        };
+
+        return {
+          ...store,
+          dashboards: store.dashboards.map(d =>
             d.id === store.activeDashboardId ? updatedDashboard : d
           )
         };
@@ -420,12 +523,23 @@ export const draggedWidget = writable<Widget | string | null>(null);
 export const selectedWidget = writable<string | null>(null);
 export const showGridLines = writable(true);
 
-// Derived store for active dashboard
-export const activeDashboard = {
-  subscribe: (callback: (dashboard: Dashboard) => void) => {
-    return dashboardStore.subscribe(store => {
-      const active = store.dashboards.find(d => d.id === store.activeDashboardId) || store.dashboards[0];
-      callback(active);
-    });
+// FIXED: Replace custom derived store with proper Svelte derived store
+export const activeDashboard = derived(
+  dashboardStore,
+  ($store) => {
+    const active = $store.dashboards.find(d => d.id === $store.activeDashboardId) || $store.dashboards[0];
+    console.log('🔄 activeDashboard derived updated:', active.id, 'widgets:', active.widgets.length);
+    return active;
   }
-};
+);
+
+// DEVELOPMENT: Expose stores to window for testing (after all stores are declared)
+if (browser && import.meta.env.DEV) {
+  console.log('🔧 Exposing dashboard stores to window...');
+  (window as any).dashboardStore = dashboardStore;
+  (window as any).activeDashboard = activeDashboard;
+  (window as any).isEditMode = isEditMode;
+  (window as any).draggedWidget = draggedWidget;
+  console.log('🔧 Dashboard stores exposed to window for testing');
+  console.log('Available stores:', Object.keys(window).filter(key => key.includes('dashboard') || key.includes('edit') || key.includes('drag')));
+}

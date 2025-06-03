@@ -8,10 +8,13 @@
 	import DashboardGrid from '$lib/components/dashboard/EnhancedDashboardGrid.svelte';
 	import DashboardTabs from '$lib/components/dashboard/DashboardTabs.svelte';
 	import EditModeToolbar from '$lib/components/dashboard/EditModeToolbar.svelte';
-	import { dashboardStore, isEditMode } from '$lib/stores/dashboard';
+	import { dashboardStore, isEditMode } from '$lib/stores/dashboardStore';
 	import { onMount } from 'svelte';
 	import { Edit3, Save, RotateCcw } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
+	
+	// Import debug utilities in development
+	import '$lib/debug';
 
 	onMount(async () => {
 		// Load dashboard
@@ -24,8 +27,9 @@
 
 	// Edit mode functions
 	function toggleEditMode() {
-		isEditMode.update(mode => !mode);
+		isEditMode.update((mode: boolean) => !mode);
 		const message = $isEditMode ? 'Edit mode enabled' : 'Edit mode disabled';
+		console.log('🔧 Edit mode toggled:', !$isEditMode, '->', $isEditMode);
 		toast.success(message);
 	}
 
@@ -108,12 +112,15 @@
 			</header>
 			
 			<!-- Dashboard Content with Tabs -->
-			<div class="flex-1 flex flex-col overflow-hidden">				<DashboardTabs>
+			<div class="flex-1 flex flex-col">
+				<DashboardTabs>
 					{#snippet children({ dashboard }: { dashboard: any })}
-						<div class="flex-1 flex flex-col p-4 gap-4 overflow-hidden">
+						<div class="flex-1 flex flex-col">
 							<!-- Edit Mode Toolbar (appears below tabs when in edit mode) -->
 							{#if $isEditMode}
-								<EditModeToolbar />
+								<div class="px-4 pt-4">
+									<EditModeToolbar />
+								</div>
 							{/if}
 							
 							<!-- Dashboard Grid -->

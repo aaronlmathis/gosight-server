@@ -23,181 +23,127 @@ Uses all available shadcn/ui components for a sleek experience.
 -->
 
 <script lang="ts">
-  import { type Snippet } from 'svelte';
+  import type { Widget, WidgetPosition } from '$lib/types/dashboard';
+  import { isEditMode, draggedWidget } from '$lib/stores/dashboardStore';
   import { fade, scale } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
-  import * as Tooltip from '$lib/components/ui/tooltip';
-  import * as ContextMenu from '$lib/components/ui/context-menu';
-  import * as Dialog from '$lib/components/ui/dialog';
+  import { Settings, X, Move, GripVertical } from 'lucide-svelte';
   import Button from '$lib/components/ui/button/button.svelte';
-  import { Settings, Copy, Trash2 } from 'lucide-svelte';
-  import type { Widget, WidgetPosition } from '$lib/types/dashboard';
-  import { isEditMode, draggedWidget, dashboardStore } from '$lib/stores/dashboard';
 
-  interface Props {
+  const { 
+    widget, 
+    children,
+    onmove = () => {},
+    onresize = () => {},
+    onremove = () => {},
+    onconfigure = () => {}
+  }: {
     widget: Widget;
-    children?: Snippet;
+    children?: any;
     onmove?: (event: { widget: Widget; position: WidgetPosition }) => void;
     onresize?: (event: { widget: Widget; size: Pick<WidgetPosition, 'width' | 'height'> }) => void;
     onremove?: (event: { widget: Widget }) => void;
     onconfigure?: (event: { widget: Widget }) => void;
-  }
+  } = $props();
 
-  let { widget, children, onmove, onresize, onremove, onconfigure }: Props = $props();
-
-  let showConfigDialog = $state(false);
   let isDragging = $state(false);
 
-  // CRITICAL FIX: Use the widget prop directly for positioning
+  // Grid positioning styles - FIXED for CSS Grid
   let gridColumn = $derived(`${widget.position.x + 1} / span ${widget.position.width}`);
   let gridRow = $derived(`${widget.position.y + 1} / span ${widget.position.height}`);
 
-  // Debug logging
+  // Debug logging for position changes
   $effect(() => {
-    console.log(`Widget ${widget.id} - Position:`, widget.position);
-    console.log(`Widget ${widget.id} - Grid styles:`, { gridColumn, gridRow });
+    console.log(`Widget ${widget.id} - Position updated:`, widget.position);
+    console.log(`Widget ${widget.id} - Grid styles updated:`, { gridColumn, gridRow });
   });
 
   function handleDragStart(event: DragEvent) {
-    if (!$isEditMode) return;
+    if (!$isEditMode) {
+      event.preventDefault();
+      return;
+    }
 
+    console.log('🚀 Drag started for widget:', widget.id);
     isDragging = true;
-    console.log('Drag started for widget:', widget);
     draggedWidget.set(widget);
-
+    
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
       event.dataTransfer.setData('text/plain', widget.id);
     }
   }
 
-  function handleDragEnd() {
-    console.log('Drag ended for widget:', widget.id);
+  function handleDragEnd(event: DragEvent) {
+    console.log('🏁 Drag ended for widget:', widget.id);
     isDragging = false;
   }
 
-  function handleConfigure() {
-    onconfigure?.({ widget });
-    showConfigDialog = true;
-  }
-
-  function handleDuplicate() {
-    dashboardStore.addWidget({
-      type: widget.type,
-      title: `${widget.title} Copy`,
-      position: { 
-        x: widget.position.x + 1, 
-        y: widget.position.y,
-        width: widget.position.width,
-        height: widget.position.height
-      },
-      config: widget.config || {}
-    });
-  }
-
   function handleRemove() {
-    onremove?.({ widget });
+    onremove({ widget });
   }
 
-  function handleClose() {
-    showConfigDialog = false;
+  function handleConfigure() {
+    onconfigure({ widget });
   }
 </script>
 
-<ContextMenu.Root>
-  <ContextMenu.Trigger class="block h-full">
-    <div 
-      class="widget-container group relative h-full rounded-lg border bg-card shadow-sm transition-all hover:shadow-md"
-      class:ring-2={$isEditMode}
-      class:ring-primary={$isEditMode}
-      class:opacity-50={isDragging}
-      class:scale-95={isDragging}
-      style:grid-column={gridColumn}
-      style:grid-row={gridRow}
-      draggable={$isEditMode}
-      ondragstart={handleDragStart}
-      ondragend={handleDragEnd}
-      role="button"
-      aria-label="Draggable widget: {widget.title}"
-      tabindex={$isEditMode ? 0 : -1}
-      in:scale={{ duration: 300, easing: quintOut }}
-      out:fade={{ duration: 200 }}
-    >
-      {#if $isEditMode}
-        <Tooltip.Root>
-          <Tooltip.Trigger>
-            <Button
-              variant="outline"
-              size="sm"
-              class="absolute -top-2 -right-2 z-10 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-              onclick={handleConfigure}
-            >
-              <Settings class="h-3 w-3" />
-            </Button>
-          </Tooltip.Trigger>
-          <Tooltip.Content>
-            <p>Configure Widget</p>
-          </Tooltip.Content>
-        </Tooltip.Root>
+<!-- FIXED: Direct CSS Grid child with proper styling -->
+<div 
+  class="widget-container group relative h-full rounded-lg border bg-card shadow-sm transition-all hover:shadow-md"
+  class:ring-2={$isEditMode}
+  class:ring-primary={$isEditMode}
+  class:opacity-50={isDragging}
+  class:scale-95={isDragging}
+  style:grid-column={gridColumn}
+  style:grid-row={gridRow}
+  draggable={$isEditMode}
+  ondragstart={handleDragStart}
+  ondragend={handleDragEnd}
+  role="button"
+  aria-label="Draggable widget: {widget.title}"
+  tabindex={$isEditMode ? 0 : -1}
+  in:scale={{ duration: 300, easing: quintOut }}
+  out:fade={{ duration: 200 }}
+>
+  <!-- Drag Handle - Restored -->
+  {#if $isEditMode}
+    <div class="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-move z-10">
+      <GripVertical class="h-4 w-4 text-muted-foreground" />
+    </div>
+  {/if}
 
-        <Tooltip.Root>
-          <Tooltip.Trigger>
-            <div
-              class="absolute top-2 left-2 z-10 h-6 w-6 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs font-bold text-muted-foreground hover:text-foreground"
-              title="Drag to move"
-            >
-              ⋮⋮
-            </div>
-          </Tooltip.Trigger>
-          <Tooltip.Content>
-            <p>Drag to move</p>
-          </Tooltip.Content>
-        </Tooltip.Root>
-      {/if}
+  <!-- Edit Mode Controls - Restored -->
+  {#if $isEditMode}
+    <div class="absolute -top-2 -right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+      <Button
+        variant="secondary"
+        size="sm"
+        class="h-6 w-6 p-0 bg-background border shadow-sm"
+        onclick={handleConfigure}
+        title="Configure widget"
+      >
+        <Settings class="h-3 w-3" />
+      </Button>
+      <Button
+        variant="destructive"
+        size="sm"
+        class="h-6 w-6 p-0"
+        onclick={handleRemove}
+        title="Remove widget"
+      >
+        <X class="h-3 w-3" />
+      </Button>
+    </div>
+  {/if}
 
+  <!-- Widget Content - Restored original structure -->
+  <div class="flex h-full w-full flex-col overflow-hidden">
+    <div class="flex-1 p-4">
       {@render children?.()}
     </div>
-  </ContextMenu.Trigger>
-
-  <ContextMenu.Content class="w-64">
-    <ContextMenu.Item onclick={handleConfigure}>
-      <Settings class="mr-2 h-4 w-4" />
-      Configure
-    </ContextMenu.Item>
-    <ContextMenu.Item onclick={handleDuplicate}>
-      <Copy class="mr-2 h-4 w-4" />
-      Duplicate
-    </ContextMenu.Item>
-    <ContextMenu.Item onclick={handleRemove} class="text-destructive focus:text-destructive">
-      <Trash2 class="mr-2 h-4 w-4" />
-      Remove
-    </ContextMenu.Item>
-  </ContextMenu.Content>
-</ContextMenu.Root>
-
-<Dialog.Root bind:open={showConfigDialog}>
-  <Dialog.Content class="sm:max-w-[425px]">
-    <Dialog.Header>
-      <Dialog.Title>Configure {widget.title}</Dialog.Title>
-      <Dialog.Description>
-        Customize the settings for this widget.
-      </Dialog.Description>
-    </Dialog.Header>
-    <div class="grid gap-4 py-4">
-      <div class="text-sm text-muted-foreground">
-        Widget configuration options would go here.
-      </div>
-    </div>
-    <Dialog.Footer>
-      <Button variant="outline" onclick={handleClose}>
-        Cancel
-      </Button>
-      <Button onclick={handleClose}>
-        Save changes
-      </Button>
-    </Dialog.Footer>
-  </Dialog.Content>
-</Dialog.Root>
+  </div>
+</div>
 
 <style>
   .widget-container {

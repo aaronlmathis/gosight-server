@@ -11,9 +11,10 @@ This file is part of GoSight Server.
   import Button from '$lib/components/ui/button/button.svelte';
   import Input from '$lib/components/ui/input/input.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
-  import { Plus, Search, TrendingUp, BarChart3, PieChart, Gauge, Cpu, Database, Activity, Clock } from 'lucide-svelte';
+  import { Plus, Search, TrendingUp, TrendingDown, BarChart3, PieChart, Gauge, Cpu, Database, Activity, Clock, AlertTriangle, List } from 'lucide-svelte';
   import type { WidgetType } from '$lib/types/dashboard';
-  import { dashboardStore, draggedWidget } from '$lib/stores/dashboard';
+  import { dashboardStore, draggedWidget } from '$lib/stores/dashboardStore';
+  import { WIDGET_CONFIGS } from '$lib/configs/widget-sizing';
 
   const dispatch = createEventDispatcher();
 
@@ -46,45 +47,89 @@ This file is part of GoSight Server.
   }
 
   const widgetCategories: Record<string, WidgetCategory> = {
-    metrics: {
-      label: 'Metrics',
-      icon: Gauge,
-      widgets: [
-        { type: 'metric' as WidgetType, title: 'Metric Display', description: 'Single value with trend', icon: TrendingUp, preview: '42', tags: ['kpi', 'number'] },
-        { type: 'gauge' as WidgetType, title: 'Gauge Chart', description: 'Circular progress indicator', icon: Gauge, preview: '75%', tags: ['progress', 'percentage'] }
-      ]
-    },
-    charts: {
-      label: 'Charts',
-      icon: BarChart3,
-      widgets: [
-        { type: 'chart' as WidgetType, title: 'Line Chart', description: 'Time series data visualization', icon: TrendingUp, preview: '📈', tags: ['trend', 'time'] },
-        { type: 'bar' as WidgetType, title: 'Bar Chart', description: 'Compare values across categories', icon: BarChart3, preview: '📊', tags: ['comparison', 'category'] },
-        { type: 'pie' as WidgetType, title: 'Pie Chart', description: 'Show proportions', icon: PieChart, preview: '🥧', tags: ['proportion', 'percentage'] }
-      ]
-    },
-    data: {
-      label: 'Data',
-      icon: Database,
-      widgets: [
-        { type: 'table' as WidgetType, title: 'Data Table', description: 'Tabular data with sorting', icon: Database, preview: '📋', tags: ['table', 'list'] },
-        { type: 'list' as WidgetType, title: 'Activity List', description: 'Recent events and activities', icon: Activity, preview: '📝', tags: ['events', 'log'] }
-      ]
-    },
-    monitoring: {
-      label: 'Monitoring',
+    observability: {
+      label: 'Core Observability',
       icon: Activity,
       widgets: [
-        { type: 'status' as WidgetType, title: 'Status Board', description: 'Service health overview', icon: Activity, preview: '🟢', tags: ['health', 'uptime'] },
-        { type: 'alerts' as WidgetType, title: 'Alert List', description: 'Current alerts and warnings', icon: Activity, preview: '🚨', tags: ['alerts', 'warnings'] }
+        { type: 'service-map' as WidgetType, title: 'Service Map', description: 'Microservices topology and dependencies', icon: Activity, preview: '🗺️', tags: ['services', 'topology', 'dependencies', 'microservices'] },
+        { type: 'sla-overview' as WidgetType, title: 'SLA Dashboard', description: 'Service level objectives and error budgets', icon: TrendingUp, preview: '99.9%', tags: ['sla', 'slo', 'reliability', 'uptime'] },
+        { type: 'health-check' as WidgetType, title: 'Health Check Matrix', description: 'Multi-service health status overview', icon: Activity, preview: '🟢', tags: ['health', 'status', 'services', 'monitoring'] },
+        { type: 'distributed-trace' as WidgetType, title: 'Trace Timeline', description: 'Distributed tracing visualization', icon: Clock, preview: '🔗', tags: ['tracing', 'latency', 'distributed', 'performance'] }
       ]
     },
-    system: {
-      label: 'System',
+    metrics: {
+      label: 'Metrics & KPIs',
+      icon: Gauge,
+      widgets: [
+        { type: 'golden-signals' as WidgetType, title: 'Golden Signals', description: 'Latency, traffic, errors, and saturation', icon: Gauge, preview: '📊', tags: ['golden-signals', 'sre', 'latency', 'errors'] },
+        { type: 'metric' as WidgetType, title: 'Business KPI', description: 'Custom business metrics and indicators', icon: TrendingUp, preview: '42K↗', tags: ['kpi', 'business', 'metrics', 'trend'] },
+        { type: 'apdex-score' as WidgetType, title: 'Apdex Score', description: 'Application performance index tracking', icon: Gauge, preview: '0.94', tags: ['apdex', 'performance', 'user-satisfaction', 'sre'] },
+        { type: 'error-rate' as WidgetType, title: 'Error Rate', description: 'Service error rates and trends', icon: AlertTriangle, preview: '0.1%', tags: ['errors', 'reliability', 'quality', 'monitoring'] }
+      ]
+    },
+    infrastructure: {
+      label: 'Infrastructure',
       icon: Cpu,
       widgets: [
-        { type: 'cpu' as WidgetType, title: 'CPU Usage', description: 'Processor utilization', icon: Cpu, preview: '32%', tags: ['cpu', 'performance'] },
-        { type: 'memory' as WidgetType, title: 'Memory Usage', description: 'RAM consumption', icon: Cpu, preview: '4.2GB', tags: ['memory', 'ram'] }
+        { type: 'cpu' as WidgetType, title: 'CPU Utilization', description: 'System and container CPU usage', icon: Cpu, preview: '32%', tags: ['cpu', 'performance', 'infrastructure', 'utilization'] },
+        { type: 'memory' as WidgetType, title: 'Memory Usage', description: 'RAM and memory pool monitoring', icon: Database, preview: '4.2GB', tags: ['memory', 'ram', 'infrastructure', 'capacity'] },
+        { type: 'network-io' as WidgetType, title: 'Network I/O', description: 'Network throughput and bandwidth usage', icon: Activity, preview: '150Mbps', tags: ['network', 'bandwidth', 'throughput', 'infrastructure'] },
+        { type: 'disk-io' as WidgetType, title: 'Disk I/O', description: 'Storage performance and IOPS monitoring', icon: Database, preview: '2.1K IOPS', tags: ['disk', 'storage', 'iops', 'performance'] },
+        { type: 'node-health' as WidgetType, title: 'Node Health', description: 'Kubernetes/cluster node status', icon: Cpu, preview: '8/10', tags: ['kubernetes', 'nodes', 'cluster', 'infrastructure'] }
+      ]
+    },
+    applications: {
+      label: 'Application Performance',
+      icon: BarChart3,
+      widgets: [
+        { type: 'response-time' as WidgetType, title: 'Response Time', description: 'API and service response latencies', icon: Clock, preview: '125ms', tags: ['latency', 'response-time', 'api', 'performance'] },
+        { type: 'throughput' as WidgetType, title: 'Throughput', description: 'Requests per second and transaction volume', icon: TrendingUp, preview: '1.2K/s', tags: ['throughput', 'rps', 'traffic', 'load'] },
+        { type: 'database-metrics' as WidgetType, title: 'Database Performance', description: 'Query time, connections, and DB health', icon: Database, preview: '45ms', tags: ['database', 'queries', 'connections', 'performance'] },
+        { type: 'cache-metrics' as WidgetType, title: 'Cache Performance', description: 'Hit rates, miss rates, and cache efficiency', icon: Database, preview: '89%', tags: ['cache', 'redis', 'hit-rate', 'performance'] },
+        { type: 'queue-metrics' as WidgetType, title: 'Queue Metrics', description: 'Message queue depth and processing rates', icon: List, preview: '47', tags: ['queue', 'messaging', 'backlog', 'processing'] }
+      ]
+    },
+    alerts: {
+      label: 'Alerting & Incidents',
+      icon: AlertTriangle,
+      widgets: [
+        { type: 'alert-feed' as WidgetType, title: 'Live Alert Feed', description: 'Real-time alert stream with severity filtering', icon: AlertTriangle, preview: '🚨', tags: ['alerts', 'real-time', 'incidents', 'monitoring'] },
+        { type: 'incident-timeline' as WidgetType, title: 'Incident Timeline', description: 'Ongoing and recent incident tracking', icon: Clock, preview: '⏰', tags: ['incidents', 'timeline', 'mttr', 'sre'] },
+        { type: 'alert-heatmap' as WidgetType, title: 'Alert Heatmap', description: 'Alert frequency patterns over time', icon: BarChart3, preview: '🔥', tags: ['alerts', 'patterns', 'frequency', 'analysis'] },
+        { type: 'oncall-status' as WidgetType, title: 'On-Call Status', description: 'Current on-call engineer and escalation', icon: Activity, preview: '👤', tags: ['oncall', 'escalation', 'contact', 'incident-response'] },
+        { type: 'mttr-trends' as WidgetType, title: 'MTTR Trends', description: 'Mean time to resolution analytics', icon: TrendingDown, preview: '12m', tags: ['mttr', 'resolution', 'incidents', 'trends'] }
+      ]
+    },
+    logs: {
+      label: 'Logs & Events',
+      icon: List,
+      widgets: [
+        { type: 'log-stream' as WidgetType, title: 'Live Log Stream', description: 'Real-time log tail with filtering', icon: List, preview: '📄', tags: ['logs', 'real-time', 'streaming', 'debugging'] },
+        { type: 'log-analytics' as WidgetType, title: 'Log Analytics', description: 'Log volume, patterns, and error analysis', icon: BarChart3, preview: '📊', tags: ['logs', 'analytics', 'patterns', 'errors'] },
+        { type: 'error-tracking' as WidgetType, title: 'Error Tracking', description: 'Application errors and stack traces', icon: AlertTriangle, preview: '🐛', tags: ['errors', 'exceptions', 'debugging', 'stack-traces'] },
+        { type: 'audit-trail' as WidgetType, title: 'Audit Trail', description: 'Security and compliance event logging', icon: List, preview: '🔍', tags: ['audit', 'security', 'compliance', 'events'] },
+        { type: 'log-correlation' as WidgetType, title: 'Log Correlation', description: 'Cross-service log correlation and tracing', icon: Activity, preview: '🔗', tags: ['correlation', 'tracing', 'debugging', 'multi-service'] }
+      ]
+    },
+    security: {
+      label: 'Security & Compliance',
+      icon: AlertTriangle,
+      widgets: [
+        { type: 'security-events' as WidgetType, title: 'Security Events', description: 'Authentication failures and security alerts', icon: AlertTriangle, preview: '🔒', tags: ['security', 'authentication', 'threats', 'compliance'] },
+        { type: 'vulnerability-scan' as WidgetType, title: 'Vulnerability Status', description: 'Security scan results and CVE tracking', icon: AlertTriangle, preview: '⚠️', tags: ['vulnerabilities', 'cve', 'security', 'scanning'] },
+        { type: 'compliance-status' as WidgetType, title: 'Compliance Dashboard', description: 'Regulatory compliance monitoring', icon: Activity, preview: '✅', tags: ['compliance', 'regulations', 'audit', 'governance'] },
+        { type: 'access-patterns' as WidgetType, title: 'Access Patterns', description: 'User access behavior and anomalies', icon: List, preview: '👥', tags: ['access', 'behavior', 'anomalies', 'security'] }
+      ]
+    },
+    business: {
+      label: 'Business Intelligence',
+      icon: TrendingUp,
+      widgets: [
+        { type: 'user-analytics' as WidgetType, title: 'User Analytics', description: 'Active users, sessions, and engagement', icon: TrendingUp, preview: '12.4K', tags: ['users', 'sessions', 'engagement', 'business'] },
+        { type: 'conversion-funnel' as WidgetType, title: 'Conversion Funnel', description: 'User journey and conversion tracking', icon: BarChart3, preview: '📊', tags: ['conversion', 'funnel', 'journey', 'business'] },
+        { type: 'revenue-metrics' as WidgetType, title: 'Revenue Metrics', description: 'Financial KPIs and revenue tracking', icon: TrendingUp, preview: '$142K', tags: ['revenue', 'financial', 'kpi', 'business'] },
+        { type: 'feature-adoption' as WidgetType, title: 'Feature Adoption', description: 'Feature usage and adoption rates', icon: Gauge, preview: '67%', tags: ['features', 'adoption', 'usage', 'product'] },
+        { type: 'cost-analytics' as WidgetType, title: 'Cost Analytics', description: 'Infrastructure and operational costs', icon: Database, preview: '$1.2K', tags: ['costs', 'infrastructure', 'optimization', 'finops'] }
       ]
     }
   };
@@ -106,13 +151,8 @@ This file is part of GoSight Server.
   );
 
   function addWidget(widgetType: WidgetType, title: string) {
-    const position = dashboardStore.findEmptyPosition(4, 3);
-    dashboardStore.addWidget({
-      type: widgetType,
-      title: title,
-      config: {},
-      position
-    });
+    // Use the new smart sizing function that automatically calculates size based on widget type and screen size
+    dashboardStore.addWidgetWithSmartSizing(widgetType, title, {});
     drawerOpen = false;
   }
 
@@ -196,13 +236,24 @@ This file is part of GoSight Server.
       </div>
 
       <!-- Categories -->
-      <Tabs.Root value="metrics" class="w-full">
-        <Tabs.List class="grid grid-cols-3 w-full">
-          {#each Object.entries(filteredCategories).slice(0, 3) as [key, category]}
+      <Tabs.Root value="observability" class="w-full">
+        <Tabs.List class="grid grid-cols-2 w-full mb-4">
+          {#each Object.entries(filteredCategories).slice(0, 4) as [key, category]}
             {@const CategoryIcon = (category as WidgetCategory).icon}
-            <Tabs.Trigger value={key} class="text-xs">
-              <CategoryIcon class="h-3 w-3 mr-1" />
-              {(category as WidgetCategory).label}
+            <Tabs.Trigger value={key} class="text-xs flex flex-col items-center gap-1 p-2">
+              <CategoryIcon class="h-4 w-4" />
+              <span class="truncate">{(category as WidgetCategory).label}</span>
+            </Tabs.Trigger>
+          {/each}
+        </Tabs.List>
+        
+        <!-- Secondary categories row -->
+        <Tabs.List class="grid grid-cols-2 w-full mb-4">
+          {#each Object.entries(filteredCategories).slice(4, 8) as [key, category]}
+            {@const CategoryIcon = (category as WidgetCategory).icon}
+            <Tabs.Trigger value={key} class="text-xs flex flex-col items-center gap-1 p-2">
+              <CategoryIcon class="h-4 w-4" />
+              <span class="truncate">{(category as WidgetCategory).label}</span>
             </Tabs.Trigger>
           {/each}
         </Tabs.List>
