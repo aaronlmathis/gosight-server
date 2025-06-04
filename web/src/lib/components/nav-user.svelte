@@ -93,13 +93,13 @@
 								{#if avatarData.url}
 									<Avatar.Image src={avatarData.url} alt={avatarData.name} />
 								{/if}
-								<Avatar.Fallback class="rounded-lg bg-primary/10 text-primary font-medium">
+								<Avatar.Fallback class="bg-primary/10 text-primary rounded-lg font-medium">
 									{avatarData.initials}
 								</Avatar.Fallback>
 							</Avatar.Root>
 							<div class="grid flex-1 text-left text-sm leading-tight">
 								<span class="truncate font-medium">{avatarData.name}</span>
-								<span class="truncate text-xs text-muted-foreground">{avatarData.email}</span>
+								<span class="text-muted-foreground truncate text-xs">{avatarData.email}</span>
 							</div>
 							<ChevronsUpDownIcon class="ml-auto size-4" />
 						</Sidebar.MenuButton>
@@ -117,30 +117,30 @@
 								{#if avatarData.url}
 									<Avatar.Image src={avatarData.url} alt={avatarData.name} />
 								{/if}
-								<Avatar.Fallback class="rounded-lg bg-primary/10 text-primary font-medium">
+								<Avatar.Fallback class="bg-primary/10 text-primary rounded-lg font-medium">
 									{avatarData.initials}
 								</Avatar.Fallback>
 							</Avatar.Root>
 							<div class="grid flex-1 text-left text-sm leading-tight">
 								<span class="truncate font-medium">{avatarData.name}</span>
-								<span class="truncate text-xs text-muted-foreground">{avatarData.email}</span>
+								<span class="text-muted-foreground truncate text-xs">{avatarData.email}</span>
 							</div>
 						</div>
 					</DropdownMenu.Label>
 					<DropdownMenu.Separator />
 					<DropdownMenu.Group>
-						<DropdownMenu.Item onclick={() => handleNavigation('/profile')}>
+						<DropdownMenu.Item onclick={() => handleNavigation('/settings/profile')}>
 							<UserIcon class="size-4" />
 							Profile
 						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => handleNavigation('/settings')}>
+						<DropdownMenu.Item onclick={() => handleNavigation('/settings/security')}>
 							<SettingsIcon class="size-4" />
-							Settings
+							Security
 						</DropdownMenu.Item>
 
-						<DropdownMenu.Item onclick={() => handleNavigation('/notifications')}>
+						<DropdownMenu.Item onclick={() => handleNavigation('/settings/preferences')}>
 							<BellIcon class="size-4" />
-							Notifications
+							Preferences
 						</DropdownMenu.Item>
 					</DropdownMenu.Group>
 					<DropdownMenu.Separator />
