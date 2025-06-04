@@ -10,16 +10,18 @@
 	import { api } from '$lib/api/api';
 	import AvatarUpload from '$lib/components/AvatarUpload.svelte';
 	import { auth } from '$lib/stores/authStore';
-
+	import { toast } from 'svelte-sonner';
+	import { get } from 'svelte/store';
 	let loading = true;
 	let successMessage = '';
-	let currentUser: any = null;
 
 	// Initialize superform with empty data
 	const profile = superForm(
 		{ full_name: '', phone: '' },
 		{
 			validators: zodClient(profileSchema),
+			validationMethod: 'oninput'
+			/*
 			onUpdated: async ({ form }) => {
 				if (form.valid) {
 					try {
@@ -32,13 +34,41 @@
 						console.error('Failed to update profile:', error);
 					}
 				}
-			}
+			}*/
 		}
 	);
 
-	const { form, enhance, submitting } = profile;
+	const { form, submitting , errors } = profile;
 
-	$: formData = $form;
+	async function saveProfile(event: Event) {
+		const formData = get(form);
+
+		event.preventDefault();
+        // Check validation using the profile object, not the form data
+        const isValid = Object.keys(get(errors)).length === 0;
+        
+        console.log('saveProfile called', { 
+            valid: isValid, 
+            data: formData,
+            errors: get(errors)
+        });
+		if (isValid) {
+			try {
+				const result = await api.updateProfile(formData);
+				if (result.success) {
+					successMessage = 'Profile updated successfully!';
+					toast.success(successMessage);
+					setTimeout(() => (successMessage = ''), 3000);
+				}
+			} catch (error) {
+				console.error('Failed to update profile:', error);
+				toast.error('Failed to update profile');
+			}
+		} else {
+			console.log('Form is NOT valid', formData);
+			toast.error('Form is invalid');
+		}
+	}
 
 	// Handle avatar upload
 	function handleAvatarUploaded(event: CustomEvent<{ avatar_url: string }>) {
@@ -52,26 +82,25 @@
 				}
 			};
 			auth.setUser(updatedUser);
-			currentUser = updatedUser;
 		}
 		successMessage = 'Profile picture updated successfully!';
+		toast.success(successMessage);
 		setTimeout(() => (successMessage = ''), 3000);
 	}
 
 	function handleAvatarDeleted() {
 		// Remove avatar from the current user in the auth store
 		if ($auth.user) {
-			const updatedUser = {
+			auth.setUser({
 				...$auth.user,
 				profile: {
 					...($auth.user.profile || {}),
 					avatar_url: ''
 				}
-			};
-			auth.setUser(updatedUser);
-			currentUser = updatedUser;
+			});
 		}
 		successMessage = 'Profile picture removed successfully!';
+		toast.success(successMessage);
 		setTimeout(() => (successMessage = ''), 3000);
 	}
 
@@ -79,15 +108,17 @@
 	onMount(async () => {
 		try {
 			const user = await api.getCurrentUser();
-			currentUser = user;
 			if (user?.profile) {
 				form.set({
-					full_name: user.profile.full_name || '',
-					phone: user.profile.phone || ''
+					full_name: String(user.profile.full_name || ''),
+					phone: String(user.profile.phone || '')
 				});
 			}
+			// Instead of `currentUser`, just rely on the $auth store!
+			auth.setUser(user);
 		} catch (error) {
 			console.error('Failed to load user profile:', error);
+			toast.error('Failed to load user profile');
 		} finally {
 			loading = false;
 		}
@@ -115,24 +146,22 @@
 			</div>
 		{/if}
 
-		<div class="rounded-lg bg-white shadow dark:bg-gray-800">
+		<div class="">
 			<div class="px-4 py-5 sm:p-6">
-				<form use:enhance class="space-y-6">
+				<form on:submit={saveProfile} class="space-y-6">
 					<!-- Profile Picture Section -->
 					<div class="flex items-center space-x-6">
 						<div>
 							<AvatarUpload
-								currentAvatar={currentUser?.profile?.avatar_url || ''}
+								currentAvatar={$auth.user?.profile?.avatar_url || ''}
 								size="lg"
 								on:uploaded={handleAvatarUploaded}
 								on:deleted={handleAvatarDeleted}
 							/>
 						</div>
 						<div>
-							<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Profile Picture</h4>
-							<p class="text-sm text-gray-500 dark:text-gray-400">
-								Click on your picture to update or remove it.
-							</p>
+							<h4 class="">Profile Picture</h4>
+							<p class="">Click on your picture to update or remove it.</p>
 						</div>
 					</div>
 
@@ -141,11 +170,7 @@
 							{#snippet children({ props })}
 								<Form.Label>Full Name</Form.Label>
 
-								<Input
-									{...props}
-									bind:value={formData.full_name}
-									placeholder="Enter your full name"
-								/>
+								<Input {...props} bind:value={$form.full_name} placeholder="Enter your full name" />
 							{/snippet}
 						</Form.Control>
 						<Form.Description>This is your display name.</Form.Description>
@@ -157,7 +182,7 @@
 							{#snippet children({ props })}
 								<Form.Label>Phone Number</Form.Label>
 
-								<Input {...props} bind:value={formData.phone} placeholder="Enter your phone" />
+								<Input {...props} bind:value={$form.phone} placeholder="Enter your phone" />
 							{/snippet}
 						</Form.Control>
 						<Form.Description>Optional</Form.Description>

@@ -2,12 +2,24 @@ import { z } from 'zod';
 
 /** 1) Profile schema **/
 export const profileSchema = z.object({
-  full_name: z.string().min(1, 'Full name is required'),
-  phone: z
-    .string()
-    .regex(/^[0-9+\s()-]+$/, 'Invalid phone')
+  full_name: z.string()
+    .min(1, 'Full name is required')
+    .regex(/^[a-zA-Z\s'-]+$/, 'Full name can only contain letters, spaces, hyphens, and apostrophes')
+    .max(50, 'Full name must be less than 50 characters'),
+
+  phone: z.string()
     .optional()
-    .or(z.literal('')), // allow empty string
+    .refine((val) => {
+      if (!val || val === '') return true; // Allow empty
+      // Remove all non-digits and check if it's a valid length
+      const digitsOnly = val.replace(/\D/g, '');
+      return digitsOnly.length >= 10 && digitsOnly.length <= 15;
+    }, 'Phone number must be between 10-15 digits')
+    .refine((val) => {
+      if (!val || val === '') return true; // Allow empty
+      // Check if it contains only numbers, spaces, hyphens, parentheses, and plus
+      return /^[\d\s\-\(\)\+]+$/.test(val);
+    }, 'Phone number can only contain numbers, spaces, hyphens, parentheses, and plus signs')
 });
 export type ProfileSchema = typeof profileSchema;
 

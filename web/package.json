@@ -57,6 +57,7 @@
 		"@sveltejs/adapter-static": "^3.0.8",
 		"express": "^5.1.0",
 		"lucide-svelte": "^0.511.0",
-		"separator": "^0.1.0"
+		"separator": "^0.1.0",
+		"svelte-tel-input": "^3.6.0"
 	}
 }

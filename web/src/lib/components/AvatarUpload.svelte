@@ -195,14 +195,14 @@
 		uploadError = '';
 	}
 
-	// ✅ Add click handler with proper event handling
+	
 	function handleAvatarClick(event: MouseEvent) {
 		event.preventDefault();
 		event.stopPropagation();
 		showModal = true;
 	}
 
-	// ✅ Add button click handlers with proper event handling
+
 	function handleUploadClick(event: MouseEvent) {
 		event.preventDefault();
 		event.stopPropagation();
@@ -242,7 +242,7 @@
 			</Avatar.Fallback>
 		</Avatar.Root>
 
-		<!-- ✅ Fixed overlay button with proper event handling -->
+
 		<button
 			type="button"
 			on:click={handleAvatarClick}
@@ -307,8 +307,8 @@
 				<div class="space-y-4">
 					<div class="flex items-center justify-between">
 						<h4 class="text-lg font-medium text-gray-900 dark:text-white">Preview</h4>
-						<!-- ✅ Fixed Reset button -->
-						<Button type="button" variant="outline" size="sm" on:click={handleResetClick}>
+	
+						<Button type="button" variant="outline" size="sm" onclick={handleResetClick}>
 							<RotateCcw class="mr-2 h-4 w-4" />
 							Reset
 						</Button>
@@ -361,12 +361,12 @@
 								Remove your current profile picture
 							</p>
 						</div>
-						<!-- ✅ Fixed Delete button -->
+
 						<Button
 							type="button"
 							variant="destructive"
 							size="sm"
-							on:click={handleDeleteClick}
+							onclick={handleDeleteClick}
 							disabled={uploading}
 						>
 							Remove
@@ -380,20 +380,21 @@
 
 		<Dialog.Footer>
 			<div class="flex justify-end space-x-3">
-				<!-- ✅ Fixed Cancel button -->
-				<Button type="button" variant="outline" on:click={handleCancelClick} disabled={uploading}>
+
+				<Button type="button" variant="outline" onclick={handleCancelClick} disabled={uploading}>
 					Cancel
-				</Button>
+				</Button> 
+
 				{#if selectedFile}
-					<!-- ✅ Fixed Upload button -->
-					<Button type="button" on:click={handleUploadClick} disabled={uploading}>
+					
+					<Button type="button" onclick={handleUploadClick} disabled={uploading}>
 						{#if uploading}
 							<div class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
 						{:else}
 							<Check class="mr-2 h-4 w-4" />
 						{/if}
 						{uploading ? 'Uploading...' : 'Upload'}
-					</Button>
+					</Button> 
 				{/if}
 			</div>
 		</Dialog.Footer>
