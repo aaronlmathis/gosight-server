@@ -27,7 +27,7 @@ Manages multiple dashboards with tab interface
   import Button from '$lib/components/ui/button/button.svelte';
   import Input from '$lib/components/ui/input/input.svelte';
   import { Plus, X } from 'lucide-svelte';
-  import { dashboardStore } from '$lib/stores/dashboard';
+  import { dashboardStore } from '$lib/stores/dashboardStore';
   import { toast } from 'svelte-sonner';
   import type { Snippet } from 'svelte';
 
@@ -90,17 +90,17 @@ Manages multiple dashboards with tab interface
           
           <!-- Delete button for non-active tabs when there's more than one -->
           {#if dashboards.length > 1}
-            <span
-              class="ml-2 inline-flex h-4 w-4 items-center justify-center rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive cursor-pointer"
-              onclick={(e) => {
-                e.stopPropagation();
-                confirmDeleteDashboard(dashboard.id);
-              }}
-              role="button"
-              tabindex="0"
-            >
-              <X class="h-3 w-3" />
-            </span>
+          <button
+            type="button"
+            class="ml-2 inline-flex h-4 w-4 items-center justify-center rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive cursor-pointer appearance-none border-none bg-transparent p-0"
+            onclick={(e) => {
+              e.stopPropagation();
+              confirmDeleteDashboard(dashboard.id);
+            }}
+            aria-label="Delete dashboard"
+          >
+            <X class="h-3 w-3" />
+          </button>
           {/if}
         </Tabs.Trigger>
       {/each}

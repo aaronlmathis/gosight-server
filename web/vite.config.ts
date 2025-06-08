@@ -3,7 +3,7 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-	base: '/dev/',
+	base: '/',
 	plugins: [tailwindcss(), sveltekit()],
 	resolve: {
 		alias: {

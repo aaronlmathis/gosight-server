@@ -226,8 +226,8 @@ func (c *metricCache) Add(payload *model.MetricPayload) {
 		c.EndpointMeta[eid] = payload.Meta
 	}
 	c.LastSeen[eid] = time.Now().Unix()
-	for _, m := range payload.Metrics {
 
+	for _, m := range payload.Metrics {
 		normalNS := strings.ToLower(m.Namespace)
 		normalSN := strings.ToLower(m.SubNamespace)
 		normalMN := strings.ToLower(m.Name)
@@ -251,7 +251,7 @@ func (c *metricCache) Add(payload *model.MetricPayload) {
 				SubNS:      normalSN,
 				Name:       normalMN,
 				Unit:       strings.ToLower(m.Unit),
-				Type:       strings.ToLower(m.Type),
+				Type:       strings.ToLower(m.DataType), // Use DataType instead of Type
 				Dimensions: make(map[string]StringSet),
 				Tags:       make(map[string]StringSet),
 				Labels:     make(map[string]StringSet),
@@ -262,16 +262,17 @@ func (c *metricCache) Add(payload *model.MetricPayload) {
 
 		entry.Emitters[eid] = struct{}{}
 
-		// Index dimensions
-		for k, v := range m.Dimensions {
-			addToSet(entry.Dimensions, k, v)
-			addToSet(entry.Labels, k, v)
-			addToSet(c.LabelValues, k, v)
+		// Index dimensions from DataPoints instead of m.Dimensions
+		for _, dp := range m.DataPoints {
+			for k, v := range dp.Attributes {
+				addToSet(entry.Dimensions, k, v)
+				addToSet(entry.Labels, k, v)
+				addToSet(c.LabelValues, k, v)
+			}
 		}
 
 		// Index tags / Meta into Labels as well.
 		AddMetaFieldsToLabels(payload.Meta, entry.Labels)
-
 	}
 }
 

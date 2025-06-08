@@ -1,38 +1,36 @@
-/*
-SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: GPL-3.0-or-later
 
-Copyright (C) 2025 Aaron Mathis <aaron.mathis@gmail.com>
+// Copyright (C) 2025 Aaron Mathis <aaron.mathis@gmail.com>
 
-This file is part of GoSight.
+// This file is part of GoSight.
 
-GoSight is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+// GoSight is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
 
-GoSight is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
+// GoSight is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with GoSight. If not, see https://www.gnu.org/licenses/.
-*/
+// You should have received a copy of the GNU General Public License
+// along with GoSight. If not, see https://www.gnu.org/licenses/.
+//
 
 package otel
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/aaronlmathis/gosight-server/internal/sys"
-	"github.com/aaronlmathis/gosight-shared/model"
 	"github.com/aaronlmathis/gosight-shared/utils"
 	"github.com/gorilla/mux"
-	"go.opentelemetry.io/collector/pdata/plog"
-	"go.opentelemetry.io/collector/pdata/pmetric"
+	logpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
+	metricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	"google.golang.org/protobuf/proto"
 )
@@ -87,25 +85,100 @@ func (o *OTelReceiver) setupRoutes() {
 // handleMetricIngest processes incoming OTLP metrics requests.
 func (o *OTelReceiver) handleMetricIngest(w http.ResponseWriter, r *http.Request) {
 
+	ct := r.Header.Get("Content-Type")
+	if r.Method != http.MethodPost || !strings.HasPrefix(ct, "application/x-protobuf") {
+		http.Error(w, "Unsupported method or content type", http.StatusUnsupportedMediaType)
+		return
+	}
+
+	const maxMetricPayloadSize = 10 << 20 // 10 MiB
+	defer r.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxMetricPayloadSize))
+	if err != nil {
+		http.Error(w, "Request body too large", http.StatusRequestEntityTooLarge)
+		return
+	}
+
+	var req metricpb.ExportMetricsServiceRequest
+	if err := proto.Unmarshal(body, &req); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to unmarshal trace request: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	metrics := o.OTLPToMetrics(&req)
+	// Save trace to store here, for now log it
+	utils.Debug("Received %d metrics in request", len(metrics))
+	for _, metric := range metrics {
+		utils.Debug("Metric: %s", metric.Name)
+
+		// DO SOMETHING WITH THE SPAN
+	}
+
+	// After processing:
+	resp := &tracepb.ExportTraceServiceResponse{} // from go.opentelemetry.io/proto/otlp/collector/logs/v1
+	data, _ := proto.Marshal(resp)
+	w.Header().Set("Content-Type", "application/x-protobuf")
+	w.WriteHeader(http.StatusAccepted)
+	w.Write(data)
+	return
+
 }
 
 // handleLogIngest processes incoming OTLP logs requests.
 func (o *OTelReceiver) handleLogIngest(w http.ResponseWriter, r *http.Request) {
+	ct := r.Header.Get("Content-Type")
+	if r.Method != http.MethodPost || !strings.HasPrefix(ct, "application/x-protobuf") {
+		http.Error(w, "Unsupported method or content type", http.StatusUnsupportedMediaType)
+		return
+	}
 
+	const maxLogPayloadSize = 10 << 20 // 10 MiB
+	defer r.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxLogPayloadSize))
+	if err != nil {
+		http.Error(w, "Request body too large", http.StatusRequestEntityTooLarge)
+		return
+	}
+
+
+	var req logpb.ExportLogsServiceRequest
+	if err := proto.Unmarshal(body, &req); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to unmarshal log request: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	logEntries := o.OTLPToLogEntries(&req)
+	// Save logs to store here, for now log it
+	utils.Debug("Received %d log entries in log request", len(logEntries))
+	for _, entry := range logEntries {
+		utils.Debug("Log Entry: %s - %s - %v", entry.Name, entry.TraceID, entry)
+
+		// DO SOMETHING WITH THE LOG ENTRY
+	}
+	// After processing:
+	resp := &logpb.ExportLogsServiceResponse{} // from go.opentelemetry.io/proto/otlp/collector/logs/v1
+	data, _ := proto.Marshal(resp)
+	w.Header().Set("Content-Type", "application/x-protobuf")
+	w.WriteHeader(http.StatusAccepted)
+	w.Write(data)
+	return
 }
 
 // handleTraceIngest processes incoming OTLP traces requests.
 func (o *OTelReceiver) handleTraceIngest(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost || r.Header.Get("Content-Type") != "application/x-protobuf" {
-		http.Error(w, "Unsupported method or content type", http.StatusMethodNotAllowed)
+	ct := r.Header.Get("Content-Type")
+	if r.Method != http.MethodPost || !strings.HasPrefix(ct, "application/x-protobuf") {
+		http.Error(w, "Unsupported method or content type", http.StatusUnsupportedMediaType)
 		return
 	}
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to read request body: %v", err), http.StatusInternalServerError)
-		return
-	}
+
+	const maxLogPayloadSize = 10 << 20 // 10 MiB
 	defer r.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxLogPayloadSize))
+	if err != nil {
+		http.Error(w, "Request body too large", http.StatusRequestEntityTooLarge)
+		return
+	}
 
 	var req tracepb.ExportTraceServiceRequest
 	if err := proto.Unmarshal(body, &req); err != nil {
@@ -118,9 +191,17 @@ func (o *OTelReceiver) handleTraceIngest(w http.ResponseWriter, r *http.Request)
 	utils.Debug("Received %d spans in trace request", len(spans))
 	for _, span := range spans {
 		utils.Debug("Span: %s - %s - %v", span.Name, span.TraceID, span)
+
+		// DO SOMETHING WITH THE SPAN
 	}
-	// Respond with success
+
+	// After processing:
+	resp := &tracepb.ExportTraceServiceResponse{} // from go.opentelemetry.io/proto/otlp/collector/logs/v1
+	data, _ := proto.Marshal(resp)
+	w.Header().Set("Content-Type", "application/x-protobuf")
 	w.WriteHeader(http.StatusAccepted)
+	w.Write(data)
+	return
 }
 
 // Shutdown gracefully stops both receivers.
@@ -133,27 +214,5 @@ func (o *OTelReceiver) Shutdown() error {
 	}
 
 	utils.Info("OTEL HTTP server shut down cleanly")
-	return nil
-}
-
-// metricConsumer adapts OTLP metrics to GoSight's internal model.
-type metricConsumer struct {
-	handle func([]model.MetricPayload)
-}
-
-// ConsumeMetrics implements consumer.Metrics interface.
-func (c *metricConsumer) ConsumeMetrics(ctx context.Context, md pmetric.Metrics) error {
-	// TODO: convert md into []model.MetricPayload and call c.handle(payloads)
-	return nil
-}
-
-// logConsumer adapts OTLP logs to GoSight's internal model.
-type logConsumer struct {
-	handle func([]model.LogEntry)
-}
-
-// ConsumeLogs implements consumer.Logs interface.
-func (c *logConsumer) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
-	// TODO: convert ld into []model.LogEntry and call c.handle(entries)
 	return nil
 }

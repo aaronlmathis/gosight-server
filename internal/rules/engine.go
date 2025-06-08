@@ -109,19 +109,22 @@ func (e *Evaluator) EvaluateMetric(ctx context.Context, metrics []model.Metric, 
 			continue
 		}
 
+		// Use helper function to extract value from DataPoints
+		matchedValue := getMetricValue(matched)
 		firing := evaluateExpression(rule.Expression, matched)
 		key := rule.ID + "|" + meta.EndpointID
 
 		if firing {
 			if !e.firing[key] {
 				e.firing[key] = true
-
-				e.AlertMgr.HandleState(ctx, rule, meta, matched.Value, true)
+				// Use extracted value instead of matched.Value
+				e.AlertMgr.HandleState(ctx, rule, meta, matchedValue, true)
 			}
 		} else {
 			if e.firing[key] {
 				delete(e.firing, key)
-				e.AlertMgr.HandleState(ctx, rule, meta, matched.Value, false)
+				// Use extracted value instead of matched.Value
+				e.AlertMgr.HandleState(ctx, rule, meta, matchedValue, false)
 			}
 		}
 	}
@@ -198,27 +201,30 @@ func evaluateLogExpression(expr model.Expression, log model.LogEntry) bool {
 
 // evaluateLogExpression evaluates the log entry against the rule's expression.
 func evaluateExpression(expr model.Expression, m *model.Metric) bool {
+	// Extract value using helper function instead of m.Value
+	metricValue := getMetricValue(m)
+
 	switch expr.Operator {
 	case ">":
-		return m.Value > toFloat(expr.Value)
+		return metricValue > toFloat(expr.Value)
 	case "<":
-		return m.Value < toFloat(expr.Value)
+		return metricValue < toFloat(expr.Value)
 	case ">=":
-		return m.Value >= toFloat(expr.Value)
+		return metricValue >= toFloat(expr.Value)
 	case "<=":
-		return m.Value <= toFloat(expr.Value)
+		return metricValue <= toFloat(expr.Value)
 	case "=", "==":
-		return m.Value == toFloat(expr.Value)
+		return metricValue == toFloat(expr.Value)
 	case "!=":
-		return m.Value != toFloat(expr.Value)
+		return metricValue != toFloat(expr.Value)
 	case "contains":
-		return strings.Contains(toString(m.Value), toString(expr.Value))
+		return strings.Contains(toString(metricValue), toString(expr.Value))
 	case "regex":
 		re, err := regexp.Compile(toString(expr.Value))
 		if err != nil {
 			return false
 		}
-		return re.MatchString(toString(m.Value))
+		return re.MatchString(toString(metricValue))
 	default:
 		return false
 	}
@@ -278,4 +284,39 @@ func toString(v interface{}) string {
 	default:
 		return fmt.Sprintf("%v", val)
 	}
+}
+
+// getMetricValue extracts the first data point value from a metric
+func getMetricValue(metric *model.Metric) float64 {
+	if len(metric.DataPoints) == 0 {
+		return 0
+	}
+
+	// For most metrics, use the first data point's value
+	dp := metric.DataPoints[0]
+
+	// Handle different metric types
+	switch metric.DataType {
+	case "gauge", "sum":
+		return dp.Value
+	case "histogram":
+		// For histograms, you might want count, sum, or average
+		if dp.Count > 0 {
+			return dp.Sum / float64(dp.Count) // Return average
+		}
+		return dp.Sum
+	case "summary":
+		// For summaries, return sum or calculate from quantiles
+		return dp.Sum
+	default:
+		return dp.Value
+	}
+}
+
+// getMetricDimensions extracts the first data point attributes from a metric
+func getMetricDimensions(metric *model.Metric) map[string]string {
+	if len(metric.DataPoints) == 0 {
+		return make(map[string]string)
+	}
+	return metric.DataPoints[0].Attributes
 }

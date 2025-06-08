@@ -3,7 +3,7 @@ module github.com/aaronlmathis/gosight-server
 go 1.23.7
 
 require (
-	github.com/aaronlmathis/gosight-shared v0.0.0-20250529164042-c900c53de4d2
+	github.com/aaronlmathis/gosight-shared v0.0.0-20250606141113-7aa59623fc04
 	github.com/bradfitz/gomemcache v0.0.0-20250403215159-8d39553ac7cf
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v5 v5.2.2
@@ -15,10 +15,10 @@ require (
 	github.com/pquerna/otp v1.4.0
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/collector/pdata v1.32.0
-	go.opentelemetry.io/proto/otlp v1.6.0
+	go.opentelemetry.io/proto/otlp v1.7.0
 	golang.org/x/crypto v0.38.0
 	golang.org/x/oauth2 v0.29.0
-	google.golang.org/grpc v1.72.0
+	google.golang.org/grpc v1.72.2
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -47,8 +47,8 @@ require (
 	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250428153025-10db94c68c34 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250428153025-10db94c68c34 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250528174236-200df99c418a // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250528174236-200df99c418a // indirect
 )
 
 replace github.com/aaronlmathis/gosight-shared => ../gosight-shared

@@ -24,9 +24,7 @@ package httpserver
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/aaronlmathis/gosight-server/internal/api/routes"
 	gosightauth "github.com/aaronlmathis/gosight-server/internal/auth"
@@ -48,7 +46,7 @@ func (s *HttpServer) withAccessLog(h http.Handler) http.Handler {
 // HandleSvelteKitApp serves the SvelteKit application without permission requirements
 func (s *HttpServer) HandleSvelteKitApp(w http.ResponseWriter, r *http.Request) {
 	// Serve the SvelteKit app's index.html directly from UI/build
-	buildDir := "UI/build"
+	buildDir := "web/build"
 	indexPath := filepath.Join(buildDir, "index.html")
 	http.ServeFile(w, r, indexPath)
 }
@@ -57,48 +55,10 @@ func (s *HttpServer) HandleSvelteKitApp(w http.ResponseWriter, r *http.Request) 
 func (s *HttpServer) HandleSvelteKitAppWithPermission(permission string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Serve the SvelteKit app's index.html directly from UI/build
-		buildDir := "UI/build"
+		buildDir := "web/build"
 		indexPath := filepath.Join(buildDir, "index.html")
 		http.ServeFile(w, r, indexPath)
 	}
-}
-
-// HandleDevSvelteKitApp serves the development SvelteKit application from ./web
-func (s *HttpServer) HandleDevSvelteKitApp(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("DEV ROUTE HIT: %s\n", r.URL.Path)
-
-	buildDir := "web/build"
-
-	// If requesting static assets (_app/), serve them directly
-	if strings.HasPrefix(r.URL.Path, "/dev/_app/") {
-		// Strip /dev/ prefix and serve the file
-		assetPath := strings.TrimPrefix(r.URL.Path, "/dev/")
-		filePath := filepath.Join(buildDir, assetPath)
-
-		fmt.Printf("Serving asset: %s\n", filePath)
-
-		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			fmt.Printf("Asset not found: %s\n", filePath)
-			http.NotFound(w, r)
-			return
-		}
-
-		http.ServeFile(w, r, filePath)
-		return
-	}
-
-	// For all other /dev/ routes, serve index.html
-	indexPath := filepath.Join(buildDir, "index.html")
-
-	// Check if file exists
-	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-		fmt.Printf("File not found: %s\n", indexPath)
-		http.Error(w, fmt.Sprintf("Build file not found: %s", indexPath), http.StatusNotFound)
-		return
-	}
-
-	fmt.Printf("Serving index.html: %s\n", indexPath)
-	http.ServeFile(w, r, indexPath)
 }
 
 // setupRoutes sets up the routes for the HTTP server.
@@ -114,7 +74,7 @@ func (s *HttpServer) setupRoutes() {
 // It includes routes for serving SvelteKit build assets from _app/ directory.
 func (s *HttpServer) setupStaticRoutes() {
 	// Serve SvelteKit build assets from UI/build/_app/
-	buildDir := "UI/build"
+	buildDir := "web/build"
 	staticFS := http.FileServer(http.Dir(buildDir))
 
 	// Serve SvelteKit build assets like _app/immutable/ and other static files
@@ -140,11 +100,6 @@ func (s *HttpServer) setupStaticRoutes() {
 func (s *HttpServer) setupSvelteKitRoutes() {
 	withAuth := s.withAuth()
 	withLog := s.withAccessLog
-
-	// Development route - serves SvelteKit app from ./web directory
-	// Public access for development purposes
-	fmt.Println("Registering /dev/ route")
-	s.Router.PathPrefix("/dev/").Handler(withLog(http.HandlerFunc(s.HandleDevSvelteKitApp))).Methods("GET")
 
 	// Public auth routes - no authentication required
 	fmt.Println("Registering /auth/ route")

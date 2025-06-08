@@ -47,31 +47,45 @@ func (s *SyslogServer) handleLog(ctx context.Context, raw []byte, srcAddr string
 		deviceName = dev.Name
 	}
 
-	// Build the LogEntry
-	entry := model.LogEntry{
-		Timestamp: ts,
-		Level:     severity,
-		Message:   msg,
-		Source:    facility,
-		Category:  "network",
-		Fields:    fields,
-		Labels: map[string]string{
-			"device_id":   deviceID,
-			"device_name": deviceName,
-			"src_ip":      srcAddr,
-		},
-		Meta: &model.LogMeta{
-			Platform: "syslog",
-			Service:  deviceName,
-		},
-	}
+	// Create unified Meta for this log
 	meta := &model.Meta{
 		Hostname:   host,
 		EndpointID: deviceID,
 		Platform:   "syslog",
 		Service:    deviceName,
 		IPAddress:  srcAddr,
+		Kind:       "network_device",
+		Labels: map[string]string{
+			"device_id":   deviceID,
+			"device_name": deviceName,
+			"src_ip":      srcAddr,
+		},
 	}
+
+	// Build the LogEntry with new OTLP-compatible structure
+	entry := model.LogEntry{
+		Timestamp:         ts,
+		ObservedTimestamp: ts,
+		SeverityText:      strings.ToUpper(severity),
+		Level:             severity,
+		Body:              msg,
+		Message:           msg, // Keep for compatibility
+		Source:            facility,
+		Category:          "network",
+		Fields:            fields,
+		Labels: map[string]string{
+			"device_id":   deviceID,
+			"device_name": deviceName,
+			"src_ip":      srcAddr,
+		},
+		Attributes: map[string]interface{}{
+			"log.source":     "syslog",
+			"network.device": deviceName,
+			"network.host":   host,
+		},
+		Meta: meta, // Use unified Meta
+	}
+
 	// Wrap in a LogPayload
 	payload := model.LogPayload{
 		Hostname:   deviceName,

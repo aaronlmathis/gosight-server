@@ -53,3 +53,6 @@ UI/ignore/
 map_gosight*
 /config/*
 *.nope
+*.bz2
+*_old
+*.bz

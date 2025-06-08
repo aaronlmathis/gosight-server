@@ -1,0 +1,1 @@
+document.querySelector('button').forEach ? Array.from(document.querySelectorAll('button')).map((b, i) => console.log(i + ': ' + b.textContent.trim() + ' | classes: ' + b.className)) : 'No buttons found'
