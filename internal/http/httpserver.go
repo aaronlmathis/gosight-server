@@ -25,6 +25,7 @@ along with GoSight. If not, see https://www.gnu.org/licenses/.
 package httpserver
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/aaronlmathis/gosight-server/internal/sys"
@@ -59,12 +60,28 @@ func NewServer(sys *sys.SystemContext) *HttpServer {
 func (s *HttpServer) Start() error {
 
 	s.setupRoutes()
+	switch s.Sys.Cfg.Server.Environment {
+	case "dev":
+		{
+			utils.Info("HTTP server running at %s", s.Sys.Cfg.Server.HTTPAddr)
+			if err := http.ListenAndServe(s.Sys.Cfg.Server.HTTPAddr, s.Router); err != nil {
+				return fmt.Errorf("http server failed: %v", err)
+			}
+		}
+	case "prod":
+		{
+			if s.Sys.Cfg.TLS.HttpsCertFile == "" || s.Sys.Cfg.TLS.HttpsKeyFile == "" {
+				return fmt.Errorf("HTTPS server requires TLS certificate and key files to be set in production environment")
+			}
+			utils.Info("Starting HTTPS server in production mode at %s", s.Sys.Cfg.Server.HTTPAddr)
+			if err := http.ListenAndServeTLS(s.Sys.Cfg.Server.HTTPAddr, s.Sys.Cfg.TLS.HttpsCertFile,
+				s.Sys.Cfg.TLS.HttpsKeyFile, s.Router); err != nil {
+				return fmt.Errorf("https server failed: %v", err)
 
-	utils.Info("HTTPS server running at %s", s.Sys.Cfg.Server.HTTPAddr)
-	if err := http.ListenAndServeTLS(s.Sys.Cfg.Server.HTTPAddr, s.Sys.Cfg.TLS.HttpsCertFile, s.Sys.Cfg.TLS.HttpsKeyFile, s.Router); err != nil {
-		utils.Error("HTTPS server failed: %v", err)
-		return err
+			}
+		}
 	}
+
 	return nil
 }
 

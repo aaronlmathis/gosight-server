@@ -58,13 +58,6 @@ func (h *TelemetryHandler) HandleMetrics(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Update metric index for search capabilities
-	if payload.Meta != nil {
-		for _, metric := range payload.Metrics {
-			h.Sys.Tele.Index.Add(metric.Namespace, metric.SubNamespace, metric.Name, metric.Dimensions)
-		}
-	}
-
 	w.WriteHeader(http.StatusAccepted)
 }
 
