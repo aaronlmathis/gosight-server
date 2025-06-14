@@ -28,7 +28,7 @@ Horizontal toolbar that appears during edit mode
   import Switch from '$lib/components/ui/switch/switch.svelte';
   import Separator from '$lib/components/ui/separator/separator.svelte';
   import WidgetPalette from './EnhancedWidgetPalette.svelte';
-  import { dashboardStore, showGridLines } from '$lib/stores/dashboard';
+  import { dashboardStore, showGridLines } from '$lib/stores/dashboardStore';
   import { toast } from 'svelte-sonner';
   import { 
     Download, 
@@ -98,7 +98,7 @@ Horizontal toolbar that appears during edit mode
   }
 
   function toggleGridLines() {
-    showGridLines.update(value => !value);
+    showGridLines.update((value: boolean) => !value);
     toast.success(`Grid lines ${$showGridLines ? 'shown' : 'hidden'}`);
   }
 

@@ -22,7 +22,7 @@ Modern toolbar with theme toggle, layout options, export features, and more.
 -->
 
 <script lang="ts">
-  import { dashboardStore, activeDashboard, isEditMode, showGridLines } from '$lib/stores/dashboard';
+  import { dashboardStore, activeDashboard, isEditMode, showGridLines } from '$lib/stores/dashboardStore';
   import { toast } from 'svelte-sonner';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import * as Sheet from '$lib/components/ui/sheet';

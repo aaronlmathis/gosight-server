@@ -307,6 +307,7 @@ func (v *VictoriaLogsStore) convertVLEntryToLogEntry(vlEntry vlLogEntry) (*model
 	logEntry := &model.LogEntry{
 		Timestamp: timestamp,
 		Message:   message,
+		Body:      message, // Add OTLP Body field
 		Fields:    make(map[string]string),
 		Labels:    make(map[string]string),
 	}
@@ -346,44 +347,61 @@ func (v *VictoriaLogsStore) convertVLEntryToLogEntry(vlEntry vlLogEntry) (*model
 			} else if strings.HasPrefix(k, "meta_") {
 				// Initialize Meta if needed
 				if logEntry.Meta == nil {
-					logEntry.Meta = &model.LogMeta{
-						Extra: make(map[string]string),
+					logEntry.Meta = &model.Meta{
+						Labels: make(map[string]string),
+						Tags:   make(map[string]string),
 					}
 				}
-				logEntry.Meta.Extra[strings.TrimPrefix(k, "meta_")] = toString(v)
+				// Add to Meta Labels instead of Extra
+				logEntry.Meta.Labels[strings.TrimPrefix(k, "meta_")] = toString(v)
 			} else {
 				// Handle other meta fields
 				if logEntry.Meta == nil {
-					logEntry.Meta = &model.LogMeta{
-						Extra: make(map[string]string),
+					logEntry.Meta = &model.Meta{
+						Labels: make(map[string]string),
+						Tags:   make(map[string]string),
 					}
 				}
 				switch k {
 				case "platform":
 					logEntry.Meta.Platform = toString(v)
 				case "app_name":
-					logEntry.Meta.AppName = toString(v)
+					logEntry.Meta.Service = toString(v) // Map app_name to Service
 				case "app_version":
 					logEntry.Meta.AppVersion = toString(v)
 				case "container_id":
 					logEntry.Meta.ContainerID = toString(v)
 				case "container_name":
 					logEntry.Meta.ContainerName = toString(v)
-				case "unit":
-					logEntry.Meta.Unit = toString(v)
 				case "service":
 					logEntry.Meta.Service = toString(v)
-				case "event_id":
-					logEntry.Meta.EventID = toString(v)
-				case "user":
-					logEntry.Meta.User = toString(v)
-				case "executable":
-					logEntry.Meta.Executable = toString(v)
-				case "path":
-					logEntry.Meta.Path = toString(v)
+				case "hostname":
+					logEntry.Meta.Hostname = toString(v)
+				case "endpoint_id":
+					logEntry.Meta.EndpointID = toString(v)
+				case "agent_id":
+					logEntry.Meta.AgentID = toString(v)
+				case "host_id":
+					logEntry.Meta.HostID = toString(v)
+				case "ip_address":
+					logEntry.Meta.IPAddress = toString(v)
+				case "os":
+					logEntry.Meta.OS = toString(v)
+				case "architecture":
+					logEntry.Meta.Architecture = toString(v)
+				case "kernel_version":
+					logEntry.Meta.KernelVersion = toString(v)
+				case "cloud_provider":
+					logEntry.Meta.CloudProvider = toString(v)
+				case "region":
+					logEntry.Meta.Region = toString(v)
+				case "instance_id":
+					logEntry.Meta.InstanceID = toString(v)
+				case "kind":
+					logEntry.Meta.Kind = toString(v)
 				default:
-					// Add as tag for other fields
-					logEntry.Labels[k] = toString(v)
+					// Add as label for other fields
+					logEntry.Meta.Labels[k] = toString(v)
 				}
 			}
 		}

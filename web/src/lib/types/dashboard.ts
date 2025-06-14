@@ -49,11 +49,73 @@ export interface Dashboard {
 }
 
 export type WidgetType = 
+  // Core Observability
+  | 'service-map'
+  | 'sla-overview'
+  | 'health-check'
+  | 'distributed-trace'
+
+  // Metrics & KPIs
+  | 'golden-signals'
+  | 'metric'
   | 'metric-card'
-  | 'chart'
-  | 'table'
-  | 'log-viewer'
+  | 'apdex-score'
+  | 'error-rate'
+  | 'gauge'
+
+  // Infrastructure
+  | 'cpu'
+  | 'memory'
+  | 'network-io'
+  | 'disk-io'
+  | 'node-health'
+
+  // Application Performance
+  | 'response-time'
+  | 'throughput'
+  | 'database-metrics'
+  | 'cache-metrics'
+  | 'queue-metrics'
+
+  // Alerting & Incidents
+  | 'alert-feed'
+  | 'incident-timeline'
+  | 'alert-heatmap'
+  | 'oncall-status'
+  | 'mttr-trends'
+  | 'alerts'
   | 'alert-list'
+
+  // Logs & Events
+  | 'log-stream'
+  | 'log-analytics'
+  | 'error-tracking'
+  | 'audit-trail'
+  | 'log-correlation'
+  | 'log-viewer'
+  | 'list'
+
+  // Security & Compliance
+  | 'security-events'
+  | 'vulnerability-scan'
+  | 'compliance-status'
+  | 'access-patterns'
+
+  // Business Intelligence
+  | 'user-analytics'
+  | 'conversion-funnel'
+  | 'revenue-metrics'
+  | 'feature-adoption'
+  | 'cost-analytics'
+
+  // Charts & Visualization
+  | 'chart'
+  | 'bar'
+  | 'pie'
+  | 'table'
+
+  // Legacy/Compatibility
+  | 'status'
   | 'status-indicator';
 
 export interface WidgetTemplate {
